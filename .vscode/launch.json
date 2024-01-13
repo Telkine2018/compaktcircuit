@@ -1,0 +1,46 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug (Settings & Data)",
+            "hookSettings": false,
+            "hookData": false,
+            "hookMode": "debug",
+            "hookControl": ["compaktcircuit", "stack4cc" ],
+            "adjustMods": {
+                "compaktcircuit" : true,
+                "stack4cc" : true
+            }
+        },
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug + factory_organizer",
+            "hookSettings": false,
+            "hookData": false,
+            "hookMode": "debug",
+            "hookControl": ["compaktcircuit", "factory_organizer" ],
+            "adjustMods": {
+                "compaktcircuit" : true,
+                "stack4cc" : true
+            }
+        },
+        
+       {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug (Profile)",
+            "hookMode": "profile",
+            "hookControl": ["compaktcircuit", "stack4cc" ],
+            "adjustMods": {
+                "compaktcircuit" : true,
+                "stack4cc" : true
+            }
+        }
+    ]
+}

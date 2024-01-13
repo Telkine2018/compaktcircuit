@@ -1,0 +1,14 @@
+{
+    "Lua.diagnostics.globals": [
+        "serpent",
+        "__Profiler",
+        "global",
+        "log",
+        "data",
+        "procinfos"
+    ],
+    "Lua.diagnostics.disable": [
+        "missing-fields"
+    ],
+    "Lua.workspace.checkThirdParty": false
+}

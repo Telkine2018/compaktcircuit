@@ -1,0 +1,269 @@
+---------------------------------------------------------------------------------------------------
+Version: 1.1.1
+Date: 12.11.2023.
+  Bugfixes:
+    - Fix crash when mixing 1.0.28 and 1.1
+    - Fix crash when having too many input/output poles
+---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 11.11.2023.
+  Changes:
+    - Add numeric display combinator to display a numeric value on a processor
+    - Add sprite display combinator to display a sprite on a processor
+    - Add text display combinator to display a text on a processor
+    - Add meta-combinator to change the input / output of a arithmetic/decider combinator based on a signal
+    - Add a combinator to display a set of signals
+    - Add a title on a processor 
+    - Add a property window on a processor that can change the state of some specialized internal combinator (opened with control+click on the processor)
+    - Add a combinator to add a text numeric field in the property window
+    - Add a combinator to add a toggle field in the property window (to input a bit set in a signal)
+    - Add a combinator to add a slider field in the property window
+    - Add a combinator to add a drop-down field in the property window (return the index of each option)
+    - Add a combinator to select a set of signals  in the property window
+    - Add a combinator to select a set of signals and their values in the property window
+    - Fix crash when too many input/output points
+---------------------------------------------------------------------------------------------------
+Version: 1.0.28
+Date: 21.06.2023.
+  Bugfixes:
+    - Fix lamp connected to a logistic network
+    - Fix invalid iopoint label on adjacent processor
+---------------------------------------------------------------------------------------------------
+Version: 1.0.27
+Date: 11.06.2023.
+  Bugfixes:
+    - Fix non removal of internal components
+---------------------------------------------------------------------------------------------------
+Version: 1.0.26
+Date: 04.06.2023.
+  Bugfixes:
+    - Fix invalid placement of entity when a processor lies on the edge of the editor
+    - Fix line gap in small processor name
+    - Add PickerDolly dependency
+    - Fix model rename not depending on processor type
+---------------------------------------------------------------------------------------------------
+Version: 1.0.25
+Date: 30.05.2023.
+  Changes:
+    - Make base entities not destructible
+    - Refactor translations
+    - Add a setting to remove packed circuits energy consumption
+  Bugfixes:
+    - Fix crash on migration
+    - Fix missing update on different processor name
+    - Fix crash when applying the same model to different processor (1x1, 4x4)
+---------------------------------------------------------------------------------------------------
+Version: 1.0.24
+Date: 15. 12. 2022.
+  Changes:
+    - Add processor displacement using Picker Dollies
+---------------------------------------------------------------------------------------------------
+Version: 1.0.23
+Date: 19. 12. 2022.
+  Changes:
+    - Add anti-bounce delay of 2 s on click
+    - Add copy/paste on external ipoint. This will exchange the internal index of the associated internnal point and also exchange the connected wires.
+  Bugfixes:
+    - Fix bad teleporation in space exploration when exiting a spaceship that has changed surface
+---------------------------------------------------------------------------------------------------
+Version: 1.0.22
+Date: 04. 12. 2022.
+  Bugfixes:
+    - Add compatibility with "Schall lamp contrast"
+    - Fix that two input/output pole with the same index lose their index after exiting editor
+  Changes:
+    - Add always_day in editor surface
+    - Improve outer lamp contrast
+    - Enhance display for input/output pole with the same index
+---------------------------------------------------------------------------------------------------
+Version: 1.0.21
+Date: 03. 12. 2022.
+  Bugfixes:
+    - Fix crash in SE spaceship
+---------------------------------------------------------------------------------------------------
+Version: 1.0.20
+Date: 01. 12. 2022.
+  Bugfixes:
+    - Fix invalid combinator in packed mode
+---------------------------------------------------------------------------------------------------
+Version: 1.0.19
+Date: 19. 11. 2022.
+  Bugfixes:
+    - Prevent  copy/paste between version of processor.
+    - Fix processor update
+  Features:
+    - Add sprite on processor.
+---------------------------------------------------------------------------------------------------
+Version: 1.0.18
+Date: 18. 11. 2022.
+  Bugfixes:
+    - Fix regression on io point display
+---------------------------------------------------------------------------------------------------
+Version: 1.0.17
+Date: 16. 11. 2022.
+  Bugfixes:
+    - Fix crash when renaming
+    - Add flag hidden to iopoint item
+  Changes:
+    - Add color to input/output display depending on the color of the internal connected wires (you have to enter at least one time in the processor to update)
+    - Add direction (input/output) shown by the direction of the arrow on the external io point
+    - Add internal connector to connect circuit wires over a long distance (64)
+---------------------------------------------------------------------------------------------------
+Version: 1.0.16
+Date: 14. 11. 2022.
+  Bugfixes:
+    - Fix copy/paste between version
+---------------------------------------------------------------------------------------------------
+Version: 1.0.15
+Date: 13. 11. 2022.
+  Info:
+    - Allow nested processors
+    - Improve management of models
+---------------------------------------------------------------------------------------------------
+Version: 1.0.14
+Date: 09. 11. 2022.
+  Bugfixes:
+    - Fix update of a blueprint lose content of processor
+    - Fix save of enabled flag on a constant combinator
+    - Fix high CPU for power grid in packed mode 
+  Info:
+    - Add 1x1 combinator
+---------------------------------------------------------------------------------------------------
+Version: 1.0.13
+Date: 09. 11. 2022.
+  Bugfixes:
+    - Fix invalid blueprint using miniloader or some other mods
+    - Fix invalid position of player when teleport inside processor
+---------------------------------------------------------------------------------------------------
+Version: 1.0.12
+Date: 07. 11. 2022.
+  Bugfixes:
+    - Fix crash when dragging a processor inside editor
+    - Fix destroy remaining object when using external combinator
+---------------------------------------------------------------------------------------------------
+Version: 1.0.11
+Date: 06. 11. 2022.
+  Info:
+    - Improve model name display
+  Bugfixes:
+    - Fix character can be stuck at position 0,0
+    - Fix display of power in packed mode
+    - Fix crash when using a signal from a removed mod
+---------------------------------------------------------------------------------------------------
+Version: 1.0.10
+Date: 05. 11. 2022.
+  Bugfixes:
+    - Fix crash with some unauthorized external mod
+---------------------------------------------------------------------------------------------------
+Version: 1.0.9
+Date: 05. 11. 2022.
+  Bugfixes:
+    - Fix death when importing in jet mode (SE)
+  Info:
+    - Add input/output name display (can be disabled in settings)
+---------------------------------------------------------------------------------------------------
+Version: 1.0.8
+Date: 01. 11. 2022.
+  Bugfixes:
+    - Fix rotation of processor in blueprints, copy/paste
+---------------------------------------------------------------------------------------------------
+Version: 1.0.7
+Date: 27. 10. 2022.
+  Bugfixes:
+    - Add dependency on flib
+---------------------------------------------------------------------------------------------------
+Version: 1.0.6
+Date: 24. 10. 2022.
+  Info:
+    - Add display of input/output signals (may be modified on each input/output point, all/one line/none, for each color of wire)
+---------------------------------------------------------------------------------------------------
+Version: 1.0.5
+Date: 16. 10. 2022.
+  Info:
+    - Fix crash on exiting processor editor with aindustrial plates
+---------------------------------------------------------------------------------------------------
+Version: 1.0.4
+Date: 16. 10. 2022.
+  Info:
+    - Add model import
+    - Add model rename
+    - Add setting to avoid tag entity when mining a processor
+---------------------------------------------------------------------------------------------------
+Version: 1.0.3
+Date: 12. 10. 2022.
+  Info:
+    - Add setting for color
+    - Add model to update quickly processors
+    - Add command to set all processor to packed mode : /compaktcircuit_pack
+    - Add remote interface to add external combinator into editor
+---------------------------------------------------------------------------------------------------
+Version: 1.0.2
+Date: 01. 10. 2022.
+  Bugfixes:
+    - Fix power supply when battery power
+    - add support to "Text plates" inside editor
+    - add support to "Industrial display plates" inside editor
+---------------------------------------------------------------------------------------------------
+Version: 1.0.1
+Date: 30. 09. 2022.
+  Bugfixes:
+    - Fix crash on SE
+---------------------------------------------------------------------------------------------------
+Version: 1.0.0
+Date: 24. 09. 2022.
+  Info:
+    - First stable release
+  Bugfixes:
+    - Fix belt disappearing in processor editor
+    - Fix exit button missing when exiting from navigation view/processor to another processor
+---------------------------------------------------------------------------------------------------
+Version: 0.0.10
+Date: 23. 09. 2022.
+  Bugfixes:
+    - Fix crash in cut
+---------------------------------------------------------------------------------------------------
+Version: 0.0.9
+Date: 22. 09. 2022.
+  Bugfixes:
+    - Fix crash in config change
+---------------------------------------------------------------------------------------------------
+Version: 0.0.8
+Date: 21. 09. 2022.
+  Info:
+    - Change graphics of processor, thanks to NGMZero
+    - Add support for editing in Navigation mode in Space exploration
+    - Add display of input/output point in alt mode (in settings)
+    - Copy/paste recompute the input/output point index to avoid conflicts
+---------------------------------------------------------------------------------------------------
+Version: 0.0.7
+Date: 21. 09. 2022.
+  Bugfixes:
+    - Fix crash in config change
+---------------------------------------------------------------------------------------------------
+Version: 0.0.6
+Date: 20. 09. 2022.
+  Bugfixes:
+    - Fix crash in space exploration
+---------------------------------------------------------------------------------------------------
+Version: 0.0.4
+Date: 20. 09. 2022.
+  Bugfixes:
+    - Improve surface management for space exploration
+---------------------------------------------------------------------------------------------------
+Version: 0.0.3
+Date: 18. 09. 2022.
+  Info:
+    - Add copy/paste between processor
+  Bugfixes:
+    - Fixed selection bug
+
+---------------------------------------------------------------------------------------------------
+Version: 0.0.2
+Date: 18. 09. 2022.
+  Info:
+    - Missing thumbnail
+---------------------------------------------------------------------------------------------------
+Version: 0.0.1
+Date: 18. 09. 2022.
+  Info:
+    - Initial release
