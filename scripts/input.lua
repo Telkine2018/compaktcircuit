@@ -223,7 +223,7 @@ function input.add_properties(type, ptable, props)
         field = ptable.add {
             type = "text-box",
             name = "input-dropdown-labels",
-            tooltip = { np("dropdown-tooltips-tooltip") },
+            tooltip = { np("dropdown-labels-tooltip") },
             text = props.labels
         }
         field.style.height = 100
