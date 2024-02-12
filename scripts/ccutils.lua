@@ -52,6 +52,19 @@ function ccutils.check_signal(type, name)
     return true
 end
 
+---@param sprite string?
+---@return any
+function ccutils.check_sprite(sprite)
+    if not sprite then return nil end
+    local signal = tools.sprite_to_signal(sprite)
+    ---@cast signal -nil
+    if ccutils.check_signal(signal.type, signal.name) then
+        return sprite
+    else
+        return nil
+    end
+end
+
 local check_signal = ccutils.check_signal
 
 ---@param signal SignalID?
@@ -61,6 +74,16 @@ function ccutils.check_signal_o(signal)
     return check_signal(signal.type, signal.name)
 end
 
+---@param signal SignalID?
+---@return SignalID?
+function ccutils.translate_signal(signal)
+    if not signal then return nil end
+    if ccutils.check_signal_o(signal) then
+        return signal
+    else
+        return nil
+    end
+end
 
 ---Split string by slash '/''
 ---@param s string

@@ -5,6 +5,7 @@ local tools = require("scripts.tools")
 local display = require("scripts.display")
 local input = require("scripts.input")
 local build = require("scripts.build")
+local ccutils = require("scripts.ccutils")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -169,14 +170,14 @@ function editor.create_editor_panel(player, procinfo)
         tooltip = { tooltip_prefix .. ".sprite1" },
         name = prefix .. "-sprite1",
         elem_type = "signal",
-        signal = tools.sprite_to_signal(procinfo.sprite1)
+        signal = ccutils.translate_signal(tools.sprite_to_signal(procinfo.sprite1))
     }
     b = info_flow.add {
         type = "choose-elem-button",
         tooltip = { tooltip_prefix .. ".sprite2" },
         name = prefix .. "-sprite2",
         elem_type = "signal",
-        signal = tools.sprite_to_signal(procinfo.sprite2)
+        signal = ccutils.translate_signal(tools.sprite_to_signal(procinfo.sprite2))
     }
 
     local models, selected_index = get_model_position(player, procinfo)
@@ -1469,10 +1470,11 @@ function editor.draw_sprite(procinfo)
         scale2 = 0.6
     end
 
-    if procinfo.sprite1 then
+    local sprite1 = ccutils.check_sprite(procinfo.sprite1)
+    if sprite1 then
         local id = rendering.draw_sprite {
             surface = processor.surface,
-            sprite = procinfo.sprite1,
+            sprite = sprite1,
             target = processor,
             target_offset = { 0, target_y * scale },
             x_scale = scale,
@@ -1482,10 +1484,11 @@ function editor.draw_sprite(procinfo)
         table.insert(ids, id)
     end
 
-    if procinfo.sprite2 then
+    local sprite2 = ccutils.check_sprite(procinfo.sprite2)
+    if sprite2 then
         local id = rendering.draw_sprite {
             surface = processor.surface,
-            sprite = procinfo.sprite2,
+            sprite = sprite2,
             target = processor,
             target_offset = { 0, target_y * scale },
             x_scale = scale2,
