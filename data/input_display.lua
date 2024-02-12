@@ -22,7 +22,7 @@ local select_input = {
 
 local control_select_input = {
     type = "custom-input",
-    key_sequence = "CONTROL+mouse-button-1",
+    key_sequence = "CONTROL + mouse-button-1",
     name = prefix .. "-control-click"
 }
 
