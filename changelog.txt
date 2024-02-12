@@ -3,6 +3,7 @@ Version: 1.1.2
 Date: 12.02.2024.
   Changes:
     - Add import / export of models as blueprint book
+    - Add better descriptions (thanks to Hares)
   Bugfixes:
     - Fix crash with unknown signals
 ---------------------------------------------------------------------------------------------------
