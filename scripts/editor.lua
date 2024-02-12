@@ -5,6 +5,7 @@ local tools = require("scripts.tools")
 local display = require("scripts.display")
 local input = require("scripts.input")
 local build = require("scripts.build")
+local ccutils = require("scripts.ccutils")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -54,7 +55,6 @@ end
 ---@param processor_name string
 ---@return string[] @ Model names
 local function get_model_list(player, processor_name)
-
     local models = build.get_models(player.force, processor_name)
     local model_table = {}
     if models then
@@ -90,7 +90,6 @@ local internal_panel_name = prefix .. "-intern_panel"
 ---@param player LuaPlayer
 ---@param procinfo ProcInfo
 function editor.create_editor_panel(player, procinfo)
-
     editor.close_editor_panel(player)
     display.close(player)
     input.close(player)
@@ -99,7 +98,7 @@ function editor.create_editor_panel(player, procinfo)
         type = "frame",
         direction = "vertical",
         name = internal_panel_name,
-        caption = {prefix .. ".main-title"}
+        caption = { prefix .. ".main-title" }
     }
 
     local frame = outer_frame.add {
@@ -107,12 +106,12 @@ function editor.create_editor_panel(player, procinfo)
         direction = "vertical",
         style = "inside_shallow_frame_with_padding",
     }
-    
+
     local b = frame.add {
         type = "button",
-        caption = {button_prefix .. ".exit_editor"},
+        caption = { button_prefix .. ".exit_editor" },
         name = prefix .. "-exit_editor",
-        tooltip = {tooltip_prefix .. ".exit"}
+        tooltip = { tooltip_prefix .. ".exit" }
     }
     b.style.width = 200
 
@@ -122,32 +121,32 @@ function editor.create_editor_panel(player, procinfo)
     }
     local label = add_flow.add {
         type = "label",
-        caption = {prefix .. ".add_component_label"}
+        caption = { prefix .. ".add_component_label" }
     }
     label.style.top_margin = 10
 
-    
+
     b = add_flow.add {
         type = "sprite-button",
-        tooltip = {tooltip_prefix .. ".add_iopole"},
+        tooltip = { tooltip_prefix .. ".add_iopole" },
         name = prefix .. "-add_iopole",
         sprite = "item/" .. commons.internal_iopoint_name
     }
     b = add_flow.add {
         type = "sprite-button",
-        tooltip = {tooltip_prefix .. ".add__internal_connector"},
+        tooltip = { tooltip_prefix .. ".add__internal_connector" },
         name = prefix .. "-add_internal_connector",
         sprite = "item/" .. internal_connector_name
     }
     b = add_flow.add {
         type = "sprite-button",
-        tooltip = {tooltip_prefix .. ".add_display"},
+        tooltip = { tooltip_prefix .. ".add_display" },
         name = prefix .. "-add_display",
         sprite = "item/" .. display_name
     }
     b = add_flow.add {
         type = "sprite-button",
-        tooltip = {tooltip_prefix .. ".add_input"},
+        tooltip = { tooltip_prefix .. ".add_input" },
         name = prefix .. "-add_input",
         sprite = "item/" .. commons.input_name
     }
@@ -160,25 +159,25 @@ function editor.create_editor_panel(player, procinfo)
     b = info_flow.add {
         type = "checkbox",
         state = procinfo.is_packed or false,
-        caption = {prefix .. "-parameters.is_packed"},
-        tooltip = {tooltip_prefix .. ".is_packed"},
+        caption = { prefix .. "-parameters.is_packed" },
+        tooltip = { tooltip_prefix .. ".is_packed" },
         name = prefix .. "-is_packed"
     }
     b.style.right_margin = 10
     b.style.top_margin = 10
     b = info_flow.add {
         type = "choose-elem-button",
-        tooltip = {tooltip_prefix .. ".sprite1"},
+        tooltip = { tooltip_prefix .. ".sprite1" },
         name = prefix .. "-sprite1",
         elem_type = "signal",
-        signal = tools.sprite_to_signal(procinfo.sprite1)
+        signal = ccutils.translate_signal(tools.sprite_to_signal(procinfo.sprite1))
     }
     b = info_flow.add {
         type = "choose-elem-button",
-        tooltip = {tooltip_prefix .. ".sprite2"},
+        tooltip = { tooltip_prefix .. ".sprite2" },
         name = prefix .. "-sprite2",
         elem_type = "signal",
-        signal = tools.sprite_to_signal(procinfo.sprite2)
+        signal = ccutils.translate_signal(tools.sprite_to_signal(procinfo.sprite2))
     }
 
     local models, selected_index = get_model_position(player, procinfo)
@@ -187,7 +186,7 @@ function editor.create_editor_panel(player, procinfo)
         direction = "horizontal",
         name = "model_flow"
     }
-    modelFlow.add {type = "label", caption = {label_prefix .. ".model"}}
+    modelFlow.add { type = "label", caption = { label_prefix .. ".model" } }
     local dp = modelFlow.add {
         type = "drop-down",
         name = prefix .. "-model_list",
@@ -198,7 +197,7 @@ function editor.create_editor_panel(player, procinfo)
     modelFlow.style.top_margin = 5
 
     local f
-    f = modelFlow.add {type = "textfield", name = prefix .. "-model_name"}
+    f = modelFlow.add { type = "textfield", name = prefix .. "-model_name" }
     f.visible = false
     f.style.width = 380
 
@@ -211,69 +210,85 @@ function editor.create_editor_panel(player, procinfo)
     f = modelButtonFlow.add {
         type = "button",
         name = prefix .. "-new_model_button",
-        caption = {button_prefix .. ".new_model"},
-        tooltip = {tooltip_prefix .. ".new_model"}
+        caption = { button_prefix .. ".new_model" },
+        tooltip = { tooltip_prefix .. ".new_model" }
     }
     f.style.width = 80
     f = modelButtonFlow.add {
         type = "button",
         name = prefix .. "-rename_button",
-        caption = {button_prefix .. ".rename_model"},
-        tooltip = {tooltip_prefix .. ".rename_model"}
+        caption = { button_prefix .. ".rename_model" },
+        tooltip = { tooltip_prefix .. ".rename_model" }
     }
     f.style.width = 80
     b = modelButtonFlow.add {
         type = "button",
-        caption = {button_prefix .. ".apply_model"},
-        tooltip = {tooltip_prefix .. ".apply_model"},
+        caption = { button_prefix .. ".apply_model" },
+        tooltip = { tooltip_prefix .. ".apply_model" },
         name = prefix .. "-apply_model"
     }
     b.style.width = 80
     b = modelButtonFlow.add {
         type = "button",
-        caption = {button_prefix .. ".import_model"},
-        tooltip = {tooltip_prefix .. ".import_model"},
+        caption = { button_prefix .. ".import_model" },
+        tooltip = { tooltip_prefix .. ".import_model" },
         name = prefix .. "-import_model"
     }
     b.style.width = 80
     b = modelButtonFlow.add {
         type = "button",
-        caption = {button_prefix .. ".remove_model"},
-        tooltip = {tooltip_prefix .. ".remove_model"},
+        caption = { button_prefix .. ".remove_model" },
+        tooltip = { tooltip_prefix .. ".remove_model" },
         name = prefix .. "-remove_model"
     }
     b.style.width = 80
 
+    b = modelButtonFlow.add {
+        type = "button",
+        caption = { button_prefix .. ".export_models" },
+        tooltip = { tooltip_prefix .. ".export_models" },
+        name = prefix .. "-export_models"
+    }
+    b.style.width = 100
+
+    b = modelButtonFlow.add {
+        type = "button",
+        caption = { button_prefix .. ".import_models" },
+        tooltip = { tooltip_prefix .. ".import_models" },
+        name = prefix .. "-import_models"
+    }
+    b.style.width = 100
+
     f = modelButtonFlow.add {
         type = "button",
         name = prefix .. "-ok_button",
-        caption = {button_prefix .. ".ok"}
+        caption = { button_prefix .. ".ok" }
     }
     f.visible = false
     f.style.width = 160
     f = modelButtonFlow.add {
         type = "button",
         name = prefix .. "-cancel_button",
-        caption = {button_prefix .. ".cancel"}
+        caption = { button_prefix .. ".cancel" }
     }
     f.visible = false
     f.style.width = 160
 
 
-    local title_flow = frame.add{
+    local title_flow = frame.add {
         type = "flow",
         direction = "horizontal"
     }
     title_flow.style.top_margin = 5
     local label = title_flow.add {
         type = "label",
-        caption = {prefix .. ".title_label"}
+        caption = { prefix .. ".title_label" }
     }
     local ftitle = title_flow.add {
-        type="textfield",
+        type = "textfield",
         name = prefix .. "-title",
         text = procinfo.label or "",
-        tooltip = {prefix.."-tooltip.title"}
+        tooltip = { prefix .. "-tooltip.title" }
     }
     ftitle.style.width = 300
 end
@@ -283,14 +298,14 @@ end
 local function get_model_flow(player)
     return
         tools.get_child(player.gui.left[internal_panel_name], "model_flow") or
-            {}
+        {}
 end
 
 ---@param player LuaPlayer
 ---@return LuaGuiElement
 local function get_model_button_flow(player)
     return tools.get_child(player.gui.left[internal_panel_name],
-                           "model_button_flow") or {}
+        "model_button_flow") or {}
 end
 
 ---@param player LuaPlayer
@@ -298,7 +313,6 @@ end
 ---@param action_mode boolean
 ---@param ok_text string | string[] | nil
 local function set_label_mode(player, text_mode, action_mode, ok_text)
-
     local model_flow = get_model_flow(player)
     local model_button_flow = get_model_button_flow(player)
 
@@ -309,6 +323,8 @@ local function set_label_mode(player, text_mode, action_mode, ok_text)
     model_button_flow[prefix .. "-apply_model"].visible = not action_mode
     model_button_flow[prefix .. "-import_model"].visible = not action_mode
     model_button_flow[prefix .. "-remove_model"].visible = not action_mode
+    model_button_flow[prefix .. "-import_models"].visible = not action_mode
+    model_button_flow[prefix .. "-export_models"].visible = not action_mode
 
     model_flow[prefix .. "-model_name"].visible = text_mode
     model_button_flow[prefix .. "-ok_button"].visible = action_mode
@@ -328,7 +344,6 @@ local function refresh_model_list(player, procinfo)
 end
 
 local function add_model(player)
-
     local procinfo = global.surface_map[player.surface.name]
     local model_flow = get_model_flow(player)
     local model_name = model_flow[prefix .. "-model_name"].text
@@ -337,7 +352,7 @@ local function add_model(player)
         procinfo.model = nil
     else
         if build.get_model(player.force, procinfo.processor.name, model_name) then
-            player.print {message_prefix .. ".model_already_exists"}
+            player.print { message_prefix .. ".model_already_exists" }
             return
         end
         procinfo.model = model_name
@@ -358,7 +373,6 @@ end
 
 ---@param player LuaPlayer
 local function import_model(player)
-
     --- @type ProcInfo
     local procinfo = global.surface_map[player.surface.name]
     if procinfo.model == nil then return end
@@ -368,7 +382,7 @@ local function import_model(player)
     if not model_info then return end
 
     local position = player.position
-    player.teleport {-EDITOR_SIZE / 2 + 1, -EDITOR_SIZE / 2 + 1}
+    player.teleport { -EDITOR_SIZE / 2 + 1, -EDITOR_SIZE / 2 + 1 }
     editor.clean_surface(procinfo)
     procinfo.circuits = model_info.circuits
     procinfo.blueprint = model_info.blueprint
@@ -388,13 +402,12 @@ local function import_model(player)
     end
 
     local x, y = editor.find_room(player.surface, position.x, position.y)
-    player.teleport({x, y})
+    player.teleport({ x, y })
     input.apply_parameters(procinfo)
 end
 
 ---@param player LuaPlayer
 local function rename_model(player)
-
     ---@type ProcInfo
     local procinfo = global.surface_map[player.surface.name]
     if procinfo.model == nil then return end
@@ -413,7 +426,7 @@ local function rename_model(player)
     if new_model == "" then return end
 
     if build.get_model(player.force, pmodel, new_model) then
-        player.print {message_prefix .. ".model_already_exists"}
+        player.print { message_prefix .. ".model_already_exists" }
         return
     end
 
@@ -423,7 +436,6 @@ local function rename_model(player)
         ---@cast p ProcInfo
         if p.processor and p.processor.valid and p.processor.force ==
             player.force and p.processor.name == pmodel then
-
             if p.model == old_model then p.model = new_model end
             if p.blueprint then
                 p.blueprint = build.rename(p.blueprint, old_model, new_model, pmodel)
@@ -433,11 +445,11 @@ local function rename_model(player)
 
     local model1s = build.get_models(player.force, commons.processor_name)
     local model2s = build.get_models(player.force, commons.processor_name_1x1)
-    for _, list in pairs({model1s, model2s}) do
+    for _, list in pairs({ model1s, model2s }) do
         for _, model in pairs(list) do
             if model.blueprint then
                 model.blueprint = build.rename(model.blueprint, old_model,
-                                               new_model, pmodel)
+                    new_model, pmodel)
             end
         end
     end
@@ -458,7 +470,6 @@ end
 ---@return boolean
 local function check_model_in_references(models, model_name, references,
                                          already_checked)
-
     if not references then return false end
     if references[model_name] then return true end
     for m, _ in pairs(references) do
@@ -468,7 +479,7 @@ local function check_model_in_references(models, model_name, references,
             local model = models[m]
             if model then
                 if check_model_in_references(models, model_name,
-                                             model.references, already_checked) then
+                        model.references, already_checked) then
                     return true
                 end
             end
@@ -482,7 +493,6 @@ end
 ---@param current ProcInfo
 ---@return integer
 function editor.update_model(procinfo, model, current)
-
     if procinfo == current then return 0 end
 
     local count = 0
@@ -500,10 +510,9 @@ function editor.update_model(procinfo, model, current)
         count = 1
         editor.draw_sprite(procinfo)
     else
-
         if procinfo.surface ~= nil then
             local processors = procinfo.surface.find_entities_filtered {
-                name = {commons.processor_name, commons.processor_name_1x1}
+                name = { commons.processor_name, commons.processor_name_1x1 }
             }
 
             for _, processor in pairs(processors) do
@@ -511,8 +520,8 @@ function editor.update_model(procinfo, model, current)
                     local procinfo1 = get_procinfo(processor, false)
                     if procinfo1 then
                         count = count +
-                                    editor.update_model(procinfo1, model,
-                                                        current)
+                            editor.update_model(procinfo1, model,
+                                current)
                     end
                 end
             end
@@ -528,7 +537,6 @@ end
 
 ---@param player LuaPlayer
 local function apply_model(player)
-
     ---@type ProcInfo
     local model_procinfo = global.surface_map[player.surface.name]
     if not model_procinfo.model then return end
@@ -586,7 +594,6 @@ end
 
 ---@param player LuaPlayer
 local function remove_model(player)
-
     ---@type ProcInfo
     local procinfo = global.surface_map[player.surface.name]
 
@@ -599,7 +606,6 @@ end
 
 ---@param player LuaPlayer
 local function execute_model_action(player)
-
     local model_action = get_vars(player).model_action
     set_label_mode(player, false, false)
     if model_action == "add" then
@@ -618,107 +624,190 @@ end
 -----------------------------------------------------------------
 
 tools.on_event(defines.events.on_gui_elem_changed,
----@param e EventData.on_gui_elem_changed
-               function(e)
-    local player = game.players[e.player_index]
-    local name
-    if e.element.name == prefix .. "-sprite1" then
-        name = "sprite1"
-    elseif e.element.name == prefix .. "-sprite2" then
-        name = "sprite2"
-    else
-        return
-    end
+    ---@param e EventData.on_gui_elem_changed
+    function(e)
+        local player = game.players[e.player_index]
+        local name
+        if e.element.name == prefix .. "-sprite1" then
+            name = "sprite1"
+        elseif e.element.name == prefix .. "-sprite2" then
+            name = "sprite2"
+        else
+            return
+        end
 
-    local procinfo = global.surface_map[player.surface.name]
-    if not procinfo then return end
-    procinfo[name] =
-        tools.signal_to_sprite(e.element.elem_value --[[@as SignalID]] )
-    editor.draw_sprite(procinfo)
-end)
+        local procinfo = global.surface_map[player.surface.name]
+        if not procinfo then return end
+        procinfo[name] =
+            tools.signal_to_sprite(e.element.elem_value --[[@as SignalID]])
+        editor.draw_sprite(procinfo)
+    end)
 
 tools.on_event(defines.events.on_gui_selection_state_changed,
----@param e EventData.on_gui_selection_state_changed
-               function(e)
+    ---@param e EventData.on_gui_selection_state_changed
+    function(e)
+        if not e.element.valid or e.element.name ~= prefix .. "-model_list" then return end
 
-    if not e.element.valid or e.element.name ~= prefix .. "-model_list" then return end
-
-    local player = game.players[e.player_index]
-    local procinfo = global.surface_map[player.surface.name]
-    if e.element.selected_index == 1 then
-        procinfo.model = nil
-    else
-        procinfo.model = e.element.items[e.element.selected_index]
-    end
-end)
+        local player = game.players[e.player_index]
+        local procinfo = global.surface_map[player.surface.name]
+        if e.element.selected_index == 1 then
+            procinfo.model = nil
+        else
+            procinfo.model = e.element.items[e.element.selected_index]
+        end
+    end)
 
 tools.on_event(defines.events.on_gui_confirmed,
----@param e EventData.on_gui_confirmed
-               function(e)
-    if not e.element.valid or e.element.name ~= prefix .. "-model_name" then return end
-    local player = game.players[e.player_index]
-    execute_model_action(player)
-end)
+    ---@param e EventData.on_gui_confirmed
+    function(e)
+        if not e.element.valid or e.element.name ~= prefix .. "-model_name" then return end
+        local player = game.players[e.player_index]
+        execute_model_action(player)
+    end)
 
 tools.on_gui_click(prefix .. "-new_model_button",
----@param e EventData.on_gui_click
-                   function(e)
-    local player = game.players[e.player_index]
-    get_vars(player).model_action = "add"
-    set_label_mode(player, true, true, {button_prefix .. ".new_model"})
-end)
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        get_vars(player).model_action = "add"
+        set_label_mode(player, true, true, { button_prefix .. ".new_model" })
+    end)
 
 tools.on_gui_click(prefix .. "-rename_button",
----@param e EventData.on_gui_click
-                   function(e)
-    local player = game.players[e.player_index]
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
 
-    local procinfo = global.surface_map[player.surface.name]
-    if procinfo.model == nil then return end
+        local procinfo = global.surface_map[player.surface.name]
+        if procinfo.model == nil then return end
 
-    local model_flow = get_model_flow(player)
-    model_flow[prefix .. "-model_name"].text = procinfo.model
+        local model_flow = get_model_flow(player)
+        model_flow[prefix .. "-model_name"].text = procinfo.model
 
-    get_vars(player).model_action = "rename"
-    set_label_mode(player, true, true, {button_prefix .. ".rename_model"})
-end)
+        get_vars(player).model_action = "rename"
+        set_label_mode(player, true, true, { button_prefix .. ".rename_model" })
+    end)
 
 tools.on_gui_click(prefix .. "-import_model", ---@param e EventData.on_gui_click
-function(e)
-    local player = game.players[e.player_index]
-    get_vars(player).model_action = "import"
-    set_label_mode(player, false, true,
-                   {button_prefix .. ".import_model_confirm"})
-end)
+    function(e)
+        local player = game.players[e.player_index]
+        get_vars(player).model_action = "import"
+        set_label_mode(player, false, true,
+            { button_prefix .. ".import_model_confirm" })
+    end)
 
 tools.on_gui_click(prefix .. "-apply_model", ---@param e EventData.on_gui_click
-function(e)
-    local player = game.players[e.player_index]
-    get_vars(player).model_action = "apply"
-    set_label_mode(player, false, true,
-                   {button_prefix .. ".apply_model_confirm"})
-end)
+    function(e)
+        local player = game.players[e.player_index]
+        get_vars(player).model_action = "apply"
+        set_label_mode(player, false, true,
+            { button_prefix .. ".apply_model_confirm" })
+    end)
 
 tools.on_gui_click(prefix .. "-remove_model", ---@param e EventData.on_gui_click
-function(e)
-    local player = game.players[e.player_index]
-    get_vars(player).model_action = "remove"
-    set_label_mode(player, false, true,
-                   {button_prefix .. ".remove_model_confirm"})
-end)
+    function(e)
+        local player = game.players[e.player_index]
+        get_vars(player).model_action = "remove"
+        set_label_mode(player, false, true,
+            { button_prefix .. ".remove_model_confirm" })
+    end)
+
+tools.on_gui_click(prefix .. "-export_models", ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+
+        player.clear_cursor()
+
+        local item = player.cursor_stack
+        item.set_stack({ name = "blueprint-book", count = 1 })
+
+        local inventory = item.get_inventory(defines.inventory.item_main)
+        ---@cast inventory -nil
+
+        local index = 1
+        for _, processor_name in pairs({ commons.processor_name_1x1, commons.processor_name }) do
+            local models = build.get_models(player.force, processor_name)
+
+            if models then
+                for name, model in pairs(models) do
+                    inventory.insert { name = "blueprint", count = 1 }
+                    local bp = inventory[index]
+                    index = index + 1
+                    bp.set_blueprint_entities {
+                        {
+                            entity_number = 1,
+                            name = processor_name,
+                            position = { 0, 0 },
+                            direction = defines.direction.north,
+                            tags = {
+                                model = model.name,
+                                sprite1 = model.sprite1,
+                                sprite2 = model.sprite2,
+                                blueprint = model.blueprint,
+                                references=model.references
+                            }
+                        }
+                    }
+                    bp.label = model.name
+                end
+            end
+        end
+    end)
+
+tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        local stack = player.cursor_stack
+        if not stack or not stack.is_blueprint_book then
+            player.print { "compaktcircuit-message.need_a_blueprint_book" }
+            return
+        end
+
+        local inventory = stack.get_inventory(defines.inventory.item_main)
+        ---@cast inventory -nil
+
+        for i = 1, #inventory do
+            ---@type LuaItemStack
+            local bp = inventory[i]
+            if bp and bp.is_blueprint then
+                local entities = bp.get_blueprint_entities()
+                local model_name = bp.label
+                if entities and #entities == 1 then
+                    local proc = entities[1]
+                    if proc.name == commons.processor_name or proc.name == commons.processor_name_1x1 then
+                        local tags = proc.tags
+
+                        if not build.get_model(player.force, proc.name, model_name) then
+                            local models = build.get_models(player.force, proc.name)
+                            models[model_name] = {
+                                blueprint = tags.blueprint --[[@as string]],
+                                tick = game.tick,
+                                name = model_name,
+                                sprite1 = tags.sprite1 --[[@as string]],
+                                sprite2 = tags.sprite2 --[[@as string]],
+                                references = tags.references --[[@as string[] ]]
+                            }
+                        end
+                    end
+                end
+            end
+        end
+        local procinfo = global.surface_map[player.surface.name]
+        refresh_model_list(player, procinfo)
+    end)
 
 tools.on_gui_click(prefix .. "-cancel_button",
----@param e EventData.on_gui_click
-                   function(e)
-    local player = game.players[e.player_index]
-    set_label_mode(player, false, false)
-end)
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        set_label_mode(player, false, false)
+    end)
 
 tools.on_gui_click(prefix .. "-ok_button", ---@param e EventData.on_gui_click
-function(e)
-    local player = game.players[e.player_index]
-    execute_model_action(player)
-end)
+    function(e)
+        local player = game.players[e.player_index]
+        execute_model_action(player)
+    end)
 
 -----------------------------------------------------------------
 
@@ -730,7 +819,7 @@ end)
 function editor.find_room(surface, x, y)
     local count = 0
     while true do
-        local entities = surface.find_entities({{x - 1, y - 1}, {x + 1, y + 1}})
+        local entities = surface.find_entities({ { x - 1, y - 1 }, { x + 1, y + 1 } })
         if #entities == 0 then break end
         x = x + 1
         if x > EDITOR_SIZE / 2 - 1 then
@@ -747,7 +836,6 @@ end
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
-
     if global.last_click and global.last_click > game.tick - 120 then return end
     global.last_click = game.tick
 
@@ -760,35 +848,33 @@ function editor.edit_selected(player, processor)
     vars.processor = processor
     local surface = editor.get_or_create_surface(procinfo)
 
-    if procinfo.is_packed then 
-        build.restore_packed_circuits(procinfo) 
+    if procinfo.is_packed then
+        build.restore_packed_circuits(procinfo)
         input.apply_parameters(procinfo)
     end
 
     local x, y = editor.find_room(surface, 0, 0)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
-    player.teleport({x, y}, surface)
+    player.teleport({ x, y }, surface)
 end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
 local function exit_player(procinfo, player)
-
     local origin_surface_name = procinfo.origin_surface_name
     local origin_surface_position = procinfo.origin_surface_position
 
     local origin_surface = game.surfaces[origin_surface_name]
     if not origin_surface or not origin_surface.valid then
         origin_surface_name = "nauvis"
-        origin_surface_position = {x = 0, y = 0}
+        origin_surface_position = { x = 0, y = 0 }
     end
     player.teleport(origin_surface_position, origin_surface_name)
 end
 
 ---@param e EventData.on_gui_click
 local function on_exit_editor(e)
-
     local player = game.players[e.player_index]
     editor.close_iopanel(player)
     display.close(player)
@@ -804,7 +890,6 @@ end
 
 ---@param e EventData.on_gui_checked_state_changed
 local function on_gui_checked_state_changed(e)
-
     if not e.element or e.element.name ~= prefix .. "-is_packed" then return end
     local player = game.players[e.player_index]
 
@@ -819,7 +904,7 @@ end
 function editor.recursive_pack(parent)
     if not parent.surface then return end
     local processors = parent.surface.find_entities_filtered {
-        name = {commons.processor_name, commons.processor_name_1x1}
+        name = { commons.processor_name, commons.processor_name_1x1 }
     }
     for _, processor in pairs(processors) do
         local procinfo = get_procinfo(processor, false)
@@ -837,7 +922,6 @@ end
 ---@param procinfo ProcInfo
 ---@param is_packed boolean
 function editor.set_packed(procinfo, is_packed)
-
     if procinfo.is_packed == is_packed then return end
     procinfo.is_packed = is_packed
     if is_packed then
@@ -855,35 +939,33 @@ end
 
 ---@param procinfo ProcInfo
 function editor.regenerate_packed(procinfo)
-
     if not procinfo.is_packed then return end
 
     build.create_packed_circuit(procinfo)
 end
 
 tools.on_event(defines.events.on_gui_checked_state_changed,
-               on_gui_checked_state_changed)
+    on_gui_checked_state_changed)
 
 ---@param player LuaPlayer
 ---@return boolean
 local function check_stack(player)
-
     local stack = player.cursor_stack
     if stack and stack.valid then
-
         if stack.count > 0 then
-
-            if  stack.name == internal_iopoint_name 
-                or  stack.name == internal_connector_name
-                or  stack.name == display_name
-                or  stack.name == input_name
-                 then return true end
+            if stack.name == internal_iopoint_name
+                or stack.name == internal_connector_name
+                or stack.name == display_name
+                or stack.name == input_name
+            then
+                return true
+            end
 
             local empty_stack = player.get_main_inventory().find_empty_stack()
             if empty_stack then
                 empty_stack.transfer_stack(stack)
             else
-                player.surface.spill_item_stack(player.position, {stack})
+                player.surface.spill_item_stack(player.position, { stack })
             end
             stack.clear()
         end
@@ -895,14 +977,12 @@ end
 
 ---@param e EventData.on_gui_click
 local function on_add_pole(e)
-
     local player = game.players[e.player_index]
     if check_stack(player) then player.cursor_ghost = internal_iopoint_name end
 end
 
 ---@param e EventData.on_gui_click
 local function on_add_internal_connector(e)
-
     local player = game.players[e.player_index]
     if check_stack(player) then
         player.cursor_ghost = internal_connector_name
@@ -911,7 +991,6 @@ end
 
 ---@param e EventData.on_gui_click
 local function on_add_display(e)
-
     local player = game.players[e.player_index]
     if check_stack(player) then
         player.cursor_ghost = display_name
@@ -920,7 +999,6 @@ end
 
 ---@param e EventData.on_gui_click
 local function on_add_input(e)
-
     local player = game.players[e.player_index]
     if check_stack(player) then
         player.cursor_ghost = commons.input_name
@@ -931,20 +1009,18 @@ end
 tools.on_gui_click(prefix .. "-exit_editor", on_exit_editor)
 tools.on_gui_click(prefix .. "-add_iopole", on_add_pole)
 tools.on_gui_click(prefix .. "-add_internal_connector",
-                   on_add_internal_connector)
+    on_add_internal_connector)
 tools.on_gui_click(prefix .. "-add_display",
-                   on_add_display)
+    on_add_display)
 tools.on_gui_click(prefix .. "-add_input",
-                   on_add_input)
-                   
+    on_add_input)
+
 ---------------------------------------------------------------
 
 ---@param procinfo ProcInfo
 ---@return LuaSurface
 function editor.get_or_create_surface(procinfo)
-
     if not global.surface_map then
-
         ---@type table<string, ProcInfo>
         global.surface_map = {}
     end
@@ -963,7 +1039,7 @@ function editor.get_or_create_surface(procinfo)
 
         surface.always_day = true
         surface.show_clouds = false
-        surface.request_to_generate_chunks({0, 0}, 8)
+        surface.request_to_generate_chunks({ 0, 0 }, 8)
         surface.force_generate_chunk_requests()
         surface.destroy_decoratives({})
 
@@ -974,15 +1050,15 @@ function editor.get_or_create_surface(procinfo)
         end
 
         for _, tile in ipairs(surface.find_tiles_filtered {
-            position = {0, 0},
+            position = { 0, 0 },
             radius = EDITOR_SIZE + 2
         }) do
             local position = tile.position
             if (math.abs(position.x) > EDITOR_SIZE / 2 or math.abs(position.y) >
-                EDITOR_SIZE / 2) then
-                table.insert(tiles, {name = "out-of-map", position = position})
+                    EDITOR_SIZE / 2) then
+                table.insert(tiles, { name = "out-of-map", position = position })
             else
-                table.insert(tiles, {name = tile_proto, position = position})
+                table.insert(tiles, { name = tile_proto, position = position })
             end
         end
 
@@ -1000,7 +1076,7 @@ function editor.clean_surface(procinfo)
     if not procinfo.surface then return end
     for _, entity in ipairs(procinfo.surface.find_entities()) do
         if entity.valid and entity.type ~= "character" then
-            if not entity.mine({raise_destroyed = true}) then
+            if not entity.mine({ raise_destroyed = true }) then
                 entity.destroy()
             end
         end
@@ -1017,13 +1093,12 @@ end
 
 ---@param procinfo ProcInfo
 function editor.connect_energy(procinfo)
-
     local processor = procinfo.processor
     local in_pole = procinfo.in_pole
     if not in_pole or not in_pole.valid then
         in_pole = procinfo.surface.create_entity {
             name = prefix .. "-energy_pole",
-            position = {EDITOR_SIZE / 2 + 4, 4},
+            position = { EDITOR_SIZE / 2 + 4, 4 },
             force = processor.force
         }
         procinfo.in_pole = in_pole
@@ -1034,7 +1109,7 @@ function editor.connect_energy(procinfo)
     if not generator or not generator.valid then
         generator = procinfo.surface.create_entity {
             name = prefix .. "-energy_source",
-            position = {EDITOR_SIZE / 2 + 4, 10},
+            position = { EDITOR_SIZE / 2 + 4, 10 },
             force = processor.force
         }
         procinfo.generator = generator
@@ -1067,8 +1142,8 @@ end
 
 local display_options = {
 
-    {prefix .. "-dropdown.all"}, {prefix .. "-dropdown.one_line"},
-    {prefix .. "-dropdown.none"}
+    { prefix .. "-dropdown.all" }, { prefix .. "-dropdown.one_line" },
+    { prefix .. "-dropdown.none" }
 }
 
 ---@param player LuaPlayer
@@ -1096,7 +1171,7 @@ function editor.open_iopole(player, entity)
         type = "frame",
         direction = "vertical",
         name = iopanel_name,
-        caption = {prefix .. "-iopanel.title"}
+        caption = { prefix .. "-iopanel.title" }
     }
 
     local frame = outer_frame.add {
@@ -1105,10 +1180,10 @@ function editor.open_iopole(player, entity)
         style = "inside_shallow_frame_with_padding",
     }
 
-    local flow = frame.add {type = "flow", direction = "horizontal"}
+    local flow = frame.add { type = "flow", direction = "horizontal" }
     local label1 = flow.add {
         type = "label",
-        caption = {label_prefix .. ".iopole_id"}
+        caption = { label_prefix .. ".iopole_id" }
     }
     label1.style.width = 200
     local combo = flow.add {
@@ -1119,10 +1194,10 @@ function editor.open_iopole(player, entity)
     }
     combo.style.width = 100
 
-    flow = frame.add {type = "flow", direction = "horizontal"}
+    flow = frame.add { type = "flow", direction = "horizontal" }
     local label2 = flow.add {
         type = "label",
-        caption = {label_prefix .. ".iopole_name"}
+        caption = { label_prefix .. ".iopole_name" }
     }
     label2.style.width = 200
     local name = flow.add {
@@ -1132,30 +1207,30 @@ function editor.open_iopole(player, entity)
     }
     flow.style.bottom_margin = 10
 
-    flow = frame.add {type = "flow", direction = "horizontal"}
+    flow = frame.add { type = "flow", direction = "horizontal" }
     flow.style.bottom_margin = 10
     label1 = flow.add {
         type = "label",
-        caption = {label_prefix .. ".io_direction"}
+        caption = { label_prefix .. ".io_direction" }
     }
     label1.style.width = 200
     local cb = flow.add {
         type = "checkbox",
-        caption = {checkbox_prefix .. ".io_input"},
+        caption = { checkbox_prefix .. ".io_input" },
         name = prefix .. ".io_input",
         state = iopoint_info.input == true
     }
     cb.style.right_margin = 20
     flow.add {
         type = "checkbox",
-        caption = {checkbox_prefix .. ".io_output"},
+        caption = { checkbox_prefix .. ".io_output" },
         name = prefix .. ".io_output",
         state = iopoint_info.output ~= false
     }
 
-    flow = frame.add {type = "flow", direction = "horizontal"}
+    flow = frame.add { type = "flow", direction = "horizontal" }
     flow.style.bottom_margin = 10
-    flow.add {type = "label", caption = {label_prefix .. ".red_display"}}
+    flow.add { type = "label", caption = { label_prefix .. ".red_display" } }
     flow.add {
         type = "drop-down",
         name = prefix .. ".red_display",
@@ -1166,7 +1241,7 @@ function editor.open_iopole(player, entity)
 
     local d = flow.add {
         type = "label",
-        caption = {label_prefix .. ".green_display"}
+        caption = { label_prefix .. ".green_display" }
     }
     d.style.left_margin = 10
     flow.add {
@@ -1179,14 +1254,13 @@ function editor.open_iopole(player, entity)
 
     frame.add {
         type = "button",
-        caption = {button_prefix .. ".ok"},
+        caption = { button_prefix .. ".ok" },
         name = prefix .. ".iopole_ok"
     }
 end
 
 ---@param e EventData.on_gui_opened
 local function on_gui_open_iopole(e)
-
     local player = game.players[e.player_index]
     local entity = e.entity
     editor.open_iopole(player, entity)
@@ -1198,7 +1272,6 @@ end
 ---@param iopole LuaEntity
 ---@return IOPointInfo?
 function editor.get_iopoint_info(procinfo, iopole)
-
     if not iopole.valid then return nil end
     local iopoint_infos = procinfo.iopoint_infos
     local iopoint_info = iopoint_infos[iopole.unit_number]
@@ -1257,7 +1330,6 @@ end
 
 ---@param e EventData.on_gui_checked_state_changed(
 local function on_gui_checked_state_changed(e)
-
     if not e.element then return end
 
     local name = e.element.name
@@ -1298,7 +1370,6 @@ local function on_gui_text_changed(e)
         iopoint_info.label = e.element.text
         build.update_io_text(iopoint_info)
     elseif e.element.name == prefix .. "-title" then
-
         local procinfo = vars.procinfo --[[@as ProcInfo]]
         ---@type string | nil
         local text
@@ -1320,7 +1391,6 @@ end
 ---@param src_procinfo ProcInfo
 ---@param packed boolean
 function editor.copy_from(procinfo, src_procinfo, packed)
-
     if src_procinfo.blueprint then
         procinfo.blueprint = src_procinfo.blueprint
     elseif src_procinfo.circuits then
@@ -1330,7 +1400,6 @@ function editor.copy_from(procinfo, src_procinfo, packed)
     end
 
     if not procinfo.is_packed then
-
         if packed then
             editor.delete_surface(procinfo)
             build.create_packed_circuit(procinfo)
@@ -1349,7 +1418,6 @@ end
 
 ---@param procinfo ProcInfo
 function editor.delete_surface(procinfo)
-
     if not procinfo.surface then return end
 
     editor.clean_surface(procinfo)
@@ -1374,13 +1442,12 @@ function editor.on_pre_surface_deleted(e)
 end
 
 tools.on_event(defines.events.on_pre_surface_deleted,
-               editor.on_pre_surface_deleted)
+    editor.on_pre_surface_deleted)
 
 ---------------------------------------------------------------
 
 ---@param procinfo ProcInfo
 function editor.draw_sprite(procinfo)
-
     local processor = procinfo.processor
     if not (processor and processor.valid) then return end
 
@@ -1403,12 +1470,13 @@ function editor.draw_sprite(procinfo)
         scale2 = 0.6
     end
 
-    if procinfo.sprite1 then
+    local sprite1 = ccutils.check_sprite(procinfo.sprite1)
+    if sprite1 then
         local id = rendering.draw_sprite {
             surface = processor.surface,
-            sprite = procinfo.sprite1,
+            sprite = sprite1,
             target = processor,
-            target_offset = {0, target_y * scale},
+            target_offset = { 0, target_y * scale },
             x_scale = scale,
             y_scale = scale,
             render_layer = "lower-object"
@@ -1416,12 +1484,13 @@ function editor.draw_sprite(procinfo)
         table.insert(ids, id)
     end
 
-    if procinfo.sprite2 then
+    local sprite2 = ccutils.check_sprite(procinfo.sprite2)
+    if sprite2 then
         local id = rendering.draw_sprite {
             surface = processor.surface,
-            sprite = procinfo.sprite2,
+            sprite = sprite2,
             target = processor,
-            target_offset = {0, target_y * scale},
+            target_offset = { 0, target_y * scale },
             x_scale = scale2,
             y_scale = scale2,
             render_layer = "lower-object"
@@ -1436,7 +1505,6 @@ end
 
 ---@param e EventData.on_player_changed_surface
 local function on_player_changed_surface(e)
-
     local player = game.players[e.player_index]
     local vars = get_vars(player)
     local procinfo = vars.procinfo
@@ -1452,7 +1520,6 @@ local function on_player_changed_surface(e)
     -- Exiting surface
     if procinfo and procinfo.surface and procinfo.surface.valid and
         procinfo.surface.index == e.surface_index then
-
         editor.close_iopanel(player)
         editor.close_editor_panel(player)
 
@@ -1462,7 +1529,6 @@ local function on_player_changed_surface(e)
         procinfo.tick = game.tick
         build.save_packed_circuits(procinfo)
         if (procinfo.is_packed) then
-
             if is_standard_exit then
                 editor.delete_surface(procinfo)
                 local _, recursionError = build.create_packed_circuit(procinfo)
@@ -1483,7 +1549,6 @@ local function on_player_changed_surface(e)
     local surface_name = player.surface.name
     procinfo = global.surface_map[surface_name]
     if procinfo then
-
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
         editor.create_editor_panel(player, procinfo)
@@ -1501,19 +1566,18 @@ end)
 tools.on_event(defines.events.on_gui_opened, on_gui_open_iopole)
 tools.on_event(defines.events.on_gui_confirmed, on_gui_confirmed)
 tools.on_event(defines.events.on_gui_selection_state_changed,
-               on_gui_selection_state_changed)
+    on_gui_selection_state_changed)
 tools.on_event(defines.events.on_gui_checked_state_changed,
-               on_gui_checked_state_changed)
+    on_gui_checked_state_changed)
 tools.on_event(defines.events.on_gui_text_changed, on_gui_text_changed)
 tools.on_event(defines.events.on_player_changed_surface,
-               on_player_changed_surface)
+    on_player_changed_surface)
 
 --------------------------------------------------------------------------------------
 
 ---@param procinfo ProcInfo
 ---@return table<integer, IOPointInfo>
 local function get_iopoint_map(procinfo)
-
     local map = {}
     for _, iopoint_info in pairs(procinfo.iopoint_infos) do
         if iopoint_info.index then map[iopoint_info.index] = iopoint_info end
@@ -1533,7 +1597,6 @@ end
 ---@param index integer
 ---@return integer
 local function check_ipoint_index(procinfo, index)
-
     if global.surface_restoring then return index end
 
     local map = get_iopoint_map(procinfo)
@@ -1550,7 +1613,7 @@ end
 ---@param procinfo ProcInfo
 local function init_internal_point(entity, tags, procinfo)
     ---@type IOPointInfo
-    local circuit = {label = ""}
+    local circuit = { label = "" }
     local label = ""
     local index
     if tags then
@@ -1581,12 +1644,11 @@ end
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
-
     if not entity or not entity.valid then return end
 
     local name = entity.name
     local procinfo = global.surface_map and
-                         global.surface_map[entity.surface.name]
+        global.surface_map[entity.surface.name]
 
     if name == internal_iopoint_name then
         if not procinfo then
@@ -1611,7 +1673,7 @@ local function on_build(entity, e)
             return
         end
     elseif name == "entity-ghost" and is_allowed(entity.ghost_name) then
-        if  entity.ghost_name == internal_iopoint_name or 
+        if entity.ghost_name == internal_iopoint_name or
             entity.ghost_name == internal_connector_name or
             entity.ghost_name == display_name or
             entity.ghost_name == input_name
@@ -1620,20 +1682,20 @@ local function on_build(entity, e)
                 entity.destroy()
                 return
             end
-            local d, new = entity.silent_revive {raise_revive = true}
+            local d, new = entity.silent_revive { raise_revive = true }
         else
             if not procinfo then return end
             if e.player_index then
                 local player = game.players[e.player_index]
                 local controller_type = player.controller_type
                 if controller_type == defines.controllers.god then
-                    entity.revive {raise_revive = true}
+                    entity.revive { raise_revive = true }
                 end
             end
         end
     elseif procinfo and not is_allowed(name) then
         if not global.destroy_list then
-            global.destroy_list = {entity}
+            global.destroy_list = { entity }
         else
             table.insert(global.destroy_list, entity)
         end
@@ -1642,24 +1704,23 @@ end
 
 ---@param entity LuaEntity
 local function destroy_invalid(entity)
-
     entity.surface.create_entity {
         name = "flying-text",
         position = entity.position,
-        text = {message_prefix .. ".not_allowed"}
+        text = { message_prefix .. ".not_allowed" }
     }
     local m = entity.prototype.mineable_properties
     local position = entity.position
     local surface = entity.surface
     local force = entity.force --[[@as LuaForce]]
-    if not entity.mine {raise_destroyed = true, ignore_minable = true} then
+    if not entity.mine { raise_destroyed = true, ignore_minable = true } then
         entity.destroy()
     end
     if m.minable and m.products then
         for _, p in pairs(m.products) do
             surface.spill_item_stack(position,
-                                     {name = p.name, count = p.amount}, true,
-                                     force)
+                { name = p.name, count = p.amount }, true,
+                force)
         end
     end
 end
@@ -1702,19 +1763,17 @@ end
 
 ---@param e EventData.on_marked_for_deconstruction
 local function on_marked_for_deconstruction(e)
-
     local player_index = e.player_index
     if not player_index then return end
 
     local player = game.players[e.player_index]
     local entity = e.entity
     local procinfo = global.surface_map and
-                         global.surface_map[entity.surface.name]
+        global.surface_map[entity.surface.name]
     if not procinfo then return end
 
     local controller_type = player.controller_type
     if controller_type == defines.controllers.god then
-
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
@@ -1727,11 +1786,11 @@ tools.on_event(defines.events.on_robot_built_entity, on_robot_built)
 tools.on_event(defines.events.script_raised_built, on_script_built)
 tools.on_event(defines.events.script_raised_revive, on_script_revive)
 tools.on_event(defines.events.on_marked_for_deconstruction,
-               on_marked_for_deconstruction)
+    on_marked_for_deconstruction)
 
 --------------------------------------------------------------------------------------
 
-local filter_names = {{}}
+local filter_names = { {} }
 
 ---@type string[]
 local surface_name_filter = {
@@ -1759,7 +1818,6 @@ end
 local function on_mined(ev)
     local entity = ev.entity
     if entity.name == internal_iopoint_name then
-
         editor.destroy_internal_iopoint(entity)
         if ev.buffer then ev.buffer.clear() end
     elseif entity.name == internal_connector_name then
@@ -1775,13 +1833,13 @@ end
 local function on_player_mined_entity(ev) on_mined(ev) end
 
 local mine_filter = {
-    {filter = 'name', name = internal_iopoint_name},
-    {filter = 'name', name = internal_connector_name},
-    {filter = 'name', name = display_name},
-    {filter = 'name', name = input_name}
+    { filter = 'name', name = internal_iopoint_name },
+    { filter = 'name', name = internal_connector_name },
+    { filter = 'name', name = display_name },
+    { filter = 'name', name = input_name }
 }
 tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity,
-               mine_filter)
+    mine_filter)
 tools.on_event(defines.events.on_robot_mined_entity, on_mined, mine_filter)
 tools.on_event(defines.events.on_entity_died, on_mined, mine_filter)
 tools.on_event(defines.events.script_raised_destroy, on_mined, mine_filter)
@@ -1805,7 +1863,6 @@ local forbidden_prototypes = {
 
 ---@param driver RemoteInterface
 function editor.add_combinator(driver)
-
     if remote_name_map[driver.name] then return end
 
     local proto = game.entity_prototypes[driver.name]
@@ -1824,7 +1881,6 @@ end
 
 ---@param name string
 function editor.remove_combinator(name)
-
     local driver = remote_name_map[name]
     if not driver then return end
 
@@ -1882,8 +1938,7 @@ remote.add_interface(prefix, {
         create_entity(info, surface, force)
             create a normal entity from information
             (position, direction, name) is in 'info' structure
-        
+
 --]]
 
 return editor
-
