@@ -21,11 +21,11 @@ local input_name = commons.input_name
 local special = "@"
 
 local iopoint_text_color = commons.get_color(
-                               settings.startup["compaktcircuit-iopoint_text_color"]
-                                   .value, {0, 0, 1, 1})
+    settings.startup["compaktcircuit-iopoint_text_color"]
+    .value, { 0, 0, 1, 1 })
 local iopoint_name = commons.iopoint_name
 
-IsProcessorRebuilding=false
+IsProcessorRebuilding = false
 
 --- @type table<string, string>
 local allowed_name_map = {
@@ -102,13 +102,13 @@ function build.create_blueprint(procinfo, player)
     ---@type LuaItemStack
     local bp = inv[1]
 
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     local entities = bp.create_blueprint {
         surface = surface,
         force = procinfo.processor.force,
         area = {
-            {-EDITOR_SIZE / 2 - 1, -EDITOR_SIZE / 2 - 1},
-            {EDITOR_SIZE / 2 + 1, EDITOR_SIZE / 2 + 1}
+            { -EDITOR_SIZE / 2 - 1, -EDITOR_SIZE / 2 - 1 },
+            { EDITOR_SIZE / 2 + 1,  EDITOR_SIZE / 2 + 1 }
         }
     }
 
@@ -126,13 +126,13 @@ function build.save_packed_circuits2(procinfo)
     ---@type LuaItemStack
     local bp = inv[1]
 
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     local entities = bp.create_blueprint {
         surface = surface,
         force = procinfo.processor.force,
         area = {
-            {-EDITOR_SIZE / 2 - 1, -EDITOR_SIZE / 2 - 1},
-            {EDITOR_SIZE / 2 + 1, EDITOR_SIZE / 2 + 1}
+            { -EDITOR_SIZE / 2 - 1, -EDITOR_SIZE / 2 - 1 },
+            { EDITOR_SIZE / 2 + 1,  EDITOR_SIZE / 2 + 1 }
         }
     }
 
@@ -157,13 +157,13 @@ function build.save_packed_circuits2(procinfo)
             if remote_name_map[name] then
                 local remote_driver = remote_name_map[name]
                 local remoteInfo = remote.call(remote_driver.interface_name,
-                                               "get_info", entity)
+                    "get_info", entity)
                 bp.set_blueprint_entity_tags(index, remoteInfo)
             elseif name == "small-lamp" then
                 if not area then
                     area = {
-                        min = {x = position.x, y = position.y},
-                        max = {x = position.x, y = position.y}
+                        min = { x = position.x, y = position.y },
+                        max = { x = position.x, y = position.y }
                     }
                 else
                     if position.x < area.min.x then
@@ -194,7 +194,7 @@ function build.save_packed_circuits2(procinfo)
                     }
                 end
             elseif name == iopoint_name then
-                table.insert(iopoints, {id = entity.unit_number, index = index})
+                table.insert(iopoints, { id = entity.unit_number, index = index })
             elseif name == internal_iopoint_name then
                 local iopoint_info = procinfo.iopoint_infos[entity.unit_number]
                 if iopoint_info then
@@ -238,23 +238,23 @@ function build.save_packed_circuits2(procinfo)
 
         if area then
             local size = math.max(area.max.x - area.min.x,
-                                  area.max.y - area.min.y)
+                area.max.y - area.min.y)
             local width = 1.5
             local lamp_name
             local size1 = size + 1
 
             local selection_box = procinfo.processor.selection_box
             local selection_width = selection_box.right_bottom.x -
-                                        selection_box.left_top.x
+                selection_box.left_top.x
             local scale = selection_width / 2.4
 
             if size < 1 then size = 1 end
 
             local resize_coef = 0.58
             local lamp_index = math.ceil(math.log(
-                                             math.ceil(size1 / width *
-                                                           resize_coef / scale),
-                                             2)) + 1
+                math.ceil(size1 / width *
+                    resize_coef / scale),
+                2)) + 1
             if lamp_index < 1 then
                 lamp_index = 1
             elseif lamp_index >= 8 then
@@ -274,9 +274,9 @@ function build.save_packed_circuits2(procinfo)
                 if entity.name == "small-lamp" then
                     local x = (entity.position.x - center.x) * coef
                     local y = (entity.position.y - center.y) * coef - scale *
-                                  0.1
+                        0.1
                     bp.set_blueprint_entity_tags(index, {
-                        ext_position = {x = x, y = y},
+                        ext_position = { x = x, y = y },
                         ext_name = lamp_name
                     })
                 end
@@ -335,7 +335,7 @@ function build.restore_packed_circuits2(procinfo)
     local inv = game.create_inventory(1)
     ---@type LuaItemStack
     local bp = inv[1]
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     if bp.import_stack(procinfo.blueprint) ~= 1 then
         local bp_entities = bp.get_blueprint_entities()
         if bp_entities then
@@ -376,12 +376,12 @@ function build.restore_packed_circuits2(procinfo)
                 local entities = bp.build_blueprint {
                     surface = procinfo.surface,
                     force = procinfo.processor.force,
-                    position = {x, y},
+                    position = { x, y },
                     force_build = true
                 }
                 for _, entity in pairs(entities) do
                     if entity.valid then
-                        entity.silent_revive {raise_revive = true}
+                        entity.silent_revive { raise_revive = true }
                     end
                 end
             end
@@ -423,15 +423,15 @@ function build.restore_packed_circuits(procinfo)
                 ["display-plate-sprite-name"] = circuit.sprite_name
             }
 
-            entity = entity.revive {raise_revive = true}
+            entity = entity.revive { raise_revive = true }
             table.insert(entities, entity)
         else
             local entity
             local remote_driver = remote_name_map[name]
             if remote_driver then
                 entity = remote.call(remote_driver.interface_name,
-                                     "create_entity", circuit, procinfo.surface,
-                                     force)
+                    "create_entity", circuit, procinfo.surface,
+                    force)
                 table.insert(entities, entity)
             else
                 entity = procinfo.surface.create_entity {
@@ -451,13 +451,13 @@ function build.restore_packed_circuits(procinfo)
                 if circuit.parameters then
                     local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
                     local parameters = check_parameters(entity.type,
-                                                        circuit.parameters)
+                        circuit.parameters)
                     if parameters then
                         cb.parameters = parameters
                     end
                     if entity.type == "constant-combinator" then
                         cb.enabled = (circuit.enabled == nil and true or
-                                         circuit.enabled) --[[@as boolean]]
+                            circuit.enabled) --[[@as boolean]]
                     end
                 elseif name == internal_iopoint_name then
                     local iopoint_info =
@@ -486,8 +486,8 @@ function build.restore_packed_circuits(procinfo)
                         if not success then
                             debug(
                                 "Fail connect restore:(" .. entity.name .. ":" ..
-                                    entity.unit_number .. "=>" .. target.name ..
-                                    ":" .. target.unit_number .. ")")
+                                entity.unit_number .. "=>" .. target.name ..
+                                ":" .. target.unit_number .. ")")
                         end
                     end
                 end
@@ -505,7 +505,7 @@ function build.create_packed_circuit_v2(procinfo)
     local input_list = {}
     procinfo.input_list = input_list
     local result = build.create_packed_circuit_internal(procinfo, false, {},
-                                                        procinfo, input_list)
+        procinfo, input_list)
     input.normalize(procinfo.input_list)
     input.set_values(procinfo)
     return result
@@ -555,7 +555,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
     local inv = game.create_inventory(1)
     ---@type LuaItemStack
     local bp = inv[1]
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     bp.import_stack(procinfo.blueprint)
 
     local proto = procinfo.processor.prototype
@@ -619,8 +619,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             parameters.first_signal = nil
                             parameters.second_signal = nil
                             for name, value in pairs(
-                                                   bpentity.control_behavior
-                                                       .arithmetic_conditions) do
+                                bpentity.control_behavior
+                                .arithmetic_conditions) do
                                 parameters[name] = value
                             end
                             cb.parameters = parameters
@@ -632,8 +632,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             parameters.first_signal = nil
                             parameters.second_signal = nil
                             for name, value in pairs(
-                                                   bpentity.control_behavior
-                                                       .decider_conditions) do
+                                bpentity.control_behavior
+                                .decider_conditions) do
                                 parameters[name] = value
                             end
                             cb.parameters = parameters
@@ -655,14 +655,14 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                                 })
                             if not success1 or not success2 then
                                 debug("Failed to connect iopoint: " ..
-                                          tags.index .. "," ..
-                                          strip(entity.position) .. " to " ..
-                                          strip(iopoint.position))
+                                    tags.index .. "," ..
+                                    strip(entity.position) .. " to " ..
+                                    strip(iopoint.position))
                                 debug("Failed to connect iopoint: " ..
-                                          entity.name .. " to " .. iopoint.name)
+                                    entity.name .. " to " .. iopoint.name)
                                 debug("Failed to connect iopoint: " ..
-                                          entity.unit_number .. " to " ..
-                                          iopoint.unit_number)
+                                    entity.unit_number .. " to " ..
+                                    iopoint.unit_number)
                             end
                         end
                     elseif name == "small-lamp" and not nolamp then
@@ -673,8 +673,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             local circuit_condition = cb.circuit_condition
                             if bpentity.control_behavior.circuit_condition then
                                 for name, value in pairs(
-                                                       bpentity.control_behavior
-                                                           .circuit_condition) do
+                                    bpentity.control_behavior
+                                    .circuit_condition) do
                                     circuit_condition.condition[name] = value
                                 end
                                 cb.circuit_condition = circuit_condition
@@ -686,8 +686,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                                 if bpentity.control_behavior.logistic_condition then
                                     circuit_condition = cb.logistic_condition
                                     for name, value in pairs(
-                                                           bpentity.control_behavior
-                                                               .logistic_condition) do
+                                        bpentity.control_behavior
+                                        .logistic_condition) do
                                         circuit_condition.condition[name] =
                                             value
                                     end
@@ -700,7 +700,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             local proc_index = tags.proc_index
                             local proc = inner_processors[proc_index]
                             if not proc then
-                                proc = {iopoints = {}}
+                                proc = { iopoints = {} }
                                 inner_processors[proc_index] = proc
                             end
                             proc.iopoints[tags.iopoint_index] = entity
@@ -725,7 +725,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     commons.processor_name_1x1 then
                     local proc = inner_processors[index]
                     if not proc then
-                        proc = {iopoints = {}}
+                        proc = { iopoints = {} }
                         inner_processors[index] = proc
                     end
                     proc.name = name
@@ -738,7 +738,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     proc.inner_input = {
                         x = position.x + bpentity.position.x / 32,
                         y = position.y + bpentity.position.y / 32,
-                        value_id = tags.value_id --[[@as string]] ,
+                        value_id = tags.value_id --[[@as string]],
                         inner_inputs = {},
                         label = proc.label or proc.model
                     }
@@ -752,8 +752,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     y = position.y + bpentity.position.y / 32
                 }
                 local entity = remote.call(remote_driver.interface_name,
-                                           "create_packed_entity", tags,
-                                           surface, pos, force)
+                    "create_packed_entity", tags,
+                    surface, pos, force)
                 if entity then
                     table.insert(entities, entity)
                     index_map[index] = #entities
@@ -792,11 +792,11 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                                         if not success then
                                             debug(
                                                 "Failed to connect: " .. index ..
-                                                    " to " .. link.entity_id ..
-                                                    "(" ..
-                                                    tools.get_constant_name(
-                                                        wire, defines.wire_type) ..
-                                                    ")")
+                                                " to " .. link.entity_id ..
+                                                "(" ..
+                                                tools.get_constant_name(
+                                                    wire, defines.wire_type) ..
+                                                ")")
                                         end
                                     end
                                 end
@@ -812,9 +812,9 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
             if proc.blueprint then
                 local res, update_count1, newErrorModel =
                     build.create_packed_circuit_internal(proc, true,
-                                                         recursionSet, top,
-                                                         proc.inner_input
-                                                             .inner_inputs)
+                        recursionSet, top,
+                        proc.inner_input
+                        .inner_inputs)
                 update_count = update_count + update_count1
                 if newErrorModel then errorModel = newErrorModel end
             end
@@ -852,7 +852,7 @@ function build.create_packed_circuit(procinfo)
 
     local selection_box = procinfo.processor.selection_box
     local selection_width = selection_box.right_bottom.x -
-                                selection_box.left_top.x
+        selection_box.left_top.x
     local scale = selection_width / 2.4
 
     for index, circuit in ipairs(procinfo.circuits) do
@@ -888,12 +888,12 @@ function build.create_packed_circuit(procinfo)
             if circuit.parameters then
                 local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
                 local parameters = check_parameters(entity.type,
-                                                    circuit.parameters)
+                    circuit.parameters)
                 if parameters then
                     cb.parameters = parameters
                     if entity.type == "constant-combinator" then
                         cb.enabled = (circuit.enabled == nil and true or
-                                         circuit.enabled) --[[@as boolean]]
+                            circuit.enabled) --[[@as boolean]]
                     end
                 end
             elseif name == internal_iopoint_name then
@@ -910,13 +910,13 @@ function build.create_packed_circuit(procinfo)
                 })
                 if not success1 or not success2 then
                     debug("Failed to connect iopoint: " .. "," ..
-                              strip(entity.position) .. " to " ..
-                              strip(iopoint.position))
+                        strip(entity.position) .. " to " ..
+                        strip(iopoint.position))
                     debug(
                         "Failed to connect iopoint: " .. entity.name .. " to " ..
-                            iopoint.name)
+                        iopoint.name)
                     debug("Failed to connect iopoint: " .. entity.unit_number ..
-                              " to " .. iopoint.unit_number)
+                        " to " .. iopoint.unit_number)
                 end
             elseif name == "small-lamp" then
                 if circuit.circuit_condition then
@@ -934,8 +934,8 @@ function build.create_packed_circuit(procinfo)
                 y = position.y + circuit.position.y / 32
             }
             entity = remote.call(remote_driver.interface_name,
-                                 "create_packed_entity", circuit, surface, pos,
-                                 force)
+                "create_packed_entity", circuit, surface, pos,
+                force)
             if entity then
                 table.insert(entities, entity)
             else
@@ -958,12 +958,12 @@ function build.create_packed_circuit(procinfo)
                     if not success then
                         debug(
                             "Failed to connect: " .. connection.target_entity ..
-                                "," .. strip(entity.position) .. " to " ..
-                                strip(targetc.position))
+                            "," .. strip(entity.position) .. " to " ..
+                            strip(targetc.position))
                         debug("Failed to connect: " .. entity.name .. " to " ..
-                                  targetc.name)
+                            targetc.name)
                         debug("Failed to connect: " .. entity.unit_number ..
-                                  " to " .. targetc.unit_number)
+                            " to " .. targetc.unit_number)
                     end
                 end
             end
@@ -997,7 +997,7 @@ function build.get_iopoint_map(procinfo)
     ---@type LuaItemStack
     local bp = inv[1]
 
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     if bp.import_stack(procinfo.blueprint) == 1 then return {} end
 
     ---@type table<Entity.unit_number, IOPointInfo>
@@ -1165,14 +1165,19 @@ function build.connect_iopole(procinfo, iopole_info)
     local point = procinfo.iopoints[index]
 
     -- debug("Try connect to iopole: extern=" .. point.unit_number .. "=> internl=" .. iopole_info.entity.unit_number)
-    local success1 = point.connect_neighbour({
-        wire = defines.wire_type.green,
-        target_entity = iopole_info.entity
-    })
-    local success2 = point.connect_neighbour({
-        wire = defines.wire_type.red,
-        target_entity = iopole_info.entity
-    })
+    local target_entity = iopole_info.entity
+
+    local success1, success2
+    if target_entity then
+        success1 = point.connect_neighbour({
+            wire = defines.wire_type.green,
+            target_entity = target_entity
+        })
+        success2 = point.connect_neighbour({
+            wire = defines.wire_type.red,
+            target_entity = target_entity
+        })
+    end
     if not success1 or not success2 then debug("Failed connect to iopole") end
 end
 
@@ -1191,14 +1196,17 @@ function build.disconnect_iopole(procinfo, iopoint_info)
     if index <= 0 then return false end
     local point = procinfo.iopoints[index]
 
-    point.disconnect_neighbour({
-        wire = defines.wire_type.green,
-        target_entity = iopoint_info.entity
-    })
-    point.disconnect_neighbour({
-        wire = defines.wire_type.red,
-        target_entity = iopoint_info.entity
-    })
+    local target_entity = iopoint_info.entity
+    if target_entity then
+        point.disconnect_neighbour({
+            wire = defines.wire_type.green,
+            target_entity = target_entity
+        })
+        point.disconnect_neighbour({
+            wire = defines.wire_type.red,
+            target_entity = target_entity
+        })
+    end
     return true
 end
 
@@ -1238,7 +1246,7 @@ function build.update_io_text(iopoint_info)
             only_in_alt_mode = true,
             alignment = "center",
             use_rich_text = true,
-            target_offset = {0, -4}
+            target_offset = { 0, -4 }
         }
     end
 end
@@ -1284,7 +1292,7 @@ function build.rename(blueprint, old_name, new_name, pmodel)
     local inv = game.create_inventory(1)
     ---@LuaItemStack
     local bp = inv[1]
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     bp.import_stack(blueprint)
 
     local entities = bp.get_blueprint_entities()
@@ -1301,10 +1309,10 @@ function build.rename(blueprint, old_name, new_name, pmodel)
                     if tags.blueprint then
                         local new_blueprint =
                             build.rename(tags.blueprint, old_name, new_name,
-                                         pmodel)
+                                pmodel)
 
                         bp.set_blueprint_entity_tag(index, "blueprint",
-                                                    new_blueprint)
+                            new_blueprint)
                     end
                 end
             end
@@ -1324,7 +1332,7 @@ function build.switch_iopoints(procinfo, index1, index2)
     local inv = game.create_inventory(1)
     ---@type LuaItemStack
     local bp = inv[1]
-    bp.set_stack {name = "blueprint", count = 1}
+    bp.set_stack { name = "blueprint", count = 1 }
     if bp.import_stack(procinfo.blueprint) == 1 then return {} end
 
     local map = {}
