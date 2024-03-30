@@ -1263,7 +1263,7 @@ local function process_meta(rt)
         parameters.second_signal = max_signal.signal
     elseif location == meta_output then
         parameters.output_signal = max_signal.signal
-        if parameters.first_signal.name and
+        if parameters.first_signal and parameters.first_signal.name and
             special_signals[parameters.first_signal.name] then
             parameters.first_signal.name = "signal-A"
         end
