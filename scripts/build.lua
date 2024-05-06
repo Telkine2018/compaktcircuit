@@ -641,28 +641,30 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     elseif name == internal_iopoint_name then
                         if tags then
                             local iopoint = procinfo.iopoints[tags.index]
-                            iopoint.get_or_create_control_behavior()
-                            iopoint.active = false
-                            local success1 =
-                                iopoint.connect_neighbour({
-                                    wire = defines.wire_type.green,
-                                    target_entity = entity
-                                })
-                            local success2 =
-                                iopoint.connect_neighbour({
-                                    wire = defines.wire_type.red,
-                                    target_entity = entity
-                                })
-                            if not success1 or not success2 then
-                                debug("Failed to connect iopoint: " ..
-                                    tags.index .. "," ..
-                                    strip(entity.position) .. " to " ..
-                                    strip(iopoint.position))
-                                debug("Failed to connect iopoint: " ..
-                                    entity.name .. " to " .. iopoint.name)
-                                debug("Failed to connect iopoint: " ..
-                                    entity.unit_number .. " to " ..
-                                    iopoint.unit_number)
+                            if iopoint then
+                                iopoint.get_or_create_control_behavior()
+                                iopoint.active = false
+                                local success1 =
+                                    iopoint.connect_neighbour({
+                                        wire = defines.wire_type.green,
+                                        target_entity = entity
+                                    })
+                                local success2 =
+                                    iopoint.connect_neighbour({
+                                        wire = defines.wire_type.red,
+                                        target_entity = entity
+                                    })
+                                if not success1 or not success2 then
+                                    debug("Failed to connect iopoint: " ..
+                                        tags.index .. "," ..
+                                        strip(entity.position) .. " to " ..
+                                        strip(iopoint.position))
+                                    debug("Failed to connect iopoint: " ..
+                                        entity.name .. " to " .. iopoint.name)
+                                    debug("Failed to connect iopoint: " ..
+                                        entity.unit_number .. " to " ..
+                                        iopoint.unit_number)
+                                end
                             end
                         end
                     elseif name == "small-lamp" and not nolamp then

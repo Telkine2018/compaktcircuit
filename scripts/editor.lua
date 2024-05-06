@@ -397,8 +397,8 @@ local function import_model(player)
     local b_sprite1 = tools.get_child(frame, prefix .. "-sprite1")
     local b_sprite2 = tools.get_child(frame, prefix .. "-sprite2")
     if b_sprite1 and b_sprite2 then
-        b_sprite1.elem_value = tools.sprite_to_signal(model_info.sprite1) --[[@as SignalID ]]
-        b_sprite2.elem_value = tools.sprite_to_signal(model_info.sprite2) --[[@as SignalID ]]
+        b_sprite1.elem_value = ccutils.check_signal_o(tools.sprite_to_signal(model_info.sprite1) --[[@as SignalID ]])
+        b_sprite2.elem_value = ccutils.check_signal_o(tools.sprite_to_signal(model_info.sprite2) --[[@as SignalID ]])
     end
 
     local x, y = editor.find_room(player.surface, position.x, position.y)
