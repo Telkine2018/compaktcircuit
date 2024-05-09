@@ -697,7 +697,7 @@ function display.set_icon(display_info)
 
         if type == display.types.signal then
             local dsignal = display_info.props --[[@as SignalDisplay]]
-            if dsignal.signal then
+            if dsignal.signal and ccutils.check_sprite(dsignal.signal) then
                 display_info.typeid = rendering.draw_sprite {
                     sprite = dsignal.signal,
                     target = display_info.entity,
