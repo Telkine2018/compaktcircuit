@@ -725,7 +725,7 @@ function tools.destroy_entities(master, entity_names)
         },
 		name = entity_names
 	}
-    for _, e in pairs(entities) do if e.valid then e.destroy() end end
+    for _, e in pairs(entities) do if e.valid then e.destroy({raise_destroy = true }) end end
 end
 
 
