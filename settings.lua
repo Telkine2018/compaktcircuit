@@ -91,7 +91,14 @@ data:extend(
 			setting_type = "runtime-global",
 			default_value = false,
 			order="ia"
-		}
+		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-no_processor_in_build",
+			setting_type = "startup",
+			default_value = false,
+			order = "ja"
+		},
 	
 
 })

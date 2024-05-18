@@ -6,6 +6,36 @@ local prefix = commons.prefix
 local debug_mode = commons.debug_mode
 local png = combinators.png
 
+local no_processor_in_build = settings.startup[commons.prefix .. "-no_processor_in_build"].value
+
+local recipe1 = {
+    type = 'recipe',
+    name = commons.processor_name,
+    enabled = false,
+    ingredients = {
+        { 'electronic-circuit', 20 }, { 'advanced-circuit', 30 }
+
+    },
+    result = commons.processor_name
+}
+
+local recipe2 = {
+    type = 'recipe',
+    name = commons.processor_name_1x1,
+    enabled = false,
+    ingredients = {
+        { 'electronic-circuit', 10 }, { 'advanced-circuit', 10 }
+    },
+    result = commons.processor_name_1x1
+}
+
+local preq = "advanced-electronics"
+if not no_processor_in_build then
+    table.insert(recipe1.ingredients, { 'processing-unit', 10 })
+    table.insert(recipe2.ingredients, { 'processing-unit', 3 })
+    preq = "advanced-electronics-2"
+end
+
 data:extend {
 
     -- Item
@@ -40,20 +70,7 @@ data:extend {
     place_result = commons.processor_name,
     stack_size = 1,
     flags = { "hidden", "not-stackable" }
-}, --[[
-	{
-		type = "item-with-tags",
-		name = commons.processor_with_tags_1x1,
-		icon_size = 64,
-		icon = png('item/processor_1x1'),
-		icon_mipmaps = 4,
-		subgroup = 'circuit-network',
-		order = 'p[rocessor]',
-		place_result = commons.processor_name_1x1,
-		stack_size = 1,
-		flags = { "hidden", "not-stackable" }
-	},
---]] {
+}, {
     type = 'item',
     name = commons.iopoint_name,
     icon_size = 32,
@@ -63,26 +80,10 @@ data:extend {
     place_result = commons.iopoint_name,
     stack_size = 50,
     flags = { "hidden", "hide-from-bonus-gui" }
-},     -- Recipe
-    {
-        type = 'recipe',
-        name = commons.processor_name,
-        enabled = false,
-        ingredients = {
-            { 'electronic-circuit', 20 }, { 'advanced-circuit', 30 },
-            { 'processing-unit',    10 }
-        },
-        result = commons.processor_name
-    }, {
-    type = 'recipe',
-    name = commons.processor_name_1x1,
-    enabled = false,
-    ingredients = {
-        { 'electronic-circuit', 10 }, { 'advanced-circuit', 10 },
-        { 'processing-unit',    3 }
-    },
-    result = commons.processor_name_1x1
-},     -- Technology
+}, -- Recipes
+    recipe1,
+    recipe2,
+    -- Technology
     {
         type = 'technology',
         name = prefix .. '-tech',
@@ -92,7 +93,7 @@ data:extend {
             { type = 'unlock-recipe', recipe = commons.processor_name },
             { type = 'unlock-recipe', recipe = commons.processor_name_1x1 }
         },
-        prerequisites = { 'advanced-electronics-2' },
+        prerequisites = { preq },
         unit = {
             count = 100,
             ingredients = {
