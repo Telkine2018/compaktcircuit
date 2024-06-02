@@ -1036,9 +1036,13 @@ local function process_text(rt)
     end
 
     local function clear()
-        if rt.renderid then rendering.destroy(rt.renderid) end
+        if rt.renderid then 
+            rendering.destroy(rt.renderid) 
+            rt.renderid = nil
+        end
         if rt.renderids then
             for _, id in pairs(rt.renderids) do rendering.destroy(id) end
+            rt.renderids = nil
         end
     end
 
@@ -1624,7 +1628,7 @@ local function on_entity_settings_pasted(e)
 
     if dst.name == display_name and src.name == display_name then
         local si = global.display_infos[src.unit_number]
-        if si.props == nil then return end
+        if not si or si.props == nil then return end
         display.register(dst, si.props)
     end
 end
