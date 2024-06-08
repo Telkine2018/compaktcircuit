@@ -718,7 +718,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             x = pos.x,
                             y = pos.y,
                             entity = entity,
-                            value_id = tags.value_id --[[@as string]],
+                            value_id = (tags and tags.value_id) or tools.get_id()  --[[@as string]],
                             label = tags.label --[[@as string]]
                         }
                         table.insert(input_list, input_prop)
@@ -737,10 +737,11 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                         proc.model = tags.model --[[@as string]]
                         proc.label = tags.label --[[@as string]]
                     end
+                    local value_id = (tags and tags.value_id) or tools.get_id()
                     proc.inner_input = {
                         x = position.x + bpentity.position.x / 32,
                         y = position.y + bpentity.position.y / 32,
-                        value_id = tags.value_id --[[@as string]],
+                        value_id = value_id --[[@as string]],
                         inner_inputs = {},
                         label = proc.label or proc.model
                     }
