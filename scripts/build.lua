@@ -32,6 +32,7 @@ local allowed_name_map = {
     ["constant-combinator"] = prefix .. "-cc",
     ["decider-combinator"] = prefix .. "-dc",
     ["arithmetic-combinator"] = prefix .. "-ac",
+    ["programmable-speaker"] = prefix .. "-ps",
     ["big-electric-pole"] = prefix .. "-cc",
     ["small-electric-pole"] = prefix .. "-cc",
     ["medium-electric-pole"] = prefix .. "-cc",
@@ -638,6 +639,25 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             end
                             cb.parameters = parameters
                         end
+                    elseif name == "programmable-speaker" then
+                        local cb = entity.get_or_create_control_behavior() --[[@as LuaProgrammableSpeakerControlBehavior]]
+                        if bpentity.control_behavior then
+                            -- Other branches do wonky deepcopy
+                            -- (table.deepcopy is not reachable? Ig need require("util") in control.lua)
+                            -- But this seems to work with only a reference copy
+                            if bpentity.control_behavior.circuit_condition then
+                                -- Assigning cb.circuit_condition.condition does nothing
+                                -- Ig cb.circuit_condition is copied on read
+                                cb.circuit_condition = {
+                                    condition = bpentity.control_behavior.circuit_condition,
+                                }
+                            end
+                            if bpentity.control_behavior.circuit_parameters then
+                                cb.circuit_parameters = bpentity.control_behavior.circuit_parameters
+                            end
+                        end
+                        entity.parameters = bpentity.parameters
+                        entity.alert_parameters = bpentity.alert_parameters
                     elseif name == internal_iopoint_name then
                         if tags then
                             local iopoint = procinfo.iopoints[tags.index]
@@ -667,8 +687,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                                 end
                             end
                         end
-                    elseif name == "small-lamp" and not nolamp then
-                        if bpentity.control_behavior then
+                    elseif name == "small-lamp" then
+                        if not nolamp and bpentity.control_behavior then
                             local cb = entity.get_or_create_control_behavior()
                             ---@cast cb LuaLampControlBehavior
                             cb.use_colors = bpentity.control_behavior.use_colors
@@ -722,6 +742,15 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                             label = tags.label --[[@as string]]
                         }
                         table.insert(input_list, input_prop)
+                    elseif  name == "small-electric-pole" or
+                            name == "medium-electric-pole" or
+                            name == "big-electric-pole" or
+                            name == "substation" then
+                        -- poles are not packed
+                    elseif name == commons.internal_connector_name then
+                        -- ???
+                    else
+                        debug("packing of " .. name .. " was not defined")
                     end
                 elseif name == commons.processor_name or name ==
                     commons.processor_name_1x1 then
@@ -746,6 +775,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                         label = proc.label or proc.model
                     }
                     table.insert(input_list, proc.inner_input)
+                else
+                    debug(name .. " was packed as special name, but was not a processor")
                 end
             elseif remote_name_map[name] then
                 local tags = bp.get_blueprint_entity_tags(index)
@@ -761,6 +792,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     table.insert(entities, entity)
                     index_map[index] = #entities
                 end
+            else
+                debug(name .. " should not be placable in a processor")
             end
         end
 

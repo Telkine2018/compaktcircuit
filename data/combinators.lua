@@ -414,6 +414,28 @@ function combinators.create_internals()
 
 	--------------------------------------------------------
 
+	local programmable_speaker = table.deepcopy(data.raw["programmable-speaker"]["programmable-speaker"])
+	programmable_speaker       = merge_table(programmable_speaker, { commons_attr, {
+		name = commons.prefix .. '-ps',
+		sprite = invisible_sprite,
+		circuit_connector_sprites = {
+			connector_main = invisible_sprite,
+			connector_shadow = invisible_sprite,
+			wire_pins = invisible_sprite,
+			wire_pins_shadow = invisible_sprite,
+			led_blue = invisible_sprite,
+			led_blue_off = invisible_sprite,
+			led_green = invisible_sprite,
+			led_red = invisible_sprite,
+			led_light = programmable_speaker.circuit_connector_sprites.led_light,
+			-- blue_led_light_offset = _____,
+			-- red_green_led_light_offset = _____,
+		},
+	}, energy_attr })
+	insert_flags(programmable_speaker.flags)
+
+	--------------------------------------------------------
+
 	local pole = {
 
 		type = "electric-pole",
@@ -489,6 +511,7 @@ function combinators.create_internals()
 		cc2,
 		arithmetic_combinator,
 		decider_combinator,
+		programmable_speaker,
 		packed_input,
 		pole,
 		epole,

@@ -25,6 +25,7 @@ commons.packed_entities = {
 	prefix .. "-cc",
 	prefix .. "-dc",
 	prefix .. "-ac",
+	prefix .. "-ps",
 	prefix .. "-cc2",
 	prefix .. "-pole",
 	commons.packed_display_name,
