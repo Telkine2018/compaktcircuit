@@ -1003,6 +1003,8 @@ function build.get_iopoint_map(procinfo)
     bp.set_stack { name = "blueprint", count = 1 }
     if bp.import_stack(procinfo.blueprint) == 1 then return {} end
 
+    ---@type table<Entity.unit_number, table<string, `true`>>
+    local prev_names = {}
     ---@type table<Entity.unit_number, IOPointInfo>
     local map = {}
     local bpentities = bp.get_blueprint_entities()
@@ -1017,15 +1019,23 @@ function build.get_iopoint_map(procinfo)
                         prev.input = (prev.input or tags.input) --[[@as boolean]]
                         prev.output = (prev.output or tags.output) --[[@as boolean]]
                         if tags.label and tags.label ~= "" then
+                            prev_names[index] = prev_names[index] or {}
                             if prev.label and prev.label ~= "" then
-                                prev.label = prev.label .. "/" .. tags.label
+                                if not prev_names[index][tags.label] then
+                                    prev.label = prev.label .. "/" .. tags.label
+                                end
                             else
                                 prev.label = tags.label --[[@as string]]
                             end
+                            prev_names[index][tags.label] = true
                         end
                         tags = prev
                     else
                         map[index] = tags
+                        prev_names[index] = {}
+                        if tags.label and tags.label ~= "" then
+                            prev_names[index][tags.label] = true
+                        end
                     end
                     if entity.connections then
                         for _, points in pairs(entity.connections) do
