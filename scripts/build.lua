@@ -819,8 +819,6 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
         local inner_processors = {} -- Indexed by bp_index
         ---@type table<ProcInfo, table<integer, string>>
         local nested_proc_bpentities = {} -- Values are bp_index=>iopoint_index maps
-        --TODO This table needs to be pre-filled to properly take care of at least the outer sub-processor connections
-        -- Tho the question of handling connections within sub-processors is open
         for bp_index, bpentity in pairs(bp_entities) do
             local name = bpentity.name
             local tags = bpentity.tags
@@ -889,8 +887,6 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
             if packed_networks[network] then return end
             packed_networks[network] = true
 
-            --TODO This currently doesn't handle nested processors...
-            -- If nested processor's IO point is connected - mark the processor and ALL of it's IO points are connected
             for _, e in pairs(network.entities) do
                 if bp_entities[e.bp_index].name == iopoint_name then
                     if not bp_entities[e.bp_index].tags then
@@ -915,6 +911,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                 -- So, instead - the algorithm needs to be 2 pass: Input=>Output, then Output=>Input
                 -- Otherwise other outputs of that clock would get picked up, even if they are not connected to any IO polls
                 -- But anyway, for this to properly work - connections within the nested processors need to be accounted for in the same way
+                -- And then don't warn when parts of nested processors are optimized out...
                 elseif add_bpentity(e.bp_index) then
                     for _, e_networks in pairs(bpentity_network_map[e.bp_index]) do
                         for _, ref_network in pairs(e_networks) do
