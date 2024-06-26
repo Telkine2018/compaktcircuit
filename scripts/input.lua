@@ -1,5 +1,4 @@
 local commons = require("scripts.commons")
-
 local tools = require("scripts.tools")
 local Runtime = require("scripts.runtime")
 local ccutils = require("scripts.ccutils")
@@ -58,7 +57,7 @@ local function text_to_number(text)
     return tonumber(text)
 end
 
-function input.get_frame(player) return player.gui.left[frame_name] end
+function input.get_frame(player) return player.gui.screen[frame_name] end
 
 ---@param type integer
 ---@return IntegerInput | SliderInput | ToggleInput | DropDownInput | ChooseSignalsInput | ChooseSignalsWithCountInput
@@ -249,34 +248,26 @@ end
 ---@param entity LuaEntity
 function input.open(player, entity)
     if not entity or not entity.valid or entity.name ~= input_name then
-        input.close(player)
         return
     end
 
     player.opened = nil
     local vars = get_vars(player)
 
-    if vars.input_entity and vars.input_entity.valid and vars.input_entity ==
-        entity then
+    if vars.input_entity and vars.input_entity.valid and vars.input_entity == entity then
         return
     end
 
-    input.close(player)
+    ccutils.close_all(player)
     vars.input_entity = entity
 
-    local outer_frame = player.gui.left.add {
-        type = "frame",
-        direction = "vertical",
-        name = frame_name,
-        caption = { np("title") }
-    }
-
-    local frame = outer_frame.add {
-        type = "frame",
-        name = "property_frame",
-        style = "inside_shallow_frame_with_padding",
-        direction = "vertical"
-    }
+    local outer_frame, frame = tools.create_standard_panel(player, {
+        panel_name = frame_name,
+        title = { np("title") },
+        is_draggable = true,
+        create_inner_frame = true,
+        close_button_name = np("close")
+    })
 
     -- Load previous
     ---@type Input?
@@ -311,13 +302,30 @@ function input.open(player, entity)
     local type = ftype.selected_index
     input.add_properties(type, ptable, props)
 
-    local b = frame.add {
+    frame.add { type = "line" }
+
+    local valid_flow = frame.add{type="flow", direction="horizontal"}
+    local empty = valid_flow.add{type="empty-widget"}
+    empty.style.horizontally_stretchable = true
+    local b = valid_flow.add {
         type = "button",
         caption = { button_prefix .. ".save_and_close" },
-        name = np("input_ok")
+        name = np("input_ok"),
+        style = "confirm_button"
     }
     b.style.top_margin = 10
+
+    local edit_location = vars.edit_location
+    if edit_location then
+        outer_frame.location = edit_location
+    else
+        outer_frame.force_auto_center()
+    end
 end
+
+tools.on_gui_click(np("close"), function(e)
+    input.close(game.players[e.player_index], true)
+end)
 
 tools.on_named_event(np("input_type"),
     defines.events.on_gui_selection_state_changed,
@@ -340,13 +348,22 @@ tools.on_named_event(np("input_type"),
     end)
 
 ---@param player LuaPlayer
-function input.close(player)
+---@param nosave boolean?
+function input.close(player, nosave)
     local frame = input.get_frame(player)
     if frame then
+        if not nosave and player.mod_settings[prefix .. "-autosave"].value then
+            input.get_edition(player)
+        end
         local vars = tools.get_vars(player)
-
+        vars.edit_location = frame.location
         vars.input_entity = nil
         frame.destroy()
+    end
+
+    local panel = player.gui.left[frame_name]
+    if panel then
+        panel.destroy()
     end
 end
 
@@ -431,7 +448,7 @@ function input.mine(entity)
         local vars = tools.get_vars(player)
         if vars.input_entity and vars.input_entity.valid and
             vars.input_entity.unit_number == entity.unit_number then
-            input.close(player)
+            input.close(player, true)
         end
     end
 end
@@ -468,7 +485,7 @@ function input.set_bp_tags(bp, index, entity)
 
     local info = input.get(unit_number)
     if info then
-        local copy = tools.table_dup(info)
+        local copy = tools.table_dup(info) --[[@as Input]]
         copy.dataid = nil
         copy.typeid = nil
         bp.set_blueprint_entity_tags(index, copy --[[@as any]])
@@ -481,7 +498,7 @@ local function on_gui_confirmed(e)
     if not e.element.valid then return end
     if not tools.is_child_of(e.element, frame_name) then return end
     input.get_edition(player)
-    input.close(player)
+    input.close(player, true)
 end
 
 tools.on_event(defines.events.on_gui_opened, on_gui_opened)

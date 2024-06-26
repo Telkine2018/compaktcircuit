@@ -5,7 +5,8 @@
         "global",
         "log",
         "data",
-        "procinfos"
+        "procinfos",
+        "require"
     ],
     "Lua.diagnostics.disable": [
         "missing-fields"

@@ -125,7 +125,9 @@ local function field_to_number(field)
     return tonumber(text)
 end
 
-function display.get_frame(player) return player.gui.left[frame_name] end
+---@param player LuaPlayer
+---@return LuaGuiElement
+function display.get_frame(player) return player.gui.screen[frame_name] end
 
 ---@param rt DisplayRuntime
 local function remove_source(rt)
@@ -196,7 +198,6 @@ local field_width = 80
 ---@param initial_color integer?
 ---@return LuaGuiElement
 local function create_color_field(ptable, props, name, initial_color)
-
     local label = ptable.add {
         type = "label",
         caption = { np(name) }
@@ -332,7 +333,6 @@ function display.add_properties(type, ptable, props)
     end
 
     if type == display_text_type then
-
         field = create_color_field(ptable, props, "text-color", props.color)
 
         label = ptable.add { type = "label", caption = { np("text") } }
@@ -434,7 +434,7 @@ function display.add_properties(type, ptable, props)
             state = props.has_frame
         }
         field.style.width = field_width
-        
+
         label = ptable.add {
             type = "label",
             caption = { np("multi-signal-has-background") }
@@ -472,33 +472,27 @@ end
 ---@param player LuaPlayer
 ---@param entity LuaEntity
 function display.open(player, entity)
+
     if not entity or not entity.valid or entity.name ~= display_name then
-        display.close(player)
         return
     end
 
     player.opened = nil
     local vars = get_vars(player)
-    if vars.display_entity and vars.display_entity.valid and vars.display_entity ==
-        entity then
+    if vars.display_entity and vars.display_entity.valid and vars.display_entity == entity then
         return
     end
 
-    display.close(player)
+    ccutils.close_all(player)
     vars.display_entity = entity
 
-    local outer_frame = player.gui.left.add {
-        type = "frame",
-        direction = "vertical",
-        name = frame_name,
-        caption = { np("title") }
-    }
-
-    local frame = outer_frame.add {
-        type = "frame",
-        direction = "vertical",
-        style = "inside_shallow_frame_with_padding"
-    }
+    local outer_frame, frame = tools.create_standard_panel(player, {
+        panel_name = frame_name,
+        title = { np("title") },
+        is_draggable = true,
+        create_inner_frame = true,
+        close_button_name = np("close")
+    })
 
     -- Load previous
     ---@type Display?
@@ -535,13 +529,29 @@ function display.open(player, entity)
     local type = ftype.selected_index
     display.add_properties(type, ptable, props)
 
-    local b = frame.add {
+    local line = frame.add{type="line"}
+
+    local valid_flow = frame.add{type="flow", direction="horizontal"}
+    local empty = valid_flow.add{type="empty-widget"}
+    empty.style.horizontally_stretchable = true
+    local b = valid_flow.add {
         type = "button",
         caption = { button_prefix .. ".save_and_close" },
-        name = np("ok")
+        name = np("ok"),
+        style = "confirm_button"
     }
     b.style.top_margin = 10
+    local edit_location = vars.edit_location
+    if edit_location then
+        outer_frame.location = edit_location
+    else
+        outer_frame.force_auto_center()
+    end
 end
+
+tools.on_gui_click(np("close"), function(e)
+    display.close(game.players[e.player_index], true)
+end)
 
 tools.on_named_event(np("display_type"),
     defines.events.on_gui_selection_state_changed,
@@ -558,13 +568,22 @@ tools.on_named_event(np("display_type"),
     end)
 
 ---@param player LuaPlayer
-function display.close(player)
+---@param nosave boolean?
+function display.close(player, nosave)
     local frame = display.get_frame(player)
     if frame then
+        if not nosave and player.mod_settings[prefix .. "-autosave"].value then
+            display.get_edition(player)
+        end
         local vars = tools.get_vars(player)
-
+        vars.edit_location = frame.location
         vars.display_entity = nil
         frame.destroy()
+    end
+
+    local panel = player.gui.left[frame_name]
+    if panel then
+        panel.destroy()
     end
 end
 
@@ -633,7 +652,7 @@ function display.mine(entity)
         local vars = tools.get_vars(player)
         if vars.display_entity and vars.display_entity.valid and
             vars.display_entity.unit_number == entity.unit_number then
-            display.close(player)
+            display.close(player, true)
         end
     end
 end
@@ -728,7 +747,7 @@ local function on_gui_confirmed(e)
     if not e.element.valid then return end
     if not tools.is_child_of(e.element, frame_name) then return end
     display.get_edition(player)
-    display.close(player)
+    display.close(player, true)
 end
 
 tools.on_event(defines.events.on_gui_opened, on_gui_opened)
@@ -1036,8 +1055,8 @@ local function process_text(rt)
     end
 
     local function clear()
-        if rt.renderid then 
-            rendering.destroy(rt.renderid) 
+        if rt.renderid then
+            rendering.destroy(rt.renderid)
             rt.renderid = nil
         end
         if rt.renderids then
@@ -1078,12 +1097,11 @@ local function process_text(rt)
         rt.lines = lines
     end
 
-    local x, y, scale, color_index    
+    local x, y, scale, color_index
     x = props.offsetx or 0
     y = props.offsety or 0
     scale = props.scale or 1
     if signals then
-
         for _, signal in pairs(signals) do
             local name = signal.signal.name
             if name == v_hide then
@@ -1224,7 +1242,7 @@ local function process_meta(rt)
 
     local source = rt.source
 
-    local cn = source.get_circuit_network(defines.wire_type.red)
+    local cn = source.get_circuit_network(defines.wire_type.red --[[@as integer]])
     if not cn then return end
 
     local signals = cn.signals

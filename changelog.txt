@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.7
+Date: 25.06.2024
+  Changes:
+    - Change interface to have floating panels
+    - Add autosave setting to automatically save a panel when it is closed (no need to click "Save & Close" to save parameters)
+---------------------------------------------------------------------------------------------------
 Version: 1.1.6
 Date: 08.06.2024
   Bugfixes:

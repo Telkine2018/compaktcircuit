@@ -20,6 +20,8 @@ commons.packed_display_name = prefix .. "-packed-display"
 commons.input_name = prefix .. "-input"
 commons.packed_input_name = prefix .. "-packed-input"
 
+commons.internal_panel_name=prefix .. "-intern_panel"
+
 ---@type string[]
 commons.packed_entities = {
 	prefix .. "-cc",

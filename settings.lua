@@ -99,6 +99,11 @@ data:extend(
 			default_value = false,
 			order = "ja"
 		},
-	
-
+		{
+			type = "bool-setting",
+			name = prefix .. "-autosave",
+			setting_type = "runtime-per-user",
+			default_value = true,
+			order = "ka"
+		},
 })
