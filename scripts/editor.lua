@@ -1165,9 +1165,10 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
 
 local filter_names = { {} }
 
+-- TODO: This doesn't seem used anymore
 ---@type string[]
 local surface_name_filter = {
-    "constant-combinator", "decider-combinator", "arithmetic-combinator",
+    "constant-combinator", "decider-combinator", "arithmetic-combinator", "programmable-speaker",
     "big-electric-pole", "small-electric-pole", "medium-electric-pole",
     "substation", internal_iopoint_name, "small-lamp"
 }
