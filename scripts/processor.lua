@@ -11,6 +11,7 @@ local build = require("scripts.build")
 
 local editor = require("scripts.editor")
 local inspectlib = require("scripts.inspect")
+local models_lib = require("scripts.models_lib")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -823,7 +824,7 @@ local function on_entity_settings_pasted(e)
         local dst_procinfo = get_procinfo(dst)
         ---@cast dst_procinfo -nil
 
-        editor.copy_from(dst_procinfo, src_procinfo, src_procinfo.is_packed)
+        models_lib.copy_from(dst_procinfo, src_procinfo, src_procinfo.is_packed)
         dst_procinfo.model = src_procinfo.model
         dst_procinfo.tick = src_procinfo.tick
         dst_procinfo.sprite1 = src_procinfo.sprite1
