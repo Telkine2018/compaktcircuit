@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.9
+Date: 03.08.2024
+  Changes:
+    - Display components now work in non-packed mode
+    - Add a setting to allow any entity inside a processor. The entity will only work in non-packed mode and copy/paste/blueprint cannot copy the internal properties of this entity.
+    - In a input component, adding a "*" in front of label disable the addition of the name of processors in the property form.
+---------------------------------------------------------------------------------------------------
 Version: 1.1.8
 Date: 31.07.2024
   Bugfixes:

@@ -500,15 +500,17 @@ end
 
 ---@param procinfo ProcInfo
 ---@return boolean
+---@return integer?
+---@return string?   @ Error recursion model
+---@return string[]?  @ external
 function build.create_packed_circuit_v2(procinfo)
     build.destroy_packed_circuit(procinfo)
     local input_list = {}
     procinfo.input_list = input_list
-    local result = build.create_packed_circuit_internal(procinfo, false, {},
-        procinfo, input_list)
+    local result, update_count, errorModel, externals = build.create_packed_circuit_internal(procinfo, false, {}, procinfo, input_list)
     input.normalize(procinfo.input_list)
     input.set_values(procinfo)
-    return result
+    return result, update_count, errorModel, externals
 end
 
 ---@param procinfo ProcInfo
@@ -519,8 +521,8 @@ end
 ---@return boolean
 ---@return integer?
 ---@return string?   @ Error recursion model
-function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
-                                              top, input_list)
+---@return string[]?  @ external
+function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, top, input_list)
     if not procinfo.blueprint then return false end
 
     local processor = procinfo.processor
@@ -567,6 +569,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
     local entities = {}
 
     local bp_entities = bp.get_blueprint_entities()
+    local externals = {}
     if bp_entities then
         ---@type table<integer, ProcInfo>
         local inner_processors = {}
@@ -761,6 +764,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
                     table.insert(entities, entity)
                     index_map[index] = #entities
                 end
+            else
+                table.insert(externals, name)
             end
         end
 
@@ -813,12 +818,14 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
         for _, proc in pairs(inner_processors) do
             proc.processor = processor
             if proc.blueprint then
-                local res, update_count1, newErrorModel =
-                    build.create_packed_circuit_internal(proc, true,
-                        recursionSet, top,
-                        proc.inner_input
-                        .inner_inputs)
+                local res, update_count1, newErrorModel, externals1 = build.create_packed_circuit_internal(proc, true,
+                        recursionSet, top, proc.inner_input.inner_inputs)
                 update_count = update_count + update_count1
+                if externals1 then
+                    for _, e in pairs(externals1) do
+                        table.insert(externals, e)
+                    end
+                end
                 if newErrorModel then errorModel = newErrorModel end
             end
         end
@@ -827,18 +834,18 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet,
     inv.destroy()
     if procinfo.model then recursionSet[procinfo.model] = nil end
 
-    return true, update_count, errorModel
+    return true, update_count, errorModel, externals
 end
 
 ---@param procinfo  ProcInfo
 ---@return integer? @ Update count
 ---@return string ?
+---@return string[]?
 function build.create_packed_circuit(procinfo)
-    local result, update_count, recursionError =
-        build.create_packed_circuit_v2(procinfo)
+    local result, update_count, recursionError, externals = build.create_packed_circuit_v2(procinfo)
     if result then
         procinfo.circuits = nil
-        return update_count, recursionError
+        return update_count, recursionError, externals
     end
 
     build.destroy_packed_circuit(procinfo)
@@ -858,6 +865,7 @@ function build.create_packed_circuit(procinfo)
         selection_box.left_top.x
     local scale = selection_width / 2.4
 
+    local externals = {}
     for index, circuit in ipairs(procinfo.circuits) do
         local name = circuit.name
         local packed_name = allowed_name_map[name]
@@ -943,9 +951,11 @@ function build.create_packed_circuit(procinfo)
                 table.insert(entities, entity)
             else
                 table.insert(entities, {})
+                table.insert(externals, name)
             end
         else
             table.insert(entities, {})
+            table.insert(externals, name)
         end
 
         if entity and circuit.connections then

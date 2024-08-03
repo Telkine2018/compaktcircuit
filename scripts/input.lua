@@ -729,7 +729,12 @@ function input.create_property_table(player, procinfo)
                     local id = property.gid
                     input_map[id] = property
                     table.insert(prefix_labels, property.label or "")
-                    property_table.add { type = "label", caption = prefix_labels }
+                    ---@type LocalisedString
+                    local plabel = prefix_labels
+                    if property.label and string.sub(property.label, 1, 1) == "*" then
+                        plabel = string.sub(property.label, 2)
+                    end
+                    property_table.add { type = "label", caption = plabel }
                     table.remove(prefix_labels)
 
                     context.property = property

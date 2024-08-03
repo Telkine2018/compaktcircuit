@@ -51,6 +51,16 @@ function editor.get_surface_name(processor)
     return "proc_" .. processor.unit_number
 end
 
+---@param name string
+---@return string?
+local function is_allowed(name)
+    local packed_name = allowed_name_map[name]
+    if packed_name then return packed_name end
+    if textplate_map[name] then return name end
+    if remote_name_map[name] then return name end
+    return nil
+end
+
 local internal_panel_name = commons.internal_panel_name
 
 ---@param player LuaPlayer
@@ -80,7 +90,7 @@ function editor.create_editor_panel(player, procinfo)
         tooltip = { tooltip_prefix .. ".exit" }
     }
     b.style.width = 160
-    
+
     b = exit_flow.add {
         type = "button",
         caption = { button_prefix .. ".models" },
@@ -284,11 +294,10 @@ local function on_gui_checked_state_changed(e)
     if not e.element or e.element.name ~= prefix .. "-is_packed" then return end
     local player = game.players[e.player_index]
 
-    local surface = player.surface
     local vars = get_vars(player)
     local procinfo = vars.procinfo
     local new_packed = e.element.state
-    editor.set_packed(procinfo, new_packed)
+    editor.set_packed(procinfo, new_packed, player)
 end
 
 ---@param parent ProcInfo
@@ -312,19 +321,25 @@ end
 
 ---@param procinfo ProcInfo
 ---@param is_packed boolean
-function editor.set_packed(procinfo, is_packed)
+---@param player LuaPlayer
+function editor.set_packed(procinfo, is_packed, player)
     if procinfo.is_packed == is_packed then return end
+
     procinfo.is_packed = is_packed
     if is_packed then
         editor.recursive_pack(procinfo)
         build.save_packed_circuits(procinfo)
         build.disconnect_all_iopoints(procinfo)
-        build.create_packed_circuit(procinfo)
+        local _, _,  externals = build.create_packed_circuit(procinfo)
+        if externals and #externals > 0 then
+            player.print({ "compaktcircuit-message.external_present" })
+        end
         input.apply_parameters(procinfo)
     else
         build.destroy_packed_circuit(procinfo)
         build.connect_all_iopoints(procinfo)
         input.apply_parameters(procinfo)
+        display.restore(procinfo)
     end
 end
 
@@ -1004,16 +1019,6 @@ local function init_internal_point(entity, tags, procinfo)
     build.update_io_text(iopoint_info)
 end
 
----@param name string
----@return string?
-local function is_allowed(name)
-    local packed_name = allowed_name_map[name]
-    if packed_name then return packed_name end
-    if textplate_map[name] then return name end
-    if remote_name_map[name] then return name end
-    return nil
-end
-
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
@@ -1067,6 +1072,22 @@ local function on_build(entity, e)
             end
         end
     elseif procinfo and not is_allowed(name) then
+        if settings.global[prefix .. "-allow-external"].value then
+            if procinfo.is_packed then
+                entity.surface.create_entity {
+                    name = "flying-text",
+                    position = entity.position,
+                    text = { message_prefix .. ".not_allowed_packed" }
+                }
+            end
+            return
+        else
+            entity.surface.create_entity {
+                name = "flying-text",
+                position = entity.position,
+                text = { message_prefix .. ".not_allowed" }
+            }
+        end
         if not global.destroy_list then
             global.destroy_list = { entity }
         else
@@ -1077,11 +1098,6 @@ end
 
 ---@param entity LuaEntity
 local function destroy_invalid(entity)
-    entity.surface.create_entity {
-        name = "flying-text",
-        position = entity.position,
-        text = { message_prefix .. ".not_allowed" }
-    }
     local m = entity.prototype.mineable_properties
     local position = entity.position
     local surface = entity.surface

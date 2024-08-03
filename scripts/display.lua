@@ -472,7 +472,6 @@ end
 ---@param player LuaPlayer
 ---@param entity LuaEntity
 function display.open(player, entity)
-
     if not entity or not entity.valid or entity.name ~= display_name then
         return
     end
@@ -529,10 +528,10 @@ function display.open(player, entity)
     local type = ftype.selected_index
     display.add_properties(type, ptable, props)
 
-    local line = frame.add{type="line"}
+    local line = frame.add { type = "line" }
 
-    local valid_flow = frame.add{type="flow", direction="horizontal"}
-    local empty = valid_flow.add{type="empty-widget"}
+    local valid_flow = frame.add { type = "flow", direction = "horizontal" }
+    local empty = valid_flow.add { type = "empty-widget" }
     empty.style.horizontally_stretchable = true
     local b = valid_flow.add {
         type = "button",
@@ -684,6 +683,44 @@ function display.register(entity, props)
     end
     if props.is_internal then
         display_info.internal = display.start(props, entity)
+    else
+        local procinfo = global.surface_map[entity.surface.name]
+        if procinfo then
+            if not procinfo.is_packed then
+                display_info.internal = display.start(props, entity)
+            end
+        end
+    end
+end
+
+---@param entity LuaEntity
+function display.restart(entity)
+
+    local display_info = global.display_infos[entity.unit_number]
+    if not display_info then return end
+    local props = display_info.props
+
+    if display_info.internal then
+        remove_source(display_info.internal)
+        display_info.internal = nil
+    end
+    if props.is_internal then
+        display_info.internal = display.start(props, entity)
+    else
+        local procinfo = global.surface_map[entity.surface.name]
+        if procinfo then
+            if not procinfo.is_packed then
+                display_info.internal = display.start(props, entity)
+            end
+        end
+    end
+end
+
+---@param procinfo ProcInfo
+function display.restore(procinfo)
+    local inputs = procinfo.surface.find_entities_filtered { name = display_name }
+    for _, input in pairs(inputs) do
+        display.restart(input)
     end
 end
 
@@ -787,21 +824,38 @@ local function find_source(rt)
         return rt.source
     else
         local rtpos = rt.source.position
-        local entities = rt.source.surface.find_entities_filtered {
-            name = { processor_name, processor_name_1x1 },
-            position = rtpos,
-            radius = 1
-        }
-        if #entities == 0 then return nil end
+        local surface = rt.source.surface
+        local surface_name = surface.name
 
-        for _, p in pairs(entities) do
-            if rtpos.x >= p.position.x - p.tile_width / 2 and rtpos.x <=
-                p.position.x + p.tile_width / 2 and rtpos.y >= p.position.y -
-                p.tile_height / 2 and rtpos.y <= p.position.y +
-                p.tile_height / 2 then
-                return p
+        if not string.find(surface_name, '^proc_') then
+            local entities = surface.find_entities_filtered {
+                name = { processor_name, processor_name_1x1 },
+                position = rtpos,
+                radius = 1
+            }
+            if #entities == 0 then return nil end
+
+            for _, p in pairs(entities) do
+                if rtpos.x >= p.position.x - p.tile_width / 2 and rtpos.x <=
+                    p.position.x + p.tile_width / 2 and rtpos.y >= p.position.y -
+                    p.tile_height / 2 and rtpos.y <= p.position.y +
+                    p.tile_height / 2 then
+                    return p
+                end
+            end
+        else
+            while true do
+                local procinfo = global.surface_map[surface_name]
+                if not procinfo then return nil end
+
+                surface_name = procinfo.processor.surface.name
+                if not string.find(surface_name, '^proc_')  then
+                    return procinfo.processor
+                end
             end
         end
+
+        -- try
         return nil
     end
 end

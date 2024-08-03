@@ -266,12 +266,12 @@ local energy_source = {
         render_no_power_icon = true,
         render_no_network_icon = true,
         usage_priority = "tertiary",
-        output_flow_limit = "20MW",
+        output_flow_limit = "2000MW",
         input_flow_limit = "0MW",
-        buffer_capacity = "20MW"
+        buffer_capacity = "200MW"
     },
     picture = invisible_sprite,
-    energy_production = "20MW",
+    energy_production = "2000MW",
     gui_mode = "none",
     flags = { "not-on-map", "hidden", "hide-alt-info", "not-blueprintable" }
 }

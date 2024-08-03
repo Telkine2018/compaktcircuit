@@ -522,8 +522,6 @@ function models_lib.copy_from(procinfo, src_procinfo, packed)
     end
 end
 
-
-
 ---@param player LuaPlayer
 local function remove_model(player)
     ---@type ProcInfo

@@ -106,4 +106,12 @@ data:extend(
 			default_value = true,
 			order = "ka"
 		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-allow-external",
+			setting_type = "runtime-global",
+			default_value = false,
+			order="la"
+		},
+
 })
