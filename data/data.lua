@@ -29,12 +29,70 @@ local recipe2 = {
     result = commons.processor_name_1x1
 }
 
+if mods["nullius"] then
+
+    recipe1.name = "nullius-" .. recipe1.name
+    recipe1.ingredients = {
+		{"arithmetic-combinator", 10},
+		{"copper-cable", 10}
+	}
+	recipe1.category = "tiny-crafting"
+	recipe1.always_show_made_in = true
+
+    recipe2.name = "nullius-" .. recipe2.name
+    recipe2.ingredients = {
+		{"arithmetic-combinator", 20},
+		{"copper-cable", 20}
+	}
+	recipe2.category = "tiny-crafting"
+	recipe2.always_show_made_in = true
+
+end
+
 local preq = "advanced-electronics"
 if not no_processor_in_build then
     table.insert(recipe1.ingredients, { 'processing-unit', 10 })
     table.insert(recipe2.ingredients, { 'processing-unit', 3 })
     preq = "advanced-electronics-2"
 end
+
+    -- Technology
+local tech = {
+        type = 'technology',
+        name = prefix .. '-tech',
+        icon_size = 128,
+        icon = png('tech'),
+        effects = {
+            { type = 'unlock-recipe', recipe = recipe1.name },
+            { type = 'unlock-recipe', recipe = recipe2.name }
+        },
+        prerequisites = { preq },
+        unit = {
+            count = 100,
+            ingredients = {
+                { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
+                { 'chemical-science-pack',   1 }
+            },
+            time = 15
+        },
+        order = 'a-d-d-z'
+    }
+
+if mods["nullius"] then
+    tech.name = "nullius-" .. tech.name
+	tech.order = "nullius-z-z-z"
+	tech.unit = {
+		count = 100,
+		ingredients = {
+			{"nullius-geology-pack", 1}, {"nullius-climatology-pack", 1}, {"nullius-electrical-pack", 1}
+		},
+		time = 25
+	}
+	tech.prerequisites = {"nullius-computation" }
+	tech.ignore_tech_tech_cost_multiplier = true
+end
+   
+    
 
 data:extend {
 
@@ -84,27 +142,7 @@ data:extend {
     recipe1,
     recipe2,
     -- Technology
-    {
-        type = 'technology',
-        name = prefix .. '-tech',
-        icon_size = 128,
-        icon = png('tech'),
-        effects = {
-            { type = 'unlock-recipe', recipe = commons.processor_name },
-            { type = 'unlock-recipe', recipe = commons.processor_name_1x1 }
-        },
-        prerequisites = { preq },
-        unit = {
-            count = 100,
-            ingredients = {
-                { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
-                { 'chemical-science-pack',   1 }
-            },
-            time = 15
-        },
-        order = 'a-d-d-z'
-    }
-
+    tech
 }
 
 local base_processor_image = {
