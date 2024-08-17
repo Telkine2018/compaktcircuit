@@ -6,6 +6,94 @@ local prefix = commons.prefix
 local debug_mode = commons.debug_mode
 local png = combinators.png
 
+local no_processor_in_build = settings.startup[commons.prefix .. "-no_processor_in_build"].value
+
+local recipe1 = {
+    type = 'recipe',
+    name = commons.processor_name,
+    enabled = false,
+    ingredients = {
+        { 'electronic-circuit', 20 }, { 'advanced-circuit', 30 }
+
+    },
+    result = commons.processor_name
+}
+
+local recipe2 = {
+    type = 'recipe',
+    name = commons.processor_name_1x1,
+    enabled = false,
+    ingredients = {
+        { 'electronic-circuit', 10 }, { 'advanced-circuit', 10 }
+    },
+    result = commons.processor_name_1x1
+}
+
+if mods["nullius"] then
+
+    recipe1.name = "nullius-" .. recipe1.name
+    recipe1.ingredients = {
+		{"arithmetic-combinator", 10},
+		{"copper-cable", 10}
+	}
+	recipe1.category = "tiny-crafting"
+	recipe1.always_show_made_in = true
+
+    recipe2.name = "nullius-" .. recipe2.name
+    recipe2.ingredients = {
+		{"arithmetic-combinator", 20},
+		{"copper-cable", 20}
+	}
+	recipe2.category = "tiny-crafting"
+	recipe2.always_show_made_in = true
+
+end
+
+local preq = "advanced-electronics"
+if not no_processor_in_build then
+    table.insert(recipe1.ingredients, { 'processing-unit', 10 })
+    table.insert(recipe2.ingredients, { 'processing-unit', 3 })
+    preq = "advanced-electronics-2"
+end
+
+    -- Technology
+local tech = {
+        type = 'technology',
+        name = prefix .. '-tech',
+        icon_size = 128,
+        icon = png('tech'),
+        effects = {
+            { type = 'unlock-recipe', recipe = recipe1.name },
+            { type = 'unlock-recipe', recipe = recipe2.name }
+        },
+        prerequisites = { preq },
+        unit = {
+            count = 100,
+            ingredients = {
+                { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
+                { 'chemical-science-pack',   1 }
+            },
+            time = 15
+        },
+        order = 'a-d-d-z'
+    }
+
+if mods["nullius"] then
+    tech.name = "nullius-" .. tech.name
+	tech.order = "nullius-z-z-z"
+	tech.unit = {
+		count = 100,
+		ingredients = {
+			{"nullius-geology-pack", 1}, {"nullius-climatology-pack", 1}, {"nullius-electrical-pack", 1}
+		},
+		time = 25
+	}
+	tech.prerequisites = {"nullius-computation" }
+	tech.ignore_tech_tech_cost_multiplier = true
+end
+   
+    
+
 data:extend {
 
     -- Item
@@ -40,20 +128,7 @@ data:extend {
     place_result = commons.processor_name,
     stack_size = 1,
     flags = { "hidden", "not-stackable" }
-}, --[[
-	{
-		type = "item-with-tags",
-		name = commons.processor_with_tags_1x1,
-		icon_size = 64,
-		icon = png('item/processor_1x1'),
-		icon_mipmaps = 4,
-		subgroup = 'circuit-network',
-		order = 'p[rocessor]',
-		place_result = commons.processor_name_1x1,
-		stack_size = 1,
-		flags = { "hidden", "not-stackable" }
-	},
---]] {
+}, {
     type = 'item',
     name = commons.iopoint_name,
     icon_size = 32,
@@ -63,47 +138,11 @@ data:extend {
     place_result = commons.iopoint_name,
     stack_size = 50,
     flags = { "hidden", "hide-from-bonus-gui" }
-},     -- Recipe
-    {
-        type = 'recipe',
-        name = commons.processor_name,
-        enabled = false,
-        ingredients = {
-            { 'electronic-circuit', 20 }, { 'advanced-circuit', 30 },
-            { 'processing-unit',    10 }
-        },
-        result = commons.processor_name
-    }, {
-    type = 'recipe',
-    name = commons.processor_name_1x1,
-    enabled = false,
-    ingredients = {
-        { 'electronic-circuit', 10 }, { 'advanced-circuit', 10 },
-        { 'processing-unit',    3 }
-    },
-    result = commons.processor_name_1x1
-},     -- Technology
-    {
-        type = 'technology',
-        name = prefix .. '-tech',
-        icon_size = 128,
-        icon = png('tech'),
-        effects = {
-            { type = 'unlock-recipe', recipe = commons.processor_name },
-            { type = 'unlock-recipe', recipe = commons.processor_name_1x1 }
-        },
-        prerequisites = { 'advanced-electronics-2' },
-        unit = {
-            count = 100,
-            ingredients = {
-                { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
-                { 'chemical-science-pack',   1 }
-            },
-            time = 15
-        },
-        order = 'a-d-d-z'
-    }
-
+}, -- Recipes
+    recipe1,
+    recipe2,
+    -- Technology
+    tech
 }
 
 local base_processor_image = {
@@ -265,12 +304,12 @@ local energy_source = {
         render_no_power_icon = true,
         render_no_network_icon = true,
         usage_priority = "tertiary",
-        output_flow_limit = "20MW",
+        output_flow_limit = "2000MW",
         input_flow_limit = "0MW",
-        buffer_capacity = "20MW"
+        buffer_capacity = "200MW"
     },
     picture = invisible_sprite,
-    energy_production = "20MW",
+    energy_production = "2000MW",
     gui_mode = "none",
     flags = { "not-on-map", "hidden", "hide-alt-info", "not-blueprintable" }
 }

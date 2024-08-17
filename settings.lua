@@ -91,7 +91,27 @@ data:extend(
 			setting_type = "runtime-global",
 			default_value = false,
 			order="ia"
-		}
-	
+		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-no_processor_in_build",
+			setting_type = "startup",
+			default_value = false,
+			order = "ja"
+		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-autosave",
+			setting_type = "runtime-per-user",
+			default_value = true,
+			order = "ka"
+		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-allow-external",
+			setting_type = "runtime-global",
+			default_value = false,
+			order="la"
+		},
 
 })

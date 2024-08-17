@@ -1,6 +1,5 @@
 
 local commons = require("scripts.commons")
-
 local tools = require("scripts.tools")
 
 local prefix = commons.prefix
@@ -119,6 +118,10 @@ function ccutils.get_top_procinfo(procinfo)
         procinfo = global.surface_map[surface.name]
         if not procinfo then return nil end
      end 
+end
+
+---@param player LuaPlayer
+function ccutils.close_all(player)
 end
 
 return ccutils

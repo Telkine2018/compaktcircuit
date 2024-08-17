@@ -1,4 +1,47 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.10
+Date: 04.08.2024
+  Changes:
+    - Add Nullius compatibility
+---------------------------------------------------------------------------------------------------
+Version: 1.1.9
+Date: 03.08.2024
+  Changes:
+    - Display components now work in non-packed mode
+    - Add a setting to allow any entity inside a processor. The entity will only work in non-packed mode and copy/paste/blueprint cannot copy the internal properties of this entity.
+    - In a input component, adding a "*" in front of label disable the addition of the name of processors in the property form.
+---------------------------------------------------------------------------------------------------
+Version: 1.1.8
+Date: 31.07.2024
+  Bugfixes:
+    - Fix crash on copy/paste
+---------------------------------------------------------------------------------------------------
+Version: 1.1.7
+Date: 25.06.2024
+  Changes:
+    - Change interface to have floating panels
+    - Add autosave setting to automatically save a panel when it is closed (no need to click "Save & Close" to save parameters)
+---------------------------------------------------------------------------------------------------
+Version: 1.1.6
+Date: 08.06.2024
+  Bugfixes:
+    - Fix crash with inner processor
+---------------------------------------------------------------------------------------------------
+Version: 1.1.5
+Date: 02.06.2024
+  Bugfixes:
+    - Fix crash when using hide signal
+---------------------------------------------------------------------------------------------------
+Version: 1.1.4
+Date: 09.05.2024
+  Bugfixes:
+    - Fix crash on icon in removed mods.
+---------------------------------------------------------------------------------------------------
+Version: 1.1.3
+Date: 30.03.2024.
+  Bugfixes:
+    - Fix crash on meta combinator
+---------------------------------------------------------------------------------------------------
 Version: 1.1.2
 Date: 12.02.2024.
   Changes:

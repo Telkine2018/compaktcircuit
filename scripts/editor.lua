@@ -1,11 +1,11 @@
 local commons = require("scripts.commons")
 
 local prefix = commons.prefix
+local ccutils = require("scripts.ccutils")
 local tools = require("scripts.tools")
 local display = require("scripts.display")
 local input = require("scripts.input")
 local build = require("scripts.build")
-local ccutils = require("scripts.ccutils")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -51,48 +51,23 @@ function editor.get_surface_name(processor)
     return "proc_" .. processor.unit_number
 end
 
----@param player LuaPlayer
----@param processor_name string
----@return string[] @ Model names
-local function get_model_list(player, processor_name)
-    local models = build.get_models(player.force, processor_name)
-    local model_table = {}
-    if models then
-        for name, _ in pairs(models) do table.insert(model_table, name) end
-    end
-
-    table.sort(model_table)
-    table.insert(model_table, 1, "---------------------------------")
-    return model_table
+---@param name string
+---@return string?
+local function is_allowed(name)
+    local packed_name = allowed_name_map[name]
+    if packed_name then return packed_name end
+    if textplate_map[name] then return name end
+    if remote_name_map[name] then return name end
+    return nil
 end
 
----@param player LuaPlayer
----@param procinfo ProcInfo
----@return string[]
----@return integer
-local function get_model_position(player, procinfo)
-    local model = procinfo.model or ""
-    local models = get_model_list(player, procinfo.processor.name)
-    local selected_index = 1
-    if model ~= "" then
-        for index, m in ipairs(models) do
-            if m == model then
-                selected_index = index
-                break
-            end
-        end
-    end
-    return models, selected_index
-end
-
-local internal_panel_name = prefix .. "-intern_panel"
+local internal_panel_name = commons.internal_panel_name
 
 ---@param player LuaPlayer
 ---@param procinfo ProcInfo
 function editor.create_editor_panel(player, procinfo)
+    ccutils.close_all(player)
     editor.close_editor_panel(player)
-    display.close(player)
-    input.close(player)
 
     local outer_frame = player.gui.left.add {
         type = "frame",
@@ -107,13 +82,22 @@ function editor.create_editor_panel(player, procinfo)
         style = "inside_shallow_frame_with_padding",
     }
 
-    local b = frame.add {
+    local exit_flow = frame.add { type = "flow", direction = "horizontal" }
+    local b = exit_flow.add {
         type = "button",
         caption = { button_prefix .. ".exit_editor" },
         name = prefix .. "-exit_editor",
         tooltip = { tooltip_prefix .. ".exit" }
     }
-    b.style.width = 200
+    b.style.width = 160
+
+    b = exit_flow.add {
+        type = "button",
+        caption = { button_prefix .. ".models" },
+        name = prefix .. "-models",
+        tooltip = { tooltip_prefix .. ".models" }
+    }
+    b.style.width = 160
 
     local add_flow = frame.add {
         type = "flow",
@@ -124,7 +108,6 @@ function editor.create_editor_panel(player, procinfo)
         caption = { prefix .. ".add_component_label" }
     }
     label.style.top_margin = 10
-
 
     b = add_flow.add {
         type = "sprite-button",
@@ -180,101 +163,6 @@ function editor.create_editor_panel(player, procinfo)
         signal = ccutils.translate_signal(tools.sprite_to_signal(procinfo.sprite2))
     }
 
-    local models, selected_index = get_model_position(player, procinfo)
-    local modelFlow = frame.add {
-        type = "flow",
-        direction = "horizontal",
-        name = "model_flow"
-    }
-    modelFlow.add { type = "label", caption = { label_prefix .. ".model" } }
-    local dp = modelFlow.add {
-        type = "drop-down",
-        name = prefix .. "-model_list",
-        items = models,
-        selected_index = selected_index
-    }
-    dp.style.width = 380
-    modelFlow.style.top_margin = 5
-
-    local f
-    f = modelFlow.add { type = "textfield", name = prefix .. "-model_name" }
-    f.visible = false
-    f.style.width = 380
-
-    local modelButtonFlow = frame.add {
-        type = "flow",
-        direction = "horizontal",
-        name = "model_button_flow"
-    }
-    modelButtonFlow.style.top_margin = 5
-    f = modelButtonFlow.add {
-        type = "button",
-        name = prefix .. "-new_model_button",
-        caption = { button_prefix .. ".new_model" },
-        tooltip = { tooltip_prefix .. ".new_model" }
-    }
-    f.style.width = 80
-    f = modelButtonFlow.add {
-        type = "button",
-        name = prefix .. "-rename_button",
-        caption = { button_prefix .. ".rename_model" },
-        tooltip = { tooltip_prefix .. ".rename_model" }
-    }
-    f.style.width = 80
-    b = modelButtonFlow.add {
-        type = "button",
-        caption = { button_prefix .. ".apply_model" },
-        tooltip = { tooltip_prefix .. ".apply_model" },
-        name = prefix .. "-apply_model"
-    }
-    b.style.width = 80
-    b = modelButtonFlow.add {
-        type = "button",
-        caption = { button_prefix .. ".import_model" },
-        tooltip = { tooltip_prefix .. ".import_model" },
-        name = prefix .. "-import_model"
-    }
-    b.style.width = 80
-    b = modelButtonFlow.add {
-        type = "button",
-        caption = { button_prefix .. ".remove_model" },
-        tooltip = { tooltip_prefix .. ".remove_model" },
-        name = prefix .. "-remove_model"
-    }
-    b.style.width = 80
-
-    b = modelButtonFlow.add {
-        type = "button",
-        caption = { button_prefix .. ".export_models" },
-        tooltip = { tooltip_prefix .. ".export_models" },
-        name = prefix .. "-export_models"
-    }
-    b.style.width = 100
-
-    b = modelButtonFlow.add {
-        type = "button",
-        caption = { button_prefix .. ".import_models" },
-        tooltip = { tooltip_prefix .. ".import_models" },
-        name = prefix .. "-import_models"
-    }
-    b.style.width = 100
-
-    f = modelButtonFlow.add {
-        type = "button",
-        name = prefix .. "-ok_button",
-        caption = { button_prefix .. ".ok" }
-    }
-    f.visible = false
-    f.style.width = 160
-    f = modelButtonFlow.add {
-        type = "button",
-        name = prefix .. "-cancel_button",
-        caption = { button_prefix .. ".cancel" }
-    }
-    f.visible = false
-    f.style.width = 160
-
-
     local title_flow = frame.add {
         type = "flow",
         direction = "horizontal"
@@ -291,334 +179,6 @@ function editor.create_editor_panel(player, procinfo)
         tooltip = { prefix .. "-tooltip.title" }
     }
     ftitle.style.width = 300
-end
-
----@param player LuaPlayer
----@return LuaGuiElement
-local function get_model_flow(player)
-    return
-        tools.get_child(player.gui.left[internal_panel_name], "model_flow") or
-        {}
-end
-
----@param player LuaPlayer
----@return LuaGuiElement
-local function get_model_button_flow(player)
-    return tools.get_child(player.gui.left[internal_panel_name],
-        "model_button_flow") or {}
-end
-
----@param player LuaPlayer
----@param text_mode boolean
----@param action_mode boolean
----@param ok_text string | string[] | nil
-local function set_label_mode(player, text_mode, action_mode, ok_text)
-    local model_flow = get_model_flow(player)
-    local model_button_flow = get_model_button_flow(player)
-
-    model_flow[prefix .. "-model_list"].visible = not text_mode
-
-    model_button_flow[prefix .. "-new_model_button"].visible = not action_mode
-    model_button_flow[prefix .. "-rename_button"].visible = not action_mode
-    model_button_flow[prefix .. "-apply_model"].visible = not action_mode
-    model_button_flow[prefix .. "-import_model"].visible = not action_mode
-    model_button_flow[prefix .. "-remove_model"].visible = not action_mode
-    model_button_flow[prefix .. "-import_models"].visible = not action_mode
-    model_button_flow[prefix .. "-export_models"].visible = not action_mode
-
-    model_flow[prefix .. "-model_name"].visible = text_mode
-    model_button_flow[prefix .. "-ok_button"].visible = action_mode
-    model_button_flow[prefix .. "-cancel_button"].visible = action_mode
-    if ok_text then
-        model_button_flow[prefix .. "-ok_button"].caption = ok_text
-    end
-    if text_mode then model_flow[prefix .. "-model_name"].focus() end
-end
-
-local function refresh_model_list(player, procinfo)
-    local model_flow = get_model_flow(player)
-    local model_list, index = get_model_position(player, procinfo)
-    local cb = model_flow[prefix .. "-model_list"]
-    cb.items = model_list
-    cb.selected_index = index
-end
-
-local function add_model(player)
-    local procinfo = global.surface_map[player.surface.name]
-    local model_flow = get_model_flow(player)
-    local model_name = model_flow[prefix .. "-model_name"].text
-
-    if model_name == "" then
-        procinfo.model = nil
-    else
-        if build.get_model(player.force, procinfo.processor.name, model_name) then
-            player.print { message_prefix .. ".model_already_exists" }
-            return
-        end
-        procinfo.model = model_name
-        build.save_packed_circuits(procinfo)
-        local models = build.get_models(player.force, procinfo.processor.name)
-        models[model_name] = {
-            blueprint = procinfo.blueprint,
-            references = procinfo.references,
-            tick = game.tick,
-            name = model_name,
-            sprite1 = procinfo.sprite1,
-            sprite2 = procinfo.sprite2
-        }
-    end
-
-    refresh_model_list(player, procinfo)
-end
-
----@param player LuaPlayer
-local function import_model(player)
-    --- @type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
-    if procinfo.model == nil then return end
-
-    local models = build.get_models(player.force, procinfo.processor.name)
-    local model_info = models[procinfo.model]
-    if not model_info then return end
-
-    local position = player.position
-    player.teleport { -EDITOR_SIZE / 2 + 1, -EDITOR_SIZE / 2 + 1 }
-    editor.clean_surface(procinfo)
-    procinfo.circuits = model_info.circuits
-    procinfo.blueprint = model_info.blueprint
-    procinfo.references = model_info.references
-    procinfo.sprite1 = model_info.sprite1
-    procinfo.sprite2 = model_info.sprite2
-    procinfo.tick = game.tick
-    build.restore_packed_circuits(procinfo)
-    editor.draw_sprite(procinfo)
-
-    local frame = player.gui.left[internal_panel_name]
-    local b_sprite1 = tools.get_child(frame, prefix .. "-sprite1")
-    local b_sprite2 = tools.get_child(frame, prefix .. "-sprite2")
-    if b_sprite1 and b_sprite2 then
-        b_sprite1.elem_value = tools.sprite_to_signal(model_info.sprite1) --[[@as SignalID ]]
-        b_sprite2.elem_value = tools.sprite_to_signal(model_info.sprite2) --[[@as SignalID ]]
-    end
-
-    local x, y = editor.find_room(player.surface, position.x, position.y)
-    player.teleport({ x, y })
-    input.apply_parameters(procinfo)
-end
-
----@param player LuaPlayer
-local function rename_model(player)
-    ---@type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
-    if procinfo.model == nil then return end
-
-    --[[
-    local bp,inv,entities = build.create_blueprint(procinfo, player)
-    if bp and bp.valid_for_read and bp.is_blueprint_setup then
-        player.cursor_stack.set_stack(bp)
-        return
-    end
-    --]]
-
-    local pmodel = procinfo.processor.name
-    local model_flow = get_model_flow(player)
-    local new_model = model_flow[prefix .. "-model_name"].text
-    if new_model == "" then return end
-
-    if build.get_model(player.force, pmodel, new_model) then
-        player.print { message_prefix .. ".model_already_exists" }
-        return
-    end
-
-    local old_model = procinfo.model
-
-    for i, p in pairs(global.procinfos) do
-        ---@cast p ProcInfo
-        if p.processor and p.processor.valid and p.processor.force ==
-            player.force and p.processor.name == pmodel then
-            if p.model == old_model then p.model = new_model end
-            if p.blueprint then
-                p.blueprint = build.rename(p.blueprint, old_model, new_model, pmodel)
-            end
-        end
-    end
-
-    local model1s = build.get_models(player.force, commons.processor_name)
-    local model2s = build.get_models(player.force, commons.processor_name_1x1)
-    for _, list in pairs({ model1s, model2s }) do
-        for _, model in pairs(list) do
-            if model.blueprint then
-                model.blueprint = build.rename(model.blueprint, old_model,
-                    new_model, pmodel)
-            end
-        end
-    end
-
-    local models = build.get_models(player.force, procinfo.processor.name)
-    if not models[old_model] then return end
-    models[new_model] = models[old_model]
-    models[new_model].name = new_model
-    models[old_model] = nil
-
-    refresh_model_list(player, procinfo)
-end
-
----@param models table<string,Model>
----@param model_name string
----@param references string[]
----@param already_checked table<string, boolean>
----@return boolean
-local function check_model_in_references(models, model_name, references,
-                                         already_checked)
-    if not references then return false end
-    if references[model_name] then return true end
-    for m, _ in pairs(references) do
-        if not already_checked[m] then
-            already_checked[m] = true
-
-            local model = models[m]
-            if model then
-                if check_model_in_references(models, model_name,
-                        model.references, already_checked) then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
----@param procinfo ProcInfo
----@param model Model
----@param current ProcInfo
----@return integer
-function editor.update_model(procinfo, model, current)
-    if procinfo == current then return 0 end
-
-    local count = 0
-    if procinfo.model == model.name and procinfo.processor.name ==
-        current.processor.name then
-        procinfo.blueprint = model.blueprint
-        procinfo.references = model.references
-        procinfo.sprite1 = model.sprite1
-        procinfo.sprite2 = model.sprite2
-        if procinfo.surface then
-            editor.clean_surface(procinfo)
-            build.restore_packed_circuits(procinfo)
-            input.apply_parameters(procinfo)
-        end
-        count = 1
-        editor.draw_sprite(procinfo)
-    else
-        if procinfo.surface ~= nil then
-            local processors = procinfo.surface.find_entities_filtered {
-                name = { commons.processor_name, commons.processor_name_1x1 }
-            }
-
-            for _, processor in pairs(processors) do
-                if processor.valid then
-                    local procinfo1 = get_procinfo(processor, false)
-                    if procinfo1 then
-                        count = count +
-                            editor.update_model(procinfo1, model,
-                                current)
-                    end
-                end
-            end
-        end
-    end
-    if procinfo.is_packed then
-        local update_count = build.create_packed_circuit(procinfo)
-        input.apply_parameters(procinfo)
-        if update_count then count = count + update_count end
-    end
-    return count
-end
-
----@param player LuaPlayer
-local function apply_model(player)
-    ---@type ProcInfo
-    local model_procinfo = global.surface_map[player.surface.name]
-    if not model_procinfo.model then return end
-
-    local force = player.force
-    build.save_packed_circuits(model_procinfo)
-
-    local processor_name = model_procinfo.processor.name
-    local models = build.get_models(player.force, processor_name)
-    local model = {
-        blueprint = model_procinfo.blueprint,
-        references = model_procinfo.references,
-        tick = game.tick,
-        sprite1 = model_procinfo.sprite1,
-        sprite2 = model_procinfo.sprite2
-    }
-    models[model_procinfo.model] = model
-
-    local count = 0
-    local model_name = model_procinfo.model
-    if not model.name then model.name = model_name end
-
-    local outer_list = {}
-    local inner_list = {}
-    for _, procinfo in pairs(global.procinfos) do
-        ---@cast procinfo ProcInfo
-        if procinfo.processor and procinfo.processor.valid and
-            procinfo.processor.force == force and
-            (procinfo ~= model_procinfo or procinfo.processor.name ~=
-                processor_name) and build.is_toplevel(procinfo) then
-            if (procinfo.model == model_name) and
-                (procinfo.processor.name == processor_name) then
-                table.insert(outer_list, procinfo)
-            else
-                local references = procinfo.references
-                if check_model_in_references(models, model_name, references, {}) then
-                    table.insert(inner_list, procinfo)
-                end
-            end
-        end
-    end
-    for _, procinfo in pairs(outer_list) do
-        ---@cast procinfo ProcInfo
-        editor.copy_from(procinfo, model_procinfo, procinfo.is_packed)
-        procinfo.sprite1 = model_procinfo.sprite1
-        procinfo.sprite2 = model_procinfo.sprite2
-        editor.draw_sprite(procinfo)
-        count = count + 1
-    end
-    for _, procinfo in pairs(inner_list) do
-        ---@cast procinfo ProcInfo
-        count = count + editor.update_model(procinfo, model, model_procinfo)
-    end
-end
-
----@param player LuaPlayer
-local function remove_model(player)
-    ---@type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
-
-    if not procinfo.model then return end
-    local models = build.get_models(player.force, procinfo.processor.name)
-    models[procinfo.model] = nil
-    procinfo.model = nil
-    refresh_model_list(player, procinfo)
-end
-
----@param player LuaPlayer
-local function execute_model_action(player)
-    local model_action = get_vars(player).model_action
-    set_label_mode(player, false, false)
-    if model_action == "add" then
-        add_model(player)
-    elseif model_action == "rename" then
-        rename_model(player)
-    elseif model_action == "apply" then
-        apply_model(player)
-    elseif model_action == "import" then
-        import_model(player)
-    elseif model_action == "remove" then
-        remove_model(player)
-    end
 end
 
 -----------------------------------------------------------------
@@ -638,175 +198,8 @@ tools.on_event(defines.events.on_gui_elem_changed,
 
         local procinfo = global.surface_map[player.surface.name]
         if not procinfo then return end
-        procinfo[name] =
-            tools.signal_to_sprite(e.element.elem_value --[[@as SignalID]])
+        procinfo[name] = tools.signal_to_sprite(e.element.elem_value --[[@as SignalID]])
         editor.draw_sprite(procinfo)
-    end)
-
-tools.on_event(defines.events.on_gui_selection_state_changed,
-    ---@param e EventData.on_gui_selection_state_changed
-    function(e)
-        if not e.element.valid or e.element.name ~= prefix .. "-model_list" then return end
-
-        local player = game.players[e.player_index]
-        local procinfo = global.surface_map[player.surface.name]
-        if e.element.selected_index == 1 then
-            procinfo.model = nil
-        else
-            procinfo.model = e.element.items[e.element.selected_index]
-        end
-    end)
-
-tools.on_event(defines.events.on_gui_confirmed,
-    ---@param e EventData.on_gui_confirmed
-    function(e)
-        if not e.element.valid or e.element.name ~= prefix .. "-model_name" then return end
-        local player = game.players[e.player_index]
-        execute_model_action(player)
-    end)
-
-tools.on_gui_click(prefix .. "-new_model_button",
-    ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        get_vars(player).model_action = "add"
-        set_label_mode(player, true, true, { button_prefix .. ".new_model" })
-    end)
-
-tools.on_gui_click(prefix .. "-rename_button",
-    ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-
-        local procinfo = global.surface_map[player.surface.name]
-        if procinfo.model == nil then return end
-
-        local model_flow = get_model_flow(player)
-        model_flow[prefix .. "-model_name"].text = procinfo.model
-
-        get_vars(player).model_action = "rename"
-        set_label_mode(player, true, true, { button_prefix .. ".rename_model" })
-    end)
-
-tools.on_gui_click(prefix .. "-import_model", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        get_vars(player).model_action = "import"
-        set_label_mode(player, false, true,
-            { button_prefix .. ".import_model_confirm" })
-    end)
-
-tools.on_gui_click(prefix .. "-apply_model", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        get_vars(player).model_action = "apply"
-        set_label_mode(player, false, true,
-            { button_prefix .. ".apply_model_confirm" })
-    end)
-
-tools.on_gui_click(prefix .. "-remove_model", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        get_vars(player).model_action = "remove"
-        set_label_mode(player, false, true,
-            { button_prefix .. ".remove_model_confirm" })
-    end)
-
-tools.on_gui_click(prefix .. "-export_models", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-
-        player.clear_cursor()
-
-        local item = player.cursor_stack
-        item.set_stack({ name = "blueprint-book", count = 1 })
-
-        local inventory = item.get_inventory(defines.inventory.item_main)
-        ---@cast inventory -nil
-
-        local index = 1
-        for _, processor_name in pairs({ commons.processor_name_1x1, commons.processor_name }) do
-            local models = build.get_models(player.force, processor_name)
-
-            if models then
-                for name, model in pairs(models) do
-                    inventory.insert { name = "blueprint", count = 1 }
-                    local bp = inventory[index]
-                    index = index + 1
-                    bp.set_blueprint_entities {
-                        {
-                            entity_number = 1,
-                            name = processor_name,
-                            position = { 0, 0 },
-                            direction = defines.direction.north,
-                            tags = {
-                                model = model.name,
-                                sprite1 = model.sprite1,
-                                sprite2 = model.sprite2,
-                                blueprint = model.blueprint,
-                                references=model.references
-                            }
-                        }
-                    }
-                    bp.label = model.name
-                end
-            end
-        end
-    end)
-
-tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        local stack = player.cursor_stack
-        if not stack or not stack.is_blueprint_book then
-            player.print { "compaktcircuit-message.need_a_blueprint_book" }
-            return
-        end
-
-        local inventory = stack.get_inventory(defines.inventory.item_main)
-        ---@cast inventory -nil
-
-        for i = 1, #inventory do
-            ---@type LuaItemStack
-            local bp = inventory[i]
-            if bp and bp.is_blueprint then
-                local entities = bp.get_blueprint_entities()
-                local model_name = bp.label
-                if entities and #entities == 1 then
-                    local proc = entities[1]
-                    if proc.name == commons.processor_name or proc.name == commons.processor_name_1x1 then
-                        local tags = proc.tags
-
-                        if not build.get_model(player.force, proc.name, model_name) then
-                            local models = build.get_models(player.force, proc.name)
-                            models[model_name] = {
-                                blueprint = tags.blueprint --[[@as string]],
-                                tick = game.tick,
-                                name = model_name,
-                                sprite1 = tags.sprite1 --[[@as string]],
-                                sprite2 = tags.sprite2 --[[@as string]],
-                                references = tags.references --[[@as string[] ]]
-                            }
-                        end
-                    end
-                end
-            end
-        end
-        local procinfo = global.surface_map[player.surface.name]
-        refresh_model_list(player, procinfo)
-    end)
-
-tools.on_gui_click(prefix .. "-cancel_button",
-    ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        set_label_mode(player, false, false)
-    end)
-
-tools.on_gui_click(prefix .. "-ok_button", ---@param e EventData.on_gui_click
-    function(e)
-        local player = game.players[e.player_index]
-        execute_model_action(player)
     end)
 
 -----------------------------------------------------------------
@@ -876,9 +269,7 @@ end
 ---@param e EventData.on_gui_click
 local function on_exit_editor(e)
     local player = game.players[e.player_index]
-    editor.close_iopanel(player)
-    display.close(player)
-    input.close(player)
+    ccutils.close_all(player)
     editor.close_editor_panel(player)
 
     local vars = get_vars(player)
@@ -888,16 +279,25 @@ local function on_exit_editor(e)
     exit_player(procinfo, player)
 end
 
+---@param player LuaPlayer
+function editor.close_all(player)
+    editor.close_iopanel(player)
+    display.close(player)
+    input.close(player)
+    tools.fire_user_event("models.close", player)
+end
+
+ccutils.close_all = editor.close_all
+
 ---@param e EventData.on_gui_checked_state_changed
 local function on_gui_checked_state_changed(e)
     if not e.element or e.element.name ~= prefix .. "-is_packed" then return end
     local player = game.players[e.player_index]
 
-    local surface = player.surface
     local vars = get_vars(player)
     local procinfo = vars.procinfo
     local new_packed = e.element.state
-    editor.set_packed(procinfo, new_packed)
+    editor.set_packed(procinfo, new_packed, player)
 end
 
 ---@param parent ProcInfo
@@ -921,19 +321,25 @@ end
 
 ---@param procinfo ProcInfo
 ---@param is_packed boolean
-function editor.set_packed(procinfo, is_packed)
+---@param player LuaPlayer
+function editor.set_packed(procinfo, is_packed, player)
     if procinfo.is_packed == is_packed then return end
+
     procinfo.is_packed = is_packed
     if is_packed then
         editor.recursive_pack(procinfo)
         build.save_packed_circuits(procinfo)
         build.disconnect_all_iopoints(procinfo)
-        build.create_packed_circuit(procinfo)
+        local _, _,  externals = build.create_packed_circuit(procinfo)
+        if externals and #externals > 0 then
+            player.print({ "compaktcircuit-message.external_present" })
+        end
         input.apply_parameters(procinfo)
     else
         build.destroy_packed_circuit(procinfo)
         build.connect_all_iopoints(procinfo)
         input.apply_parameters(procinfo)
+        display.restore(procinfo)
     end
 end
 
@@ -1005,8 +411,14 @@ local function on_add_input(e)
     end
 end
 
+---@param e EventData.on_gui_click
+local function on_models_open(e)
+    local player = game.players[e.player_index]
+    tools.fire_user_event("models.open", player)
+end
 
 tools.on_gui_click(prefix .. "-exit_editor", on_exit_editor)
+tools.on_gui_click(prefix .. "-models", on_models_open)
 tools.on_gui_click(prefix .. "-add_iopole", on_add_pole)
 tools.on_gui_click(prefix .. "-add_internal_connector",
     on_add_internal_connector)
@@ -1134,8 +546,16 @@ end
 
 ---@param player LuaPlayer
 function editor.close_iopanel(player)
-    local panel = player.gui.left[iopanel_name]
-    if panel then panel.destroy() end
+    local panel = player.gui.screen[iopanel_name]
+    if panel then
+        tools.get_vars(player).edit_location = panel.location
+        panel.destroy()
+    end
+
+    panel = player.gui.left[iopanel_name]
+    if panel then
+        panel.destroy()
+    end
 end
 
 ---------------------------------------------------------------
@@ -1150,9 +570,10 @@ local display_options = {
 ---@param entity LuaEntity
 function editor.open_iopole(player, entity)
     if not entity or not entity.valid or entity.name ~= internal_iopoint_name then
-        editor.close_iopanel(player)
         return
     end
+
+    ccutils.close_all(player)
 
     player.opened = nil
 
@@ -1162,23 +583,17 @@ function editor.open_iopole(player, entity)
     local ids = {}
     for i = 1, #procinfo.iopoints do table.insert(ids, tostring(i)) end
 
-    editor.close_iopanel(player)
 
     vars.iopole = entity
     local iopoint_info = procinfo.iopoint_infos[entity.unit_number]
 
-    local outer_frame = player.gui.left.add {
-        type = "frame",
-        direction = "vertical",
-        name = iopanel_name,
-        caption = { prefix .. "-iopanel.title" }
-    }
-
-    local frame = outer_frame.add {
-        type = "frame",
-        direction = "vertical",
-        style = "inside_shallow_frame_with_padding",
-    }
+    local outer_frame, frame = tools.create_standard_panel(player, {
+        panel_name = iopanel_name,
+        title = { prefix .. "-iopanel.title" },
+        is_draggable = true,
+        create_inner_frame = true,
+        close_button_name = prefix .. ".iopole_ok"
+    })
 
     local flow = frame.add { type = "flow", direction = "horizontal" }
     local label1 = flow.add {
@@ -1252,11 +667,12 @@ function editor.open_iopole(player, entity)
             iopoint_info.green_display + 1 or 1
     }
 
-    frame.add {
-        type = "button",
-        caption = { button_prefix .. ".ok" },
-        name = prefix .. ".iopole_ok"
-    }
+    local edit_location = vars.edit_location
+    if edit_location then
+        outer_frame.location = edit_location
+    else
+        outer_frame.force_auto_center()
+    end
 end
 
 ---@param e EventData.on_gui_opened
@@ -1385,34 +801,6 @@ local function on_gui_confirmed(e)
     editor.close_iopanel(player)
 end
 
----------------------------------------------------------------
-
----@param procinfo ProcInfo
----@param src_procinfo ProcInfo
----@param packed boolean
-function editor.copy_from(procinfo, src_procinfo, packed)
-    if src_procinfo.blueprint then
-        procinfo.blueprint = src_procinfo.blueprint
-    elseif src_procinfo.circuits then
-        procinfo.circuits = src_procinfo.circuits
-    else
-        return
-    end
-
-    if not procinfo.is_packed then
-        if packed then
-            editor.delete_surface(procinfo)
-            build.create_packed_circuit(procinfo)
-            procinfo.is_packed = true
-        else
-            procinfo.surface = nil
-            editor.get_or_create_surface(procinfo)
-            build.restore_packed_circuits(procinfo)
-        end
-    else
-        build.create_packed_circuit(procinfo)
-    end
-end
 
 ---------------------------------------------------------------
 
@@ -1631,16 +1019,6 @@ local function init_internal_point(entity, tags, procinfo)
     build.update_io_text(iopoint_info)
 end
 
----@param name string
----@return string?
-local function is_allowed(name)
-    local packed_name = allowed_name_map[name]
-    if packed_name then return packed_name end
-    if textplate_map[name] then return name end
-    if remote_name_map[name] then return name end
-    return nil
-end
-
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
@@ -1694,6 +1072,22 @@ local function on_build(entity, e)
             end
         end
     elseif procinfo and not is_allowed(name) then
+        if settings.global[prefix .. "-allow-external"].value then
+            if procinfo.is_packed then
+                entity.surface.create_entity {
+                    name = "flying-text",
+                    position = entity.position,
+                    text = { message_prefix .. ".not_allowed_packed" }
+                }
+            end
+            return
+        else
+            entity.surface.create_entity {
+                name = "flying-text",
+                position = entity.position,
+                text = { message_prefix .. ".not_allowed" }
+            }
+        end
         if not global.destroy_list then
             global.destroy_list = { entity }
         else
@@ -1704,11 +1098,6 @@ end
 
 ---@param entity LuaEntity
 local function destroy_invalid(entity)
-    entity.surface.create_entity {
-        name = "flying-text",
-        position = entity.position,
-        text = { message_prefix .. ".not_allowed" }
-    }
     local m = entity.prototype.mineable_properties
     local position = entity.position
     local surface = entity.surface

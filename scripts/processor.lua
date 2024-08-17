@@ -4,12 +4,14 @@ local commons = require("scripts.commons")
 
 local prefix = commons.prefix
 local tools = require("scripts.tools")
+local ccutils = require("scripts.ccutils")
 local display = require("scripts.display")
 local input = require("scripts.input")
 local build = require("scripts.build")
 
 local editor = require("scripts.editor")
 local inspectlib = require("scripts.inspect")
+local models_lib = require("scripts.models_lib")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -822,7 +824,7 @@ local function on_entity_settings_pasted(e)
         local dst_procinfo = get_procinfo(dst)
         ---@cast dst_procinfo -nil
 
-        editor.copy_from(dst_procinfo, src_procinfo, src_procinfo.is_packed)
+        models_lib.copy_from(dst_procinfo, src_procinfo, src_procinfo.is_packed)
         dst_procinfo.model = src_procinfo.model
         dst_procinfo.tick = src_procinfo.tick
         dst_procinfo.sprite1 = src_procinfo.sprite1
@@ -1384,6 +1386,16 @@ local function migration_1_0_25(data)
     end
 end
 
+local function migration_1_1_7(data)
+    for _, player in pairs(game.players) do
+        local vars = tools.get_vars(player)
+        if vars.procinfo and editor.close_editor_panel(player) then
+            editor.create_editor_panel(player, vars.procinfo)
+            ccutils.close_all(player)
+        end
+    end
+end
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
@@ -1401,7 +1413,9 @@ local migrations_table = {
     ["1.0.14"] = migration_1_0_14,
     ["1.0.15"] = migration_1_0_15,
     ["1.0.17"] = migration_1_0_17,
-    ["1.0.25"] = migration_1_0_25
+    ["1.0.25"] = migration_1_0_25,
+    ["1.1.7"] = migration_1_1_7
+
 }
 
 local function on_configuration_changed(data)
