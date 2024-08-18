@@ -656,6 +656,9 @@ local function on_entity_cloned(ev)
                 init_procinfo(dst_procinfo)
                 build.connect_all_iopoints(dst_procinfo)
                 editor.connect_energy(dst_procinfo)
+                if not src_procinfo.is_packed then
+                    display.update_for_cloning(src_procinfo, dst_procinfo)
+                end
                 return
             end
         end
@@ -1511,6 +1514,7 @@ local function destroy_all()
     end
     game.print("#processor=" .. count)
 end
+
 
 commands.add_command("compaktcircuit_purge", { "compaktcircuit_purge_cmd" },
     function(e) purge(e.player_index) end)

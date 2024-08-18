@@ -3,6 +3,8 @@ Version: 1.1.10
 Date: 04.08.2024
   Changes:
     - Add Nullius compatibility
+  Bugfixes:
+    - Fix crash with display on a spacehip in space exploration
 ---------------------------------------------------------------------------------------------------
 Version: 1.1.9
 Date: 03.08.2024
