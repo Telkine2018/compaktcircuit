@@ -689,7 +689,7 @@ end
 
 local gmatch = string.gmatch
 
----@param sprite string
+---@param sprite string?
 ---@return SignalID?
 function tools.sprite_to_signal(sprite)
     if not sprite then return nil end
@@ -731,15 +731,16 @@ local function check_signal(type, name)
 end
 
 ---@param sprite string?
+---@param default string?
 ---@return string?
-function tools.check_sprite(sprite)
+function tools.check_sprite(sprite, default)
     if not sprite then return nil end
     local signal = tools.sprite_to_signal(sprite)
     ---@cast signal -nil
     if check_signal(signal.type, signal.name) then
         return sprite
     else
-        return nil
+        return default
     end
 end
 

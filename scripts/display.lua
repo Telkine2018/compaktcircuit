@@ -328,7 +328,7 @@ function display.add_properties(type, ptable, props)
             name = "signal"
         }
         if props.signal then
-            field.elem_value = tools.sprite_to_signal(props.signal) --[[@as SignalID]]
+            field.elem_value = tools.sprite_to_signal(tools.check_sprite(props.signal, "virtual-signal/signal-A")) --[[@as SignalID]]
         end
     end
 
@@ -850,6 +850,7 @@ local function find_source(rt)
 
                 surface_name = procinfo.processor.surface.name
                 if not string.find(surface_name, '^proc_')  then
+                    rt.source = procinfo.processor
                     return procinfo.processor
                 end
             end
@@ -1713,6 +1714,19 @@ tools.on_event(defines.events.on_entity_settings_pasted,
 function display.load_disable_config()
     display_runtime.disabled = settings.global[prefix .. "-disable-display"]
         .value --[[@as boolean]]
+end
+
+---@param src_proc any
+---@param dst_proc any
+function display.update_for_cloning(src_proc, dst_proc)
+    for _, rt in pairs(display_runtime.map) do
+        ---@cast rt DisplayRuntime
+        if rt.source == src_proc.processor then
+            rt.source = dst_proc.processor
+            rt.renderids = nil
+            rt.renderid = nil
+        end
+    end
 end
 
 -- #endregion
