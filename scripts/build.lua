@@ -764,6 +764,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     table.insert(entities, entity)
                     index_map[index] = #entities
                 end
+            elseif build.textplate_map[name] then
+
             else
                 table.insert(externals, name)
             end

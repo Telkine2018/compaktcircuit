@@ -695,7 +695,6 @@ end
 
 ---@param entity LuaEntity
 function display.restart(entity)
-
     local display_info = global.display_infos[entity.unit_number]
     if not display_info then return end
     local props = display_info.props
@@ -809,7 +808,6 @@ end
 
 ---@param rt DisplayRuntime
 local function is_source_invalid(rt)
-
     ---@cast rt SpriteDisplayRuntime
     if not rt.source.valid or (rt.proc and not rt.proc.valid) then
         remove_source(rt)
@@ -821,6 +819,9 @@ end
 ---@param rt DisplayRuntime
 ---@return LuaEntity?
 local function find_source(rt)
+    if not rt.source or not rt.source.valid then
+        return nil
+    end
     if rt.props.is_internal then
         return rt.source
     else
@@ -847,10 +848,10 @@ local function find_source(rt)
         else
             while true do
                 local procinfo = global.surface_map[surface_name]
-                if not procinfo then return nil end
+                if not procinfo or not procinfo.processor.valid or not procinfo.processor.surface.valid then return nil end
 
                 surface_name = procinfo.processor.surface.name
-                if not string.find(surface_name, '^proc_')  then
+                if not string.find(surface_name, '^proc_') then
                     rt.proc = procinfo.processor
                     return procinfo.processor
                 end
@@ -864,7 +865,6 @@ end
 
 ---@param rt EntityWithIdAndProcess
 local function process_signal(rt)
-
     ---@cast rt SignalDisplayRuntime
     if is_source_invalid(rt) then return end
 
@@ -1361,7 +1361,6 @@ local multi_signals_delta = {
 
 ---@param rt EntityWithIdAndProcess
 local function process_multisignal(rt)
-
     ---@cast rt MultiSignalRuntime
     if is_source_invalid(rt) then
         rt.signals = nil
@@ -1623,9 +1622,9 @@ end
 ---@type table<int, fun(DisplayRuntime) >
 local process_table = {
 
-    process_signal, 
-    process_sprite, 
-    process_text, 
+    process_signal,
+    process_sprite,
+    process_text,
     process_meta,
     process_multisignal
 }
@@ -1746,9 +1745,11 @@ function display.update_for_cloning(src_proc, dst_proc)
 end
 
 function display.update_processors()
-    for _, rt in pairs(display_runtime.map) do
-        ---@cast rt DisplayRuntime
-        find_source(rt)
+    if display_runtime.map then
+        for _, rt in pairs(display_runtime.map) do
+            ---@cast rt DisplayRuntime
+            find_source(rt)
+        end
     end
 end
 
