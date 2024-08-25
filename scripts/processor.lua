@@ -1,6 +1,7 @@
 local migration = require("__flib__.migration")
 
 local commons = require("scripts.commons")
+local runtime = require("scripts.runtime")
 
 local prefix = commons.prefix
 local tools = require("scripts.tools")
@@ -1426,10 +1427,10 @@ local migrations_table = {
     ["1.0.25"] = migration_1_0_25,
     ["1.1.7"] = migration_1_1_7,
     ["1.1.11"] = migration_1_1_11
-
 }
 
 local function on_configuration_changed(data)
+    runtime.initialize()
     migration.on_config_changed(data, migrations_table)
 end
 

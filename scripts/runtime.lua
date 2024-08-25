@@ -84,10 +84,6 @@ function Runtime.get(name)
     setmetatable(rt, mt)
 
     local map = global[config.global_name] --[[@as EntityMap<EntityWithIdAndProcess>]]
-    if not map then -- only on init
-        map = {}
-        global[config.global_name] = map
-    end
     rt.map = map
 
     ---@type RuntimeGlobal
@@ -116,15 +112,10 @@ function Runtime.get(name)
     ---@param data NthTickEventData
     local function on_tick(data)
         map = rt.map
-        if not map then return end
-        
-        if not gdata then
-            Runtime.check_runtime(rt)
-            gdata = rt.gdata
-        end
+        gdata = rt.gdata
 
         if rt.disabled then return end
-    
+
         local size = table_size(map)
         if size == 0 then return end
 
@@ -206,15 +197,18 @@ function Runtime:remove(eid)
     self.map[id] = nil
 end
 
----@param rt Runtime
-function Runtime.check_runtime(rt)
-    if not rt.gdata then
-        local gdata = global[rt.config.rt_name ]
-        if not gdata then
-            gdata = { refresh_index = 0 }
-            global[rt.config.rt_name ] = gdata
+function Runtime.initialize()
+    for _, config in pairs(configs) do
+        local rt = Runtime.get(config.name)
+        if not rt.map then
+            rt.map = {}
+            global[rt.config.global_name] = rt.map
         end
-        rt.gdata = gdata
+        if not rt.gdata then
+            local gdata = { refresh_index = 0 }
+            global[rt.config.rt_name] = gdata
+            rt.gdata = gdata
+        end
     end
 end
 
