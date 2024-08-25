@@ -840,6 +840,8 @@ local function on_entity_settings_pasted(e)
         local dst = player.selected
         local src = player.entity_copy_source
 
+        ---@cast dst -nil
+        ---@cast src -nil
         if src.name == iopoint_name and dst.name == iopoint_name then
             local src_processor = find_processor(src)
             local dst_processor = find_processor(dst)
@@ -1131,7 +1133,8 @@ show_iopoint_label = function(player)
 
     local found_iopoint = player.selected
     local vars = get_vars(player)
-
+    if not found_iopoint then return end
+    
     local pos = found_iopoint.position
     local entities = found_iopoint.surface.find_entities_filtered {
         area = { { pos.x - 1, pos.y - 1 }, { pos.x + 1, pos.y + 1 } },

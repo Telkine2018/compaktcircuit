@@ -802,7 +802,7 @@ function display.start(tags, source)
     local rt = { props = tags, source = source }
     rt.id = source.unit_number
     display_runtime:add(rt)
-    display_runtime.boost = true
+    display_runtime.gdata.boost = true
     return rt
 end
 
@@ -1296,7 +1296,7 @@ local function process_meta(rt)
 
     local source = rt.source
 
-    local cn = source.get_circuit_network(defines.wire_type.red --[[@as integer]])
+    local cn = source.get_circuit_network(defines.wire_type.red)
     if not cn then return end
 
     local signals = cn.signals
@@ -1638,7 +1638,7 @@ local function process_display(rt)
         display_runtime.map[rt.id] = nil
         rt.id = rt.source.unit_number
         display_runtime.map[rt.id] = rt
-        display_runtime.currentid = nil
+        display_runtime.gdata.currentid = nil
         return
     end
 
@@ -1712,8 +1712,7 @@ tools.on_event(defines.events.on_entity_settings_pasted,
 --------------------
 
 function display.load_disable_config()
-    display_runtime.disabled = settings.global[prefix .. "-disable-display"]
-        .value --[[@as boolean]]
+    display_runtime.disabled = settings.global[prefix .. "-disable-display"].value --[[@as boolean]]
 end
 
 local saved_fields = {
@@ -1730,7 +1729,7 @@ end
 function display.update_for_cloning(src_proc, dst_proc)
     for _, rt in pairs(display_runtime.map) do
         ---@cast rt DisplayRuntime
-        if rt.proc and rt.proc == src_proc.processor then
+        if rt.proc and rt.proc.valid and rt.proc.unit_number == src_proc.processor.unit_number then
             local to_remove = {}
             for name, _ in pairs(rt) do
                 if not saved_field_map[name] then
