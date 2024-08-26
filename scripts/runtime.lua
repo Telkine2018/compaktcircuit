@@ -55,6 +55,7 @@ function Runtime.register(config)
             if not global[config.rt_name] then
                 global[config.rt_name] = { refresh_index = 0 }
             end
+            Runtime.get(config.name)
         end)
 end
 
