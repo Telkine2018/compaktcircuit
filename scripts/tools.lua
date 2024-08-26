@@ -1,7 +1,9 @@
 
 local tools = {}
-local log_index = 1
-local tracing = true
+local tracing = false
+
+tools.tracing = tracing
+tools.trace_console = false
 
 ---@param msg LocalisedString?
 function tools.print(msg)
@@ -10,19 +12,33 @@ function tools.print(msg)
     log(msg)
 end
 
+local print_settings = { game_state = false, skip = defines.print_skip.never }
+
+local log_index = 1
+
 ---@param msg LocalisedString?
 local function debug(msg)
     if not tracing then return end
 
     if not msg then return end
 
-    if type(msg) == "string" then
-    msg = "[" .. log_index .. "] " .. msg
+    local time
+    if game then
+        time = game.tick
     else
-        table.insert(msg, 2, "[" .. log_index .. "] ")
+        time = log_index
+    end
+
+    if type(msg) == "string" then
+        msg = "[" .. time .. "] " .. msg
+    else
+        table.insert(msg, 2, "[" .. time .. "] ")
     end
     log_index = log_index + 1
-    tools.print(msg)
+    log(msg)
+    if tools.trace_console then
+        game.print(msg, print_settings)
+    end
 end
 
 tools.debug = debug
@@ -33,8 +49,11 @@ local function cdebug(cond, msg) if cond then debug(msg) end end
 
 tools.cdebug = cdebug
 
----@param trace boolean
-function tools.set_tracing(trace) tracing = trace end
+---@param value boolean
+function tools.set_tracing(value) 
+    tracing = value 
+    tools.tracing = value
+end
 
 function tools.is_tracing() return tracing end
 
@@ -265,18 +284,16 @@ end
 
 ------------------------------------------------
 
----@param event defines.events
+---@param event integer
 ---@param handler fun(EventData)
 ---@param filters ({["filter"]:string}|{["name"]:string})[]?
 function tools.on_event(event, handler, filters)
-
-    local ievent = event --[[@as integer]]
-    local previous = script.get_event_handler(ievent)
+    local previous = script.get_event_handler(event)
     if not previous then
         ---@cast filters EventFilter
-        script.on_event(ievent, handler, filters)
+        script.on_event(event, handler, filters)
     else
-        local prev_filters = script.get_event_filter(ievent)
+        local prev_filters = script.get_event_filter(event)
         local new_filters = nil
         if prev_filters == nil then
             new_filters = filters
@@ -287,7 +304,7 @@ function tools.on_event(event, handler, filters)
         end
 
         ---@cast new_filters EventFilter
-        script.on_event(ievent, function(e)
+        script.on_event(event, function(e)
             previous(e)
             handler(e)
         end, new_filters)
@@ -447,7 +464,7 @@ local function call_handler(e)
 end
 
 ---@param name string
----@param event defines.events
+---@param event integer | defines.events
 ---@param callback fun(e:EventData)
 function tools.on_named_event(name, event, callback)
 
@@ -778,13 +795,14 @@ function tools.destroy_entities(master, entity_names)
     for _, e in pairs(entities) do if e.valid then e.destroy() end end
 end
 
-
----@param index integer
+---@param index integer | defines.train_state | defines.events
 ---@param base table<string, integer>
 ---@return string
 function tools.get_constant_name(index, base)
+    if base then
     for name, i in pairs(base) do if i == index then return name end end
-    return "[unknown:"..index.."]"
+    end
+    return  tostring(index)
 end
 
 ------------------------------------------------

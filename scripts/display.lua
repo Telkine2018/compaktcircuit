@@ -695,7 +695,6 @@ end
 
 ---@param entity LuaEntity
 function display.restart(entity)
-
     local display_info = global.display_infos[entity.unit_number]
     if not display_info then return end
     local props = display_info.props
@@ -803,14 +802,14 @@ function display.start(tags, source)
     local rt = { props = tags, source = source }
     rt.id = source.unit_number
     display_runtime:add(rt)
-    display_runtime.boost = true
+    display_runtime.gdata.boost = true
     return rt
 end
 
 ---@param rt DisplayRuntime
 local function is_source_invalid(rt)
     ---@cast rt SpriteDisplayRuntime
-    if not rt.source.valid then
+    if not rt.source.valid or (rt.proc and not rt.proc.valid) then
         remove_source(rt)
         return true
     end
@@ -820,6 +819,9 @@ end
 ---@param rt DisplayRuntime
 ---@return LuaEntity?
 local function find_source(rt)
+    if not rt.source or not rt.source.valid then
+        return nil
+    end
     if rt.props.is_internal then
         return rt.source
     else
@@ -846,11 +848,11 @@ local function find_source(rt)
         else
             while true do
                 local procinfo = global.surface_map[surface_name]
-                if not procinfo then return nil end
+                if not procinfo or not procinfo.processor.valid or not procinfo.processor.surface.valid then return nil end
 
                 surface_name = procinfo.processor.surface.name
-                if not string.find(surface_name, '^proc_')  then
-                    rt.source = procinfo.processor
+                if not string.find(surface_name, '^proc_') then
+                    rt.proc = procinfo.processor
                     return procinfo.processor
                 end
             end
@@ -864,10 +866,7 @@ end
 ---@param rt EntityWithIdAndProcess
 local function process_signal(rt)
     ---@cast rt SignalDisplayRuntime
-    if not rt.source.valid then
-        remove_source(rt)
-        return
-    end
+    if is_source_invalid(rt) then return end
 
     if rt.hidden then
         if (rt.source.get_merged_signal(vs_hide) == 0) then
@@ -1297,7 +1296,7 @@ local function process_meta(rt)
 
     local source = rt.source
 
-    local cn = source.get_circuit_network(defines.wire_type.red --[[@as integer]])
+    local cn = source.get_circuit_network(defines.wire_type.red)
     if not cn then return end
 
     local signals = cn.signals
@@ -1363,6 +1362,10 @@ local multi_signals_delta = {
 ---@param rt EntityWithIdAndProcess
 local function process_multisignal(rt)
     ---@cast rt MultiSignalRuntime
+    if is_source_invalid(rt) then
+        rt.signals = nil
+        return
+    end
 
     local function clear()
         if rt.renderids then
@@ -1370,12 +1373,6 @@ local function process_multisignal(rt)
             rt.renderids = nil
         end
         rt.signals = nil
-    end
-
-    if not rt.source.valid then
-        remove_source(rt)
-        rt.signals = nil
-        return
     end
 
     if rt.hidden then
@@ -1625,7 +1622,10 @@ end
 ---@type table<int, fun(DisplayRuntime) >
 local process_table = {
 
-    process_signal, process_sprite, process_text, process_meta,
+    process_signal,
+    process_sprite,
+    process_text,
+    process_meta,
     process_multisignal
 }
 
@@ -1638,7 +1638,7 @@ local function process_display(rt)
         display_runtime.map[rt.id] = nil
         rt.id = rt.source.unit_number
         display_runtime.map[rt.id] = rt
-        display_runtime.currentid = nil
+        display_runtime.gdata.currentid = nil
         return
     end
 
@@ -1712,19 +1712,42 @@ tools.on_event(defines.events.on_entity_settings_pasted,
 --------------------
 
 function display.load_disable_config()
-    display_runtime.disabled = settings.global[prefix .. "-disable-display"]
-        .value --[[@as boolean]]
+    display_runtime.disabled = settings.global[prefix .. "-disable-display"].value --[[@as boolean]]
 end
 
----@param src_proc any
----@param dst_proc any
+local saved_fields = {
+    "id", "process", "props", "source"
+}
+
+local saved_field_map = {}
+for _, name in pairs(saved_fields) do
+    saved_field_map[name] = true
+end
+
+---@param src_proc ProcInfo
+---@param dst_proc ProcInfo
 function display.update_for_cloning(src_proc, dst_proc)
     for _, rt in pairs(display_runtime.map) do
         ---@cast rt DisplayRuntime
-        if rt.source == src_proc.processor then
-            rt.source = dst_proc.processor
-            rt.renderids = nil
-            rt.renderid = nil
+        if rt.proc and rt.proc.valid and rt.proc.unit_number == src_proc.processor.unit_number then
+            local to_remove = {}
+            for name, _ in pairs(rt) do
+                if not saved_field_map[name] then
+                    table.insert(to_remove, name)
+                end
+            end
+            for _, name in pairs(to_remove) do
+                rt[name] = nil
+            end
+        end
+    end
+end
+
+function display.update_processors()
+    if display_runtime.map then
+        for _, rt in pairs(display_runtime.map) do
+            ---@cast rt DisplayRuntime
+            find_source(rt)
         end
     end
 end

@@ -321,7 +321,7 @@ end
 
 ---@param procinfo ProcInfo
 ---@param is_packed boolean
----@param player LuaPlayer
+---@param player LuaPlayer?
 function editor.set_packed(procinfo, is_packed, player)
     if procinfo.is_packed == is_packed then return end
 
@@ -331,7 +331,7 @@ function editor.set_packed(procinfo, is_packed, player)
         build.save_packed_circuits(procinfo)
         build.disconnect_all_iopoints(procinfo)
         local _, _,  externals = build.create_packed_circuit(procinfo)
-        if externals and #externals > 0 then
+        if externals and #externals > 0 and player then
             player.print({ "compaktcircuit-message.external_present" })
         end
         input.apply_parameters(procinfo)

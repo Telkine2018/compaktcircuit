@@ -139,6 +139,7 @@
 ---@field renderids integer[]?
 ---@field props Display
 ---@field source LuaEntity
+---@field proc LuaEntity
 ---@field freeze boolean?
 ---@field hidden boolean?
 ---@field signals Signal[]
