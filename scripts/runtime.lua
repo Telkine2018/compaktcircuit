@@ -55,7 +55,8 @@ function Runtime.register(config)
             if not global[config.rt_name] then
                 global[config.rt_name] = { refresh_index = 0 }
             end
-            Runtime.get(config.name)
+            local rt = Runtime.get(config.name)
+            Runtime.init_data(rt)
         end)
 end
 
@@ -114,6 +115,12 @@ function Runtime.get(name)
     local function on_tick(data)
         map = rt.map
         gdata = rt.gdata
+
+        if not map or not gdata then
+            Runtime.init_data(rt)
+            map = rt.map
+            gdata = rt.gdata
+        end
 
         if rt.disabled then return end
 
@@ -198,18 +205,22 @@ function Runtime:remove(eid)
     self.map[id] = nil
 end
 
+function Runtime.init_data(rt)
+    if not rt.map then
+        rt.map = {}
+        global[rt.config.global_name] = rt.map
+    end
+    if not rt.gdata then
+        local gdata = { refresh_index = 0 }
+        global[rt.config.rt_name] = gdata
+        rt.gdata = gdata
+    end
+end
+
 function Runtime.initialize()
     for _, config in pairs(configs) do
         local rt = Runtime.get(config.name)
-        if not rt.map then
-            rt.map = {}
-            global[rt.config.global_name] = rt.map
-        end
-        if not rt.gdata then
-            local gdata = { refresh_index = 0 }
-            global[rt.config.rt_name] = gdata
-            rt.gdata = gdata
-        end
+        Runtime.init_data(rt)
     end
 end
 
