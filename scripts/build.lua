@@ -571,10 +571,92 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
     local bp_entities = bp.get_blueprint_entities()
     local externals = {}
     if bp_entities then
-        ---@type table<integer, ProcInfo>
-        local inner_processors = {}
 
-        for index, bpentity in pairs(bp_entities) do
+        ---@alias WireType defines.wire_type
+        ---@alias ConnPointName any
+        ---@alias BpWireNetwork { wire_color: string, wire: defines.wire_type, entities: { bp_index: integer, conn_point_name: ConnPointName }[] }
+
+        ---@type BpWireNetwork[]
+        local wire_networks = {}
+        ---@type table<integer, table<WireType, table<ConnPointName, BpWireNetwork>>>
+        local bpentity_network_map = {}
+        ---@param network BpWireNetwork
+        ---@param conn_point_name ConnPointName
+        ---@param bp_index integer
+        ---@param skip_network_conflict boolean
+        ---@return boolean
+        local function add_bpentity_conn(network, conn_point_name, bp_index, skip_network_conflict)
+            bpentity_network_map[bp_index] = bpentity_network_map[bp_index] or {}
+            bpentity_network_map[bp_index][network.wire] = bpentity_network_map[bp_index][network.wire] or {}
+            if bpentity_network_map[bp_index][network.wire][conn_point_name] then
+                if network ~= bpentity_network_map[bp_index][network.wire][conn_point_name] and not skip_network_conflict then
+                    error("Conflicting wire networks")
+                end
+                return false
+            end
+            bpentity_network_map[bp_index][network.wire][conn_point_name] = network
+
+            network.entities = network.entities or {}
+            table.insert(network.entities, {
+                bp_index = bp_index,
+                conn_point_name = conn_point_name,
+            })
+
+            local links = bp_entities[bp_index].connections[conn_point_name][network.wire_color]
+            for _, link in pairs(links) do
+                local circuit_id = link.circuit_id
+                if circuit_id == nil then
+                    -- If there is only one connection, circuit_id would be nil
+                    -- In that case, find the name of the connection manually:
+                    for target_conn_point_name, _ in pairs(bp_entities[link.entity_id].connections) do
+                        if circuit_id ~= nil then
+                            error("Expected only one connection point")
+                        end
+                        circuit_id = target_conn_point_name
+                    end
+                    if circuit_id == nil then
+                        error("No connection point found")
+                    end
+                end
+                add_bpentity_conn(network, circuit_id .. "", link.entity_id, false)
+            end
+
+            return true
+        end
+
+        for bp_index, bpentity in pairs(bp_entities) do
+            if bpentity.connections then
+                for conn_point_name, wire_colors in pairs(bpentity.connections) do
+                    for wire_color, _ in pairs(wire_colors) do
+                        ---@type WireType
+                        local wire = defines.wire_type[wire_color]
+                        if wire ~= defines.wire_type.copper then
+                            ---@type BpWireNetwork
+                            local network = { wire_color = wire_color, wire = wire }
+                            if add_bpentity_conn(network, conn_point_name, bp_index, true) then
+                                table.insert(wire_networks, network)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        --TODO Would be great to rewrite this to use a system similar to remote_name_map for all entities, uncluding standard ones
+        -- Things like regular power-polls can now just return nil as their packed version
+        -- And combinators with unconfigured output can do so too - that would also optimized out all the were connections, dependant on that combinator
+        -- Personally, I've decided on at least waiting for the "Speaker support" to be merged - otherwise there will be ugly conflicts with such refactoring
+        ---@type table<integer, `true`>
+        local processed_bp_entities = {}
+        ---@param bp_index integer
+        ---@return boolean
+        local function add_bpentity(bp_index)
+            if processed_bp_entities[bp_index] then
+                return index_map[bp_index] ~= nil
+            end
+            processed_bp_entities[bp_index] = true
+            local bpentity = bp_entities[bp_index]
+            
             local name = bpentity.name
             local packed_name = allowed_name_map[name]
 
@@ -603,7 +685,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     }
                     ---@cast entity -nil
                     table.insert(entities, entity)
-                    index_map[index] = #entities
+                    index_map[bp_index] = #entities
 
                     if name == "constant-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
@@ -700,16 +782,6 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                 end
                             end
                         end
-                    elseif name == iopoint_name then
-                        if tags then
-                            local proc_index = tags.proc_index
-                            local proc = inner_processors[proc_index]
-                            if not proc then
-                                proc = { iopoints = {} }
-                                inner_processors[proc_index] = proc
-                            end
-                            proc.iopoints[tags.iopoint_index] = entity
-                        end
                     elseif name == display_name then
                         if tags and not tags.is_internal then
                             display.start(tags, entity)
@@ -726,32 +798,9 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                         }
                         table.insert(input_list, input_prop)
                     end
-                elseif name == commons.processor_name or name ==
-                    commons.processor_name_1x1 then
-                    local proc = inner_processors[index]
-                    if not proc then
-                        proc = { iopoints = {} }
-                        inner_processors[index] = proc
-                    end
-                    proc.name = name
-                    if tags then
-                        proc.blueprint = tags.blueprint --[[@as string]]
-                        proc.tick = tags.tick --[[@as integer]]
-                        proc.model = tags.model --[[@as string]]
-                        proc.label = tags.label --[[@as string]]
-                    end
-                    local value_id = (tags and tags.value_id) or tools.get_id()
-                    proc.inner_input = {
-                        x = position.x + bpentity.position.x / 32,
-                        y = position.y + bpentity.position.y / 32,
-                        value_id = value_id --[[@as string]],
-                        inner_inputs = {},
-                        label = proc.label or proc.model
-                    }
-                    table.insert(input_list, proc.inner_input)
                 end
             elseif remote_name_map[name] then
-                local tags = bp.get_blueprint_entity_tags(index)
+                local tags = bp.get_blueprint_entity_tags(bp_index)
                 local remote_driver = remote_name_map[name]
                 local pos = {
                     x = position.x + bpentity.position.x / 32,
@@ -762,58 +811,187 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     surface, pos, force)
                 if entity then
                     table.insert(entities, entity)
-                    index_map[index] = #entities
+                    index_map[bp_index] = #entities
                 end
             elseif build.textplate_map[name] then
 
             else
                 table.insert(externals, name)
             end
+
+            return index_map[bp_index] ~= nil
         end
 
-        for index, bpentity in pairs(bp_entities) do
-            local dst_index = index_map[index]
-            local entity = entities[dst_index]
-            if entity then
-                if bpentity.connections then
-                    for connection_name, colors in pairs(bpentity.connections) do
-                        for color, links in pairs(colors) do
-                            for _, link in pairs(links) do
-                                local src_circuit_id =
-                                    tonumber(connection_name) or 0
-                                local target_circuit_id = link.circuit_id
-                                local wire = defines.wire_type[color]
-                                local target_index = link.entity_id
-                                if index > target_index or
-                                    (index == target_index and src_circuit_id >
-                                        target_circuit_id) then
-                                    local target =
-                                        entities[index_map[target_index]]
-                                    if target and
-                                        (wire == defines.wire_type.red or wire ==
-                                            defines.wire_type.green) then
-                                        local success =
-                                            entity.connect_neighbour {
-                                                source_circuit_id = src_circuit_id,
-                                                wire = wire,
-                                                target_entity = target,
-                                                target_circuit_id = target_circuit_id
-                                            }
-                                        if not success then
-                                            debug(
-                                                "Failed to connect: " .. index ..
-                                                " to " .. link.entity_id ..
-                                                "(" ..
-                                                tools.get_constant_name(
-                                                    wire, defines.wire_type) ..
-                                                ")")
-                                        end
+        ---@type table<integer, ProcInfo>
+        local inner_processors = {} -- Indexed by bp_index
+        ---@type table<ProcInfo, table<integer, string>>
+        local nested_proc_bpentities = {} -- Values are bp_index=>iopoint_index maps
+        for bp_index, bpentity in pairs(bp_entities) do
+            local name = bpentity.name
+            local tags = bpentity.tags
+            if name == commons.processor_name or name == commons.processor_name_1x1 then
+                if inner_processors[bp_index] then
+                    error("inner processor index collision")
+                end
+                proc = { iopoints = {} }
+                inner_processors[bp_index] = proc
+                nested_proc_bpentities[proc] = {}
+                proc.name = name
+                if tags then
+                    proc.blueprint = tags.blueprint --[[@as string]]
+                    proc.tick = tags.tick --[[@as integer]]
+                    proc.model = tags.model --[[@as string]]
+                    proc.label = tags.label --[[@as string]]
+                end
+                local value_id = (tags and tags.value_id) or tools.get_id()
+                proc.inner_input = {
+                    x = position.x + bpentity.position.x / 32,
+                    y = position.y + bpentity.position.y / 32,
+                    value_id = value_id --[[@as string]],
+                    inner_inputs = {},
+                    label = proc.label or proc.model
+                }
+                table.insert(input_list, proc.inner_input)
+            end
+        end
+        for bp_index, bpentity in pairs(bp_entities) do
+            local name = bpentity.name
+            local tags = bpentity.tags
+            if name == iopoint_name then
+                local entity = surface.create_entity {
+                    name = allowed_name_map[name],
+                    position = position,
+                    direction = bpentity.direction,
+                    force = force
+                }
+                ---@cast entity -nil
+                table.insert(entities, entity)
+                index_map[bp_index] = #entities
+
+                if not tags then
+                    debug(name .. " without tags") -- Same check below is commented out
+                else
+                    local proc_bp_index = tags.proc_index
+                    local proc = inner_processors[proc_bp_index]
+                    if not proc then
+                        proc = { iopoints = {} }
+                        inner_processors[proc_bp_index] = proc
+                    end
+
+                    proc.iopoints[tags.iopoint_index] = entity
+                    nested_proc_bpentities[proc][bp_index] = tags.iopoint_index
+                end
+
+            end
+        end
+
+        ---@type table<BpWireNetwork, `true`>
+        local packed_networks = {}
+        ---@type table<integer, `true`>
+        local packed_inner_processors = {}
+        ---@param network BpWireNetwork
+        local function add_packed_network(network)
+            if packed_networks[network] then return end
+            packed_networks[network] = true
+
+            for _, e in pairs(network.entities) do
+                if bp_entities[e.bp_index].name == iopoint_name then
+                    if not bp_entities[e.bp_index].tags then
+                        -- debug(iopoint_name .. " without tags") -- Same check above
+                    else
+                        local proc_bp_index = bp_entities[e.bp_index].tags.proc_index
+                        local proc = inner_processors[proc_bp_index]
+                        packed_inner_processors[proc_bp_index] = true
+                        for io_bp_index, _ in pairs(nested_proc_bpentities[proc]) do
+                            if bpentity_network_map[io_bp_index] then
+                                for _, e_networks in pairs(bpentity_network_map[io_bp_index]) do
+                                    for _, ref_network in pairs(e_networks) do
+                                        add_packed_network(ref_network)
                                     end
                                 end
                             end
                         end
                     end
+                --TODO also check that e.conn_point_name is not a combinator output (defines.circuit_connector_id.combinator_output)
+                -- Maybe add remote interface to check that for remote combinators?
+                -- Actually no, this is not enough. A clock connected only to output poll is valid and should be packed
+                -- So, instead - the algorithm needs to be 2 pass: Input=>Output, then Output=>Input
+                -- Otherwise other outputs of that clock would get picked up, even if they are not connected to any IO polls
+                -- But anyway, for this to properly work - connections within the nested processors need to be accounted for in the same way
+                -- And then don't warn when parts of nested processors are optimized out...
+                elseif add_bpentity(e.bp_index) then
+                    for _, e_networks in pairs(bpentity_network_map[e.bp_index]) do
+                        for _, ref_network in pairs(e_networks) do
+                            add_packed_network(ref_network)
+                        end
+                    end
                 end
+            end
+
+        end
+        for _, network in pairs(wire_networks) do
+            local has_io = false
+            for _, e in pairs(network.entities) do
+                if bp_entities[e.bp_index].name == internal_iopoint_name then
+                    has_io = true
+                    break
+                end
+            end
+            if has_io then
+                add_packed_network(network)
+            end
+        end
+        
+        for bp_index, bpentity in pairs(bp_entities) do
+            if not packed_inner_processors[bp_index] and not bpentity_network_map[bp_index] and bpentity.name ~= iopoint_name then
+                debug(bp_entities[bp_index].name .. " entity was not packed, because it was not connected to any wire network")
+            end
+        end
+
+        for _, network in pairs(wire_networks) do
+            if not packed_networks[network] then
+                local m = "Network with "..network.wire_color.." wire had no path to/from IO. Entities:"
+                local any_packed = false
+                for _, e in pairs(network.entities) do
+                    if add_bpentity(e.bp_index) then
+                        any_packed = true
+                    end
+                    m = m .. " " .. bp_entities[e.bp_index].name
+                end
+                if any_packed then
+                    debug(m)
+                end
+            end
+        end
+
+        for network, _ in pairs(packed_networks) do
+            local first_bp_entity = nil
+
+            for _, e in pairs(network.entities) do
+                local pack_entity = entities[index_map[e.bp_index]]
+                if pack_entity then
+                    if not first_bp_entity then
+                        first_bp_entity = e
+                    else
+                        local success = pack_entity.connect_neighbour {
+                            wire = network.wire,
+                            target_entity = entities[index_map[first_bp_entity.bp_index]],
+                            source_circuit_id = e.conn_point_name,
+                            target_circuit_id = first_bp_entity.conn_point_name,
+                        }
+                        if not success then
+                            debug(
+                                "Failed to connect: " .. e.bp_index .. " (" .. bp_entities[e.bp_index].name .. ")" ..
+                                " to " .. first_bp_entity.bp_index .. " (" .. bp_entities[first_bp_entity.bp_index].name .. ")" ..
+                                " using " .. network.wire_color .. " wire"
+                            )
+                        end
+                    end
+                end
+            end
+
+            if not first_bp_entity then
+                error("first_bp_entity not found")
             end
         end
 
