@@ -809,7 +809,7 @@ end
 
 local define_directions = defines.direction
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_local_disp(direction, pos)
@@ -827,7 +827,7 @@ function tools.get_local_disp(direction, pos)
 	end
 end
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_front(direction, pos)
@@ -844,7 +844,7 @@ function tools.get_front(direction, pos)
 	end
 end
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_back(direction, pos)
@@ -868,7 +868,7 @@ tools.opposite_directions = {
     [define_directions.west ] = define_directions.east
 }
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@return integer
 function tools.get_opposite_direction(direction)
 	if direction == define_directions.north then
