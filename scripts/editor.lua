@@ -196,7 +196,7 @@ tools.on_event(defines.events.on_gui_elem_changed,
             return
         end
 
-        local procinfo = global.surface_map[player.surface.name]
+        local procinfo = storage.surface_map[player.surface.name]
         if not procinfo then return end
         procinfo[name] = tools.signal_to_sprite(e.element.elem_value --[[@as SignalID]])
         editor.draw_sprite(procinfo)
@@ -229,8 +229,8 @@ end
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
-    if global.last_click and global.last_click > game.tick - 120 then return end
-    global.last_click = game.tick
+    if storage.last_click and storage.last_click > game.tick - 120 then return end
+    storage.last_click = game.tick
 
     if not processor or not processor.valid then return end
 
@@ -330,7 +330,7 @@ function editor.set_packed(procinfo, is_packed, player)
         editor.recursive_pack(procinfo)
         build.save_packed_circuits(procinfo)
         build.disconnect_all_iopoints(procinfo)
-        local _, _,  externals = build.create_packed_circuit(procinfo)
+        local _, _, externals = build.create_packed_circuit(procinfo)
         if externals and #externals > 0 and player then
             player.print({ "compaktcircuit-message.external_present" })
         end
@@ -371,7 +371,7 @@ local function check_stack(player)
             if empty_stack then
                 empty_stack.transfer_stack(stack)
             else
-                player.surface.spill_item_stack(player.position, { stack })
+                player.surface.spill_item_stack { position = player.position, stack = stack }
             end
             stack.clear()
         end
@@ -432,9 +432,9 @@ tools.on_gui_click(prefix .. "-add_input",
 ---@param procinfo ProcInfo
 ---@return LuaSurface
 function editor.get_or_create_surface(procinfo)
-    if not global.surface_map then
+    if not storage.surface_map then
         ---@type table<string, ProcInfo>
-        global.surface_map = {}
+        storage.surface_map = {}
     end
 
     local surface_name = editor.get_surface_name(procinfo.processor)
@@ -457,7 +457,7 @@ function editor.get_or_create_surface(procinfo)
 
         local tiles = {}
         local tile_proto = prefix .. "-ground"
-        if not game.tile_prototypes[tile_proto] then
+        if not prototypes.tile[tile_proto] then
             tile_proto = "refined-concrete"
         end
 
@@ -478,7 +478,7 @@ function editor.get_or_create_surface(procinfo)
     end
 
     procinfo.surface = surface
-    global.surface_map[surface_name] = procinfo
+    storage.surface_map[surface_name] = procinfo
     editor.clean_surface(procinfo)
     return surface
 end
@@ -578,7 +578,7 @@ function editor.open_iopole(player, entity)
     player.opened = nil
 
     local vars = get_vars(player)
-    local procinfo = global.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map[entity.surface.name]
 
     local ids = {}
     for i = 1, #procinfo.iopoints do table.insert(ids, tostring(i)) end
@@ -809,7 +809,7 @@ function editor.delete_surface(procinfo)
     if not procinfo.surface then return end
 
     editor.clean_surface(procinfo)
-    global.surface_map[procinfo.surface.name] = nil
+    storage.surface_map[procinfo.surface.name] = nil
     game.delete_surface(procinfo.surface)
     procinfo.surface = nil
 end
@@ -817,12 +817,12 @@ end
 ---@param e EventData.on_pre_surface_deleted
 function editor.on_pre_surface_deleted(e)
     local surface = game.surfaces[e.surface_index]
-    local procinfo = global.surface_map[surface.name]
+    local procinfo = storage.surface_map[surface.name]
 
     if procinfo == nil then return end
 
     editor.clean_surface(procinfo)
-    global.surface_map[surface.name] = nil
+    storage.surface_map[surface.name] = nil
     procinfo.surface = nil
     for _, player in pairs(game.players) do
         if player.surface == surface then exit_player(procinfo, player) end
@@ -840,7 +840,13 @@ function editor.draw_sprite(procinfo)
     if not (processor and processor.valid) then return end
 
     if procinfo.sprite_ids then
-        for _, id in pairs(procinfo.sprite_ids) do rendering.destroy(id) end
+        for _, id in pairs(procinfo.sprite_ids) do 
+            if type(id)=="number" then
+                rendering.get_object_by_id(id).destroy()
+            else
+                id.destroy() 
+            end
+        end
         procinfo.sprite_ids = nil
     end
 
@@ -863,8 +869,10 @@ function editor.draw_sprite(procinfo)
         local id = rendering.draw_sprite {
             surface = processor.surface,
             sprite = sprite1,
-            target = processor,
-            target_offset = { 0, target_y * scale },
+            target = {
+                offset = { 0, target_y * scale },
+                entity = processor
+            },
             x_scale = scale,
             y_scale = scale,
             render_layer = "lower-object"
@@ -877,8 +885,10 @@ function editor.draw_sprite(procinfo)
         local id = rendering.draw_sprite {
             surface = processor.surface,
             sprite = sprite2,
-            target = processor,
-            target_offset = { 0, target_y * scale },
+            target = {
+                offset = { 0, target_y * scale },
+                entity = processor
+            },
             x_scale = scale2,
             y_scale = scale2,
             render_layer = "lower-object"
@@ -935,7 +945,7 @@ local function on_player_changed_surface(e)
     end
 
     local surface_name = player.surface.name
-    procinfo = global.surface_map[surface_name]
+    procinfo = storage.surface_map[surface_name]
     if procinfo then
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
@@ -985,7 +995,7 @@ end
 ---@param index integer
 ---@return integer
 local function check_ipoint_index(procinfo, index)
-    if global.surface_restoring then return index end
+    if storage.surface_restoring then return index end
 
     local map = get_iopoint_map(procinfo)
     if index then
@@ -1025,8 +1035,8 @@ local function on_build(entity, e)
     if not entity or not entity.valid then return end
 
     local name = entity.name
-    local procinfo = global.surface_map and
-        global.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and
+        storage.surface_map[entity.surface.name]
 
     if name == internal_iopoint_name then
         if not procinfo then
@@ -1088,10 +1098,10 @@ local function on_build(entity, e)
                 text = { message_prefix .. ".not_allowed" }
             }
         end
-        if not global.destroy_list then
-            global.destroy_list = { entity }
+        if not storage.destroy_list then
+            storage.destroy_list = { entity }
         else
-            table.insert(global.destroy_list, entity)
+            table.insert(storage.destroy_list, entity)
         end
     end
 end
@@ -1107,24 +1117,25 @@ local function destroy_invalid(entity)
     end
     if m.minable and m.products then
         for _, p in pairs(m.products) do
-            surface.spill_item_stack(position,
-                { name = p.name, count = p.amount }, true,
-                force)
+            surface.spill_item_stack { position = position,
+                stack = { name = p.name, count = p.amount },
+                enable_looted = true,
+                force = force }
         end
     end
 end
 
 tools.on_nth_tick(5, function()
-    if not global.destroy_list then return end
-    for _, entity in ipairs(global.destroy_list) do
+    if not storage.destroy_list then return end
+    for _, entity in ipairs(storage.destroy_list) do
         if entity.valid then destroy_invalid(entity) end
     end
-    global.destroy_list = nil
+    storage.destroy_list = nil
 end)
 
 ---@param ev EventData.on_robot_built_entity
 local function on_robot_built(ev)
-    local entity = ev.created_entity
+    local entity = ev.entity
 
     on_build(entity, ev)
 end
@@ -1145,7 +1156,7 @@ end
 
 ---@param ev EventData.on_built_entity
 local function on_player_built(ev)
-    local entity = ev.created_entity
+    local entity = ev.entity
 
     on_build(entity, ev)
 end
@@ -1157,8 +1168,8 @@ local function on_marked_for_deconstruction(e)
 
     local player = game.players[e.player_index]
     local entity = e.entity
-    local procinfo = global.surface_map and
-        global.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and
+        storage.surface_map[entity.surface.name]
     if not procinfo then return end
 
     local controller_type = player.controller_type
@@ -1183,7 +1194,7 @@ local filter_names = { {} }
 
 ---@type string[]
 local surface_name_filter = {
-    "constant-combinator", "decider-combinator", "arithmetic-combinator",
+    "constant-combinator", "decider-combinator", "arithmetic-combinator", "selector-combinator",
     "big-electric-pole", "small-electric-pole", "medium-electric-pole",
     "substation", internal_iopoint_name, "small-lamp"
 }
@@ -1197,7 +1208,7 @@ function editor.destroy_internal_iopoint(entity)
     if not entity.valid then return end
 
     ---@type ProcInfo
-    local procinfo = global.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map[entity.surface.name]
     if not procinfo then return end
 
     procinfo.iopoint_infos[entity.unit_number] = nil
@@ -1254,7 +1265,7 @@ local forbidden_prototypes = {
 function editor.add_combinator(driver)
     if remote_name_map[driver.name] then return end
 
-    local proto = game.entity_prototypes[driver.name]
+    local proto = prototypes.entity[driver.name]
     if forbidden_prototypes[proto.type] then return end
 
     remote_name_map[driver.name] = driver

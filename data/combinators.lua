@@ -7,7 +7,7 @@ local function png(name) return ('__compaktcircuit__/graphics/%s.png'):format(na
 
 combinators.png = png
 
-local no_energy = settings.startup[commons.prefix .. "-no_energy" ].value
+local no_energy = settings.startup[commons.prefix .. "-no_energy"].value
 local boxsize = commons.boxsize
 
 function combinators.merge_table(dst, sources)
@@ -33,7 +33,6 @@ local function scale_vect(v, scale)
 end
 
 local function scale_connector(c, scale)
-
 	if not c then return end
 	if c.scale then
 		c.scale = scale * c.scale
@@ -51,7 +50,6 @@ local function scale_connector(c, scale)
 end
 
 local function scale_picture(p, scale)
-
 	if not p then return end
 	if p.scale then
 		p.scale = scale * p.scale
@@ -69,28 +67,57 @@ local lamp_definition = {
 		blue_led_light_offset = { 0.171875, 0.53125 },
 		connector_main = {
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04a-base-sequence.png",
-			height = 50, priority = "low", scale = 0.5, width = 52, x = 104, y = 150,
+			height = 50,
+			priority = "low",
+			scale = 0.5,
+			width = 52,
+			x = 104,
+			y = 150,
 			shift = { 0.140625, 0.265625 }
 		},
 		connector_shadow = {
 			draw_as_shadow = true,
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04b-base-shadow-sequence.png",
-			height = 46, priority = "low", scale = 0.5, width = 62, x = 124, y = 138, shift = { 0.1875, 0.3125 }
+			height = 46,
+			priority = "low",
+			scale = 0.5,
+			width = 62,
+			x = 124,
+			y = 138,
+			shift = { 0.1875, 0.3125 }
 
 		},
 		led_blue = {
 			draw_as_glow = true,
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04e-blue-LED-on-sequence.png",
-			height = 60, priority = "low", scale = 0.5, shift = { 0.140625, 0.234375 }, width = 60, x = 120, y = 180
+			height = 60,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.140625, 0.234375 },
+			width = 60,
+			x = 120,
+			y = 180
 		},
 		led_blue_off = {
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04f-blue-LED-off-sequence.png",
-			height = 44, priority = "low", scale = 0.5, shift = { 0.140625, 0.234375 }, width = 46, x = 92, y = 132
+			height = 44,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.140625, 0.234375 },
+			width = 46,
+			x = 92,
+			y = 132
 		},
 		led_green = {
 			draw_as_glow = true,
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04h-green-LED-sequence.png",
-			height = 46, priority = "low", scale = 0.5, shift = { 0.140625, 0.234375 }, width = 48, x = 96, y = 138
+			height = 46,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.140625, 0.234375 },
+			width = 48,
+			x = 96,
+			y = 138
 		},
 		led_light = {
 			intensity = 0, size = 0.9
@@ -98,17 +125,35 @@ local lamp_definition = {
 		led_red = {
 			draw_as_glow = true,
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04i-red-LED-sequence.png",
-			height = 46, priority = "low", scale = 0.5, shift = { 0.140625, 0.234375 }, width = 48, x = 96, y = 138
+			height = 46,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.140625, 0.234375 },
+			width = 48,
+			x = 96,
+			y = 138
 		},
 		red_green_led_light_offset = { 0.15625, 0.421875 },
 		wire_pins = {
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04c-wire-sequence.png",
-			height = 58, priority = "low", scale = 0.5, shift = { 0.140625, 0.234375 }, width = 62, x = 124, y = 174
+			height = 58,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.140625, 0.234375 },
+			width = 62,
+			x = 124,
+			y = 174
 		},
 		wire_pins_shadow = {
 			draw_as_shadow = true,
 			filename = "__base__/graphics/entity/circuit-connector/hr-ccm-universal-04d-wire-shadow-sequence.png",
-			height = 54, priority = "low", scale = 0.5, shift = { 0.296875, 0.359375 }, width = 70, x = 140, y = 162
+			height = 54,
+			priority = "low",
+			scale = 0.5,
+			shift = { 0.296875, 0.359375 },
+			width = 70,
+			x = 140,
+			y = 162
 		}
 	},
 	circuit_wire_connection_point = {
@@ -124,7 +169,7 @@ local lamp_definition = {
 		type = "electric",
 		usage_priority = "lamp"
 	},
-	energy_usage_per_tick = "5KW",
+	energy_usage_per_tick = "5kJ",
 	flags = {
 		"placeable-neutral",
 		"player-creation"
@@ -148,21 +193,11 @@ local lamp_definition = {
 				direction_count = 1,
 				filename = "__base__/graphics/entity/small-lamp/lamp.png",
 				frame_count = 1,
-				height = 36,
-				hr_version = {
-					axially_symmetrical = false,
-					direction_count = 1,
-					filename = "__base__/graphics/entity/small-lamp/hr-lamp.png",
-					frame_count = 1,
-					height = 70,
-					priority = "high",
-					scale = 0.5,
-					shift = { 0.0078125, 0.09375 },
-					width = 83
-				},
+				height = 70,
+				scale = 0.5,
 				priority = "high",
-				shift = { 0, 0.09375 },
-				width = 42
+				shift = { 0.0078125, 0.09375 },
+				width = 83
 			},
 			{
 				axially_symmetrical = false,
@@ -170,22 +205,11 @@ local lamp_definition = {
 				draw_as_shadow = true,
 				filename = "__base__/graphics/entity/small-lamp/lamp-shadow.png",
 				frame_count = 1,
-				height = 24,
-				hr_version = {
-					axially_symmetrical = false,
-					direction_count = 1,
-					draw_as_shadow = true,
-					filename = "__base__/graphics/entity/small-lamp/hr-lamp-shadow.png",
-					frame_count = 1,
-					height = 47,
-					priority = "high",
-					scale = 0.5,
-					shift = { 0.125, 0.1484375 },
-					width = 76
-				},
+				height = 47,
 				priority = "high",
-				shift = { 0.125, 0.15625 },
-				width = 38
+				scale = 0.5,
+				shift = { 0.125, 0.1484375 },
+				width = 76
 			}
 		}
 	},
@@ -194,49 +218,46 @@ local lamp_definition = {
 		direction_count = 1,
 		filename = "__base__/graphics/entity/small-lamp/lamp-light.png",
 		frame_count = 1,
-		height = 40,
-		hr_version = {
-			axially_symmetrical = false,
-			direction_count = 1,
-			filename = "__base__/graphics/entity/small-lamp/hr-lamp-light.png",
-			frame_count = 1,
-			height = 78,
-			priority = "high",
-			scale = 0.5,
-			shift = { 0, -0.21875 },
-			width = 90
-		},
+		height = 78,
 		priority = "high",
+		scale = 0.5,
 		shift = { 0, -0.21875 },
-		width = 46
+		width = 90
 	},
 	selection_box = { { -0.5, -0.5 }, { 0.5, 0.5 } },
 	signal_to_color_mapping = {
-		{ color = { b = 0, g = 0, r = 1 },
+		{
+			color = { b = 0, g = 0, r = 1 },
 			name = "signal-red",
 			type = "virtual"
 		},
-		{  color = { b = 0, g = 1, r = 0 },
+		{
+			color = { b = 0, g = 1, r = 0 },
 			name = "signal-green",
 			type = "virtual"
 		},
-		{  color = { b = 1, g = 0, 	r = 0 },
+		{
+			color = { b = 1, g = 0, r = 0 },
 			name = "signal-blue",
 			type = "virtual"
 		},
-		{ color = { b = 0, g = 1, r = 1 },
+		{
+			color = { b = 0, g = 1, r = 1 },
 			name = "signal-yellow",
 			type = "virtual"
-		}, 
-		{  color = {  b = 1, g = 0, r = 1 },
+		},
+		{
+			color = { b = 1, g = 0, r = 1 },
 			name = "signal-pink",
 			type = "virtual"
 		},
-		{ color = { b = 1, g = 1, r = 0 },
+		{
+			color = { b = 1, g = 1, r = 0 },
 			name = "signal-cyan",
 			type = "virtual"
 		},
-		{ color = { b = 1, g = 1, r = 1 },
+		{
+			color = { b = 1, g = 1, r = 1 },
 			name = "signal-white",
 			type = "virtual"
 		}
@@ -246,7 +267,6 @@ local lamp_definition = {
 
 
 local function scale_lamp(name, scale)
-
 	local lamp = table.deepcopy(lamp_definition)
 	local connectors = lamp.circuit_connector_sprites
 
@@ -270,40 +290,35 @@ local function scale_lamp(name, scale)
 	points.wire.red = scale_vect(points.wire.red, scale)
 
 	scale_picture(lamp.picture_off.layers[1], scale)
-	scale_picture(lamp.picture_off.layers[1].hr_version, scale)
 	scale_picture(lamp.picture_off.layers[2], scale)
-	scale_picture(lamp.picture_off.layers[2].hr_version, scale)
 	scale_picture(lamp.picture_on, scale)
-	scale_picture(lamp.picture_on.hr_version, scale)
 
 	lamp.flags = { "hide-alt-info", "not-on-map", "not-upgradable", "not-deconstructable", "not-blueprintable",
-		"placeable-off-grid", "hidden" }
+		"placeable-off-grid" }
 	lamp.name = name
 	lamp.collision_box = { { -boxsize, -boxsize }, { boxsize, boxsize } }
-	lamp.collision_mask = {}
+	lamp.collision_mask = { layers = {} }
 	lamp.selection_box = { { -0.01, -0.01 }, { 0.01, 0.01 } }
 	lamp.selectable_in_game = false
 	lamp.draw_circuit_wires = false
 	lamp.draw_copper_wires = false
-	lamp.energy_usage_per_tick = "10W"
-	lamp.glow_size = scale * lamp.glow_size 
+	lamp.energy_usage_per_tick = "10J"
+	lamp.glow_size = scale * lamp.glow_size
 	lamp.light.size = 3 * scale
 	lamp.light_when_colored.size = 2 * scale
 	--lamp.always_on = true
-	lamp.picture_off.layers[1].filename = png("entity/lamp/lamp")
-	lamp.picture_off.layers[1].hr_version.filename = png("entity/lamp/hr-lamp")
+	lamp.picture_off.layers[1].filename = png("entity/lamp/hr-lamp")
 	lamp.energy_source = { type = "void" }
 
 	return lamp
 end
 
 function combinators.create_internals()
-
 	local invisible_sprite = { filename = png('invisible'), width = 1, height = 1 }
 	local wire_conn = { wire = { red = { 0, 0 }, green = { 0, 0 } }, shadow = { red = { 0, 0 }, green = { 0, 0 } } }
 	local commons_attr = {
 		flags = { 'placeable-off-grid' },
-		collision_mask = {},
+		collision_mask = { layers = {} },
 		minable = nil,
 		selectable_in_game = debug_mode,
 		circuit_wire_max_distance = 64,
@@ -323,12 +338,12 @@ function combinators.create_internals()
 
 	if no_energy then
 		energy_attr = {
-			active_energy_usage = "0.01KW",
+			active_energy_usage = "0.01kW",
 			energy_source = { type = "void" }
 		}
 	else
 		energy_attr = {
-			active_energy_usage = "1KW",
+			active_energy_usage = "1kW",
 			energy_source = {
 				type = "electric",
 				usage_priority = "secondary-input",
@@ -343,9 +358,7 @@ function combinators.create_internals()
 	end
 
 	local function insert_flags(flags)
-
 		if not debug_mode then
-			table_add(flags, "hidden")
 			table_add(flags, "hide-alt-info")
 			table_add(flags, "not-on-map")
 		end
@@ -361,20 +374,19 @@ function combinators.create_internals()
 
 	local constant_combinator = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
 	constant_combinator = merge_table(constant_combinator, { commons_attr, {
-		name = commons.prefix .. '-cc',
-		item_slot_count = 100
+		name = commons.prefix .. '-cc'
 	} })
 	insert_flags(constant_combinator.flags)
 
 	--------------------------------------------------------
 
-	local cc2 = table.deepcopy(constant_combinator)
-	cc2.name = commons.prefix .. "-cc2"
+	local cc2                   = table.deepcopy(constant_combinator)
+	cc2.name                    = commons.prefix .. "-cc2"
 
 	--------------------------------------------------------
 
-	local packed_input = table.deepcopy(constant_combinator)
-	packed_input.name = commons.packed_input_name
+	local packed_input          = table.deepcopy(constant_combinator)
+	packed_input.name           = commons.packed_input_name
 
 	--------------------------------------------------------
 
@@ -382,19 +394,19 @@ function combinators.create_internals()
 	arithmetic_combinator       = merge_table(arithmetic_combinator, {
 
 		commons_attr, {
-			name = commons.prefix .. '-ac',
-			and_symbol_sprites = invisible_sprite,
-			divide_symbol_sprites = invisible_sprite,
-			left_shift_symbol_sprites = invisible_sprite,
-			minus_symbol_sprites = invisible_sprite,
-			plus_symbol_sprites = invisible_sprite,
-			power_symbol_sprites = invisible_sprite,
-			multiply_symbol_sprites = invisible_sprite,
-			or_symbol_sprites = invisible_sprite,
-			right_shift_symbol_sprites = invisible_sprite,
-			xor_symbol_sprites = invisible_sprite,
-			modulo_symbol_sprites = invisible_sprite
-		}, energy_attr
+		name = commons.prefix .. '-ac',
+		and_symbol_sprites = invisible_sprite,
+		divide_symbol_sprites = invisible_sprite,
+		left_shift_symbol_sprites = invisible_sprite,
+		minus_symbol_sprites = invisible_sprite,
+		plus_symbol_sprites = invisible_sprite,
+		power_symbol_sprites = invisible_sprite,
+		multiply_symbol_sprites = invisible_sprite,
+		or_symbol_sprites = invisible_sprite,
+		right_shift_symbol_sprites = invisible_sprite,
+		xor_symbol_sprites = invisible_sprite,
+		modulo_symbol_sprites = invisible_sprite
+	}, energy_attr
 	})
 	insert_flags(arithmetic_combinator.flags)
 
@@ -414,13 +426,28 @@ function combinators.create_internals()
 
 	--------------------------------------------------------
 
+	local selector_combinator = table.deepcopy(data.raw["selector-combinator"]["selector-combinator"])
+	selector_combinator       = merge_table(selector_combinator, { commons_attr, {
+		name = commons.prefix .. '-sc',
+		max_symbol_sprites = invisible_sprite,
+		min_symbol_sprites = invisible_sprite,
+		count_symbol_sprites = invisible_sprite,
+		random_symbol_sprites = invisible_sprite,
+		stack_size_sprites = invisible_sprite,
+		rocket_capacity_sprites = invisible_sprite,
+		quality_capacity_sprites = invisible_sprite
+	}, energy_attr })
+	insert_flags(selector_combinator.flags)
+
+	--------------------------------------------------------
+
 	local pole = {
 
 		type = "electric-pole",
 		name = commons.prefix .. "-pole",
 		minable = nil,
 		collision_box = { { -boxsize, -boxsize }, { boxsize, boxsize } },
-		collision_mask = {},
+		collision_mask = { layers = {} },
 		selection_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
 		draw_copper_wires = debug_mode,
 		draw_circuit_wires = debug_mode,
@@ -463,7 +490,7 @@ function combinators.create_internals()
 		discharge_cooldown = 60,
 		selectable_in_game = debug_mode,
 		energy_source = {
-			buffer_capacity = "100KJ",
+			buffer_capacity = "100kJ",
 			input_flow_limit = "20MW",
 			output_flow_limit = "20MW",
 			type = "electric",
@@ -489,6 +516,7 @@ function combinators.create_internals()
 		cc2,
 		arithmetic_combinator,
 		decider_combinator,
+		selector_combinator,
 		packed_input,
 		pole,
 		epole,

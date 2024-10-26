@@ -24,7 +24,6 @@ local tools = require("scripts.tools")
 ---@field map table<int, EntityWithIdAndProcess>
 ---@field gdata RuntimeGlobal
 ---@field disabled boolean?
-
 local Runtime = {}
 
 --- @type table<string, RuntimeConfig>
@@ -49,11 +48,11 @@ function Runtime.register(config)
     ---@type EntityMap<EntityWithId>
     tools.on_init(
         function()
-            if not global[config.global_name] then
-                global[config.global_name] = {} --[[@as EntityMap<EntityWithId>]]
+            if not storage[config.global_name] then
+                storage[config.global_name] = {} --[[@as EntityMap<EntityWithId>]]
             end
-            if not global[config.rt_name] then
-                global[config.rt_name] = { refresh_index = 0 }
+            if not storage[config.rt_name] then
+                storage[config.rt_name] = { refresh_index = 0 }
             end
             local rt = Runtime.get(config.name)
             Runtime.init_data(rt)
@@ -85,11 +84,11 @@ function Runtime.get(name)
 
     setmetatable(rt, mt)
 
-    local map = global[config.global_name] --[[@as EntityMap<EntityWithIdAndProcess>]]
+    local map = storage[config.global_name] --[[@as EntityMap<EntityWithIdAndProcess>]]
     rt.map = map
 
     ---@type RuntimeGlobal
-    local gdata = global[config.rt_name]
+    local gdata = storage[config.rt_name]
     rt.gdata = gdata
 
     local max_per_run = max_per_tick
@@ -101,12 +100,7 @@ function Runtime.get(name)
     local function boost()
         local map_copy = tools.table_dup(rt.map)
         for _, current in pairs(map_copy) do
-            local local_process = current.process
-            if local_process then
-                local_process(current)
-            else
-                process(current)
-            end
+            process(current)
         end
         gdata.boost = nil
     end
@@ -146,12 +140,7 @@ function Runtime.get(name)
                 debug(config.name .. ":(" .. currentid .. ")")
             end
 
-            local local_process = current.process
-            if local_process then
-                local_process(current)
-            else
-                process(current)
-            end
+            process(current)
             gdata.refresh_index = gdata.refresh_index - 1
         end
     end
@@ -174,7 +163,7 @@ end
 ---@param map table<int, EntityWithIdAndProcess>
 function Runtime:set_map(map)
     self.map = map
-    global[self.config.global_name] = map
+    storage[self.config.global_name] = map
 end
 
 --- Add object to runtime
@@ -208,11 +197,11 @@ end
 function Runtime.init_data(rt)
     if not rt.map then
         rt.map = {}
-        global[rt.config.global_name] = rt.map
+        storage[rt.config.global_name] = rt.map
     end
     if not rt.gdata then
         local gdata = { refresh_index = 0 }
-        global[rt.config.rt_name] = gdata
+        storage[rt.config.rt_name] = gdata
         rt.gdata = gdata
     end
 end

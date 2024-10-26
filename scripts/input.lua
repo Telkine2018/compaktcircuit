@@ -304,8 +304,8 @@ function input.open(player, entity)
 
     frame.add { type = "line" }
 
-    local valid_flow = frame.add{type="flow", direction="horizontal"}
-    local empty = valid_flow.add{type="empty-widget"}
+    local valid_flow = frame.add { type = "flow", direction = "horizontal" }
+    local empty = valid_flow.add { type = "empty-widget" }
     empty.style.horizontally_stretchable = true
     local b = valid_flow.add {
         type = "button",
@@ -441,8 +441,8 @@ end
 
 ---@param entity LuaEntity
 function input.mine(entity)
-    if not global.input_infos then return end
-    global.input_infos[entity.unit_number] = nil
+    if not storage.input_infos then return end
+    storage.input_infos[entity.unit_number] = nil
 
     for _, player in pairs(game.players) do
         local vars = tools.get_vars(player)
@@ -456,7 +456,7 @@ end
 ---@param id integer
 ---@return Input?
 function input.get(id)
-    local input_infos = global.input_infos
+    local input_infos = storage.input_infos
     if not input_infos then return nil end
     return input_infos[id]
 end
@@ -464,10 +464,10 @@ end
 ---@param entity LuaEntity
 ---@param props Input
 function input.register(entity, props)
-    local input_infos = global.input_infos
+    local input_infos = storage.input_infos
     if not input_infos then
         input_infos = {}
-        global.input_infos = input_infos
+        storage.input_infos = input_infos
     end
     if not props then
         props = input.create(input.types.integer)
@@ -538,7 +538,7 @@ local function on_entity_settings_pasted(e)
         local info = input.get(src.unit_number)
         if info then
             local new_info = input.copy(info)
-            global.input_infos[dst.unit_number] = new_info
+            storage.input_infos[dst.unit_number] = new_info
         end
     end
 end
@@ -586,7 +586,7 @@ function input.create_unpacked_input_list(procinfo, input_list)
             local pos = entity.position
 
             ---@type Input?
-            local input_info = global.input_infos[entity.unit_number]
+            local input_info = storage.input_infos[entity.unit_number]
 
             if input_info then
                 ---@type InputProperty
@@ -611,7 +611,7 @@ function input.create_unpacked_input_list(procinfo, input_list)
         for _, processor in pairs(inner_processors) do
             local pos = processor.position
 
-            local inner_procinfo = global.procinfos[processor.unit_number] --[[@as ProcInfo?]]
+            local inner_procinfo = storage.procinfos[processor.unit_number] --[[@as ProcInfo?]]
             if inner_procinfo then
                 if inner_procinfo.is_packed then
                     if inner_procinfo.input_list and #inner_procinfo.input_list >
@@ -686,7 +686,7 @@ function input.create_property_table(player, procinfo)
         tooltip = { prefix .. "-tooltip.close" },
         style = "frame_action_button",
         mouse_button_filter = { "left" },
-        sprite = "utility/close_white",
+        sprite = "utility/close",
         hovered_sprite = "utility/close_black"
     }
 
@@ -1222,10 +1222,25 @@ local function set_signal(cb, index, signal, value)
     if signal and value then
         local signal = tools.sprite_to_signal(signal) --[[@as SignalID]]
         if not ccutils.special_signals[signal.name] and check_signal_o(signal) then
-            cb.set_signal(index, { signal = signal, count = value })
+            local section = cb.get_section(1)
+            if not section then
+                section = cb.add_section()
+            end
+            if section then
+                local filter = signal --[[@as SignalFilter]]
+                filter.quality = "normal"
+                filter.comparator = "="
+                section.set_slot(index, {
+                    value = filter,
+                    min = value
+                })
+            end
         end
     else
-        cb.set_signal(index, nil)
+        local section = cb.get_section(1)
+        if section then
+            section.clear_slot(index)
+        end
     end
 end
 
@@ -1291,35 +1306,43 @@ setter_table = {
         function(context)
             local signals = context.value --[[@as string[] ]]
             if not signals then return end
-            local parameters = {}
+            local filters = {}
             local index = 1
             for _, s in pairs(signals) do
                 local signal = tools.sprite_to_signal(s) --[[@as SignalID]]
                 if not ccutils.special_signals[signal.name] and
                     check_signal_o(signal) then
-                    table.insert(parameters,
-                        { count = 1, signal = signal, index = index })
+                    local filter = signal --[[@as SignalFilter]]
+                    filter.quality = "normal"
+                    filter.comparator = "="
+                    table.insert(filters, { value = filter, min = 1 })
                     index = index + 1
                 end
             end
-            context.cb.parameters = parameters
+            local section = context.cb.get_section(1)
+            if not section then section = context.cb.add_section("") end
+            section.filters = filters
         end,
     [input.types.choose_signals_with_count] = ---@param context SetterPropertyContext
         function(context)
             local signals = context.value --[[@as {count:integer, signal:string}[] ]]
             if not signals then return end
-            local parameters = {}
+            local filters = {}
             local index = 1
             for _, s in pairs(signals) do
                 local signal = tools.sprite_to_signal(s.signal) --[[@as SignalID]]
                 if not ccutils.special_signals[signal.name] and
                     check_signal_o(signal) then
-                    table.insert(parameters,
-                        { count = s.count, signal = signal, index = index })
+                    local filter = signal --[[@as SignalFilter]]
+                    filter.quality = "normal"
+                    filter.comparator = "="
+                    table.insert(filters, { value = filter, min = s.count })
                     index = index + 1
                 end
             end
-            context.cb.parameters = parameters
+            local section = context.cb.get_section(1)
+            if not section then section = context.cb.add_section("") end
+            section.filters = filters
         end
 }
 
@@ -1335,7 +1358,7 @@ function input.save(player, check_autosave)
     local input_list = vars.input_list
     if procinfo then input.set_values(procinfo, input_list) end
 
-    display_runtime.boost = true
+    display_runtime.gdata.boost = true
 end
 
 tools.on_gui_click(prefix .. "-property_close", ---@param e EventData.on_gui_click
@@ -1391,12 +1414,14 @@ end
 ---@param input_info Input
 ---@param entity LuaEntity
 function input.set_icon(input_info, entity)
+    input_info.typeid = tools.render_translate(input_info.typeid)
     if input_info.typeid then
-        rendering.destroy(input_info.typeid)
+        input_info.typeid.destroy()
         input_info.typeid = nil
     end
+    input_info.dataid = tools.render_translate(input_info.dataid)
     if input_info.dataid then
-        rendering.destroy(input_info.dataid)
+        input_info.dataid.destroy()
         input_info.dataid = nil
     end
     if input_info.type then
@@ -1406,12 +1431,15 @@ function input.set_icon(input_info, entity)
         local scale = 0.5
         input_info.typeid = rendering.draw_sprite {
             sprite = sprite,
-            target = entity,
+
             surface = entity.surface,
             only_in_alt_mode = true,
             x_scale = scale,
             y_scale = scale,
-            target_offset = { x = 0.5, y = -0.5 }
+            target = {
+                offset = { x = 0.5, y = -0.5 },
+                entity = entity,
+            }
         }
 
         if type <= input.types.drop_down then
@@ -1421,12 +1449,14 @@ function input.set_icon(input_info, entity)
                 if check_signal_o(s) then
                     input_info.typeid = rendering.draw_sprite {
                         sprite = signal,
-                        target = entity,
                         surface = entity.surface,
                         only_in_alt_mode = true,
                         x_scale = scale,
                         y_scale = scale,
-                        target_offset = { x = 0.5, y = -0.3 }
+                        target = {
+                            offset = { x = 0.5, y = -0.3 },
+                            entity = entity
+                        }
                     }
                 end
             end

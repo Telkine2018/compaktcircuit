@@ -133,9 +133,9 @@ function display.get_frame(player) return player.gui.screen[frame_name] end
 local function remove_source(rt)
     ---@cast rt SpriteDisplayRuntime
     display_runtime:remove(rt)
-    if rt.renderid then rendering.destroy(rt.renderid) end
+    if rt.renderid then rt.renderid.destroy() end
     if rt.renderids then
-        for _, id in pairs(rt.renderids) do rendering.destroy(id) end
+        for _, id in pairs(rt.renderids) do id.destroy() end
     end
 end
 
@@ -496,8 +496,8 @@ function display.open(player, entity)
     -- Load previous
     ---@type Display?
     local props
-    if global.display_infos then
-        local di = global.display_infos[entity.unit_number]
+    if storage.display_infos then
+        local di = storage.display_infos[entity.unit_number]
         if di then props = di.props end
     end
     if not props then props = display.create(display_signal_type) end
@@ -644,8 +644,8 @@ end
 
 ---@param entity LuaEntity
 function display.mine(entity)
-    if not global.display_infos then return end
-    global.display_infos[entity.unit_number] = nil
+    if not storage.display_infos then return end
+    storage.display_infos[entity.unit_number] = nil
 
     for _, player in pairs(game.players) do
         local vars = tools.get_vars(player)
@@ -659,22 +659,22 @@ end
 ---@param id integer
 ---@return DisplayInfo?
 function display.get(id)
-    if not global.display_infos then return nil end
-    return global.display_infos[id]
+    if not storage.display_infos then return nil end
+    return storage.display_infos[id]
 end
 
 ---@param entity LuaEntity
 ---@param props Display
 function display.register(entity, props)
-    if not global.display_infos then global.display_infos = {} end
+    if not storage.display_infos then storage.display_infos = {} end
 
     ---@type DisplayInfo
-    local display_info = global.display_infos[entity.unit_number]
+    local display_info = storage.display_infos[entity.unit_number]
     if display_info then
         display_info.props = props
     else
         display_info = { entity = entity, props = props, id = entity.unit_number }
-        global.display_infos[entity.unit_number] = display_info
+        storage.display_infos[entity.unit_number] = display_info
     end
     display.set_icon(display_info)
     if display_info.internal then
@@ -684,7 +684,7 @@ function display.register(entity, props)
     if props.is_internal then
         display_info.internal = display.start(props, entity)
     else
-        local procinfo = global.surface_map[entity.surface.name]
+        local procinfo = storage.surface_map[entity.surface.name]
         if procinfo then
             if not procinfo.is_packed then
                 display_info.internal = display.start(props, entity)
@@ -695,7 +695,7 @@ end
 
 ---@param entity LuaEntity
 function display.restart(entity)
-    local display_info = global.display_infos[entity.unit_number]
+    local display_info = storage.display_infos[entity.unit_number]
     if not display_info then return end
     local props = display_info.props
 
@@ -706,7 +706,7 @@ function display.restart(entity)
     if props.is_internal then
         display_info.internal = display.start(props, entity)
     else
-        local procinfo = global.surface_map[entity.surface.name]
+        local procinfo = storage.surface_map[entity.surface.name]
         if procinfo then
             if not procinfo.is_packed then
                 display_info.internal = display.start(props, entity)
@@ -725,12 +725,14 @@ end
 
 ---@param display_info DisplayInfo
 function display.set_icon(display_info)
+    display_info.typeid = tools.render_translate(display_info.typeid)
     if display_info.typeid then
-        rendering.destroy(display_info.typeid)
+        display_info.typeid.destroy()
         display_info.typeid = nil
     end
+    display_info.dataid = tools.render_translate(display_info.dataid)
     if display_info.dataid then
-        rendering.destroy(display_info.dataid)
+        display_info.dataid.destroy()
         display_info.dataid = nil
     end
     if display_info.props and display_info.props.type then
@@ -742,12 +744,15 @@ function display.set_icon(display_info)
         local scale = 0.5
         display_info.typeid = rendering.draw_sprite {
             sprite = sprite,
-            target = display_info.entity,
+            target = {
+                entity = display_info.entity,
+                offset = { x = 0.5, y = -0.5 }
+            },
             surface = display_info.entity.surface,
             only_in_alt_mode = true,
             x_scale = scale,
             y_scale = scale,
-            target_offset = { x = 0.5, y = -0.5 }
+
         }
 
         if type == display.types.signal then
@@ -755,12 +760,14 @@ function display.set_icon(display_info)
             if dsignal.signal and ccutils.check_sprite(dsignal.signal) then
                 display_info.typeid = rendering.draw_sprite {
                     sprite = dsignal.signal,
-                    target = display_info.entity,
+                    target = {
+                        entity = display_info.entity,
+                        offset = { x = 0.5, y = -0.3 }
+                    },
                     surface = display_info.entity.surface,
                     only_in_alt_mode = true,
                     x_scale = scale,
-                    y_scale = scale,
-                    target_offset = { x = 0.5, y = -0.3 }
+                    y_scale = scale
                 }
             end
         end
@@ -847,7 +854,7 @@ local function find_source(rt)
             end
         else
             while true do
-                local procinfo = global.surface_map[surface_name]
+                local procinfo = storage.surface_map[surface_name]
                 if not procinfo or not procinfo.processor.valid or not procinfo.processor.surface.valid then return nil end
 
                 surface_name = procinfo.processor.surface.name
@@ -863,13 +870,28 @@ local function find_source(rt)
     end
 end
 
+local circuit_red = defines.wire_connector_id.circuit_red
+local circuit_green = defines.wire_connector_id.circuit_green
+
+
+---@param rt DisplayRuntime
+local function is_hidden_cleared(rt)
+    return rt.source.get_signal(vs_hide, circuit_red, circuit_green) == 0
+end
+
+---@param rt DisplayRuntime
+local function is_freeze_cleared(rt)
+    return rt.source.get_signal(vs_freeze, circuit_red, circuit_green) == 0
+end
+
+
 ---@param rt EntityWithIdAndProcess
 local function process_signal(rt)
     ---@cast rt SignalDisplayRuntime
     if is_source_invalid(rt) then return end
 
     if rt.hidden then
-        if (rt.source.get_merged_signal(vs_hide) == 0) then
+        if is_hidden_cleared(rt) then
             rt.hidden = nil
             rt.value = nil
         else
@@ -878,7 +900,7 @@ local function process_signal(rt)
     end
 
     if rt.freeze then
-        if (rt.source.get_merged_signal(vs_freeze) == 0) then
+        if is_freeze_cleared(rt) then
             rt.freeze = nil
         else
             return
@@ -903,8 +925,10 @@ local function process_signal(rt)
             text = "",
             use_rich_text = true,
             surface = source.surface,
-            target = source,
-            target_offset = { x = props.offsetx or 0, y = props.offsety or 0 },
+            target = {
+                entity = source,
+                offset = { x = props.offsetx or 0, y = props.offsety or 0 },
+            },
             color = { 1, 1, 1 },
             scale = props.scale or 1,
             forces = { source.force },
@@ -918,7 +942,7 @@ local function process_signal(rt)
     if not cb then return end
 
     local sname = rt.signal.name
-    local signals = rt.source.get_merged_signals()
+    local signals = rt.source.get_signals(circuit_green, circuit_red)
     local count
 
     local x, y, scale
@@ -936,7 +960,7 @@ local function process_signal(rt)
             elseif name == v_hide then
                 rt.hidden = true
                 if rt.renderid then
-                    rendering.destroy(rt.renderid);
+                    rt.renderid.destroy()
                     rt.renderid = nil
                     return
                 end
@@ -959,32 +983,35 @@ local function process_signal(rt)
         end
         if color and color_name ~= rt.color then
             rt.color = color_name
-            rendering.set_color(rt.renderid, color)
+            rt.renderid.color = color
         end
     end
 
     if count then
         if count ~= rt.value then
             rt.value = count
-            rendering.set_text(rt.renderid, tostring(count))
+            rt.renderid.text = tostring(count)
         end
     elseif rt.value ~= 0 then
-        rendering.set_text(rt.renderid, "0")
+        rt.renderid.text = "0"
         rt.value = 0
     end
 
     if x ~= rt.x or y ~= rt.y then
-        local processor = rendering.get_target(rt.renderid).entity
-        rendering.set_target(rt.renderid, processor, {
-            x = (props.offsetx or 0) + (x or 0) / 32,
-            y = (props.offsety or 0) + (y or 0) / 32
-        })
+        local processor = rt.renderid.target.entity
+        rt.renderid.target = {
+            entity = processor,
+            offset = {
+                x = (props.offsetx or 0) + (x or 0) / 32,
+                y = (props.offsety or 0) + (y or 0) / 32
+            }
+        }
         rt.x = x
         rt.y = y
     end
     if scale ~= rt.scale then
         local real_scale = (props.scale or 1) * ((scale or 100) / 100)
-        rendering.set_scale(rt.renderid, real_scale)
+        rt.renderid.scale = real_scale
         rt.scale = scale
     end
 end
@@ -995,7 +1022,7 @@ local function process_sprite(rt)
     if is_source_invalid(rt) then return end
 
     if rt.hidden then
-        if (rt.source.get_merged_signal(vs_hide) == 0) then
+        if is_hidden_cleared(rt) then
             rt.hidden = nil
             rt.sprite_name = nil
         else
@@ -1004,7 +1031,7 @@ local function process_sprite(rt)
     end
 
     if rt.freeze then
-        if (rt.source.get_merged_signal(vs_freeze) == 0) then
+        if is_freeze_cleared(rt) then
             rt.freeze = nil
         else
             return
@@ -1021,8 +1048,10 @@ local function process_sprite(rt)
         rt.renderid = rendering.draw_sprite {
             sprite = prefix .. "-invisible",
             surface = source.surface,
-            target = source,
-            target_offset = { x = props.offsetx or 0, y = props.offsety or 0 },
+            target = {
+                offset = { x = props.offsetx or 0, y = props.offsety or 0 },
+                entity = source,
+            },
             x_scale = props.scale or 1,
             y_scale = props.scale or 1,
             forces = { source.force },
@@ -1033,7 +1062,7 @@ local function process_sprite(rt)
     local cb = rt.source.get_control_behavior()
     if not cb then return end
 
-    local signals = rt.source.get_merged_signals()
+    local signals = rt.source.get_signals(circuit_red, circuit_green)
     local sname
     local x, y, scale
     if signals then
@@ -1049,7 +1078,7 @@ local function process_sprite(rt)
             elseif pname == v_hide then
                 rt.hidden = true
                 if rt.renderid then
-                    rendering.destroy(rt.renderid)
+                    rt.renderid.destroy()
                     rt.renderid = nil
                 end
                 return
@@ -1066,22 +1095,25 @@ local function process_sprite(rt)
     end
     if not sname then sname = prefix .. "-invisible" end
     if rt.sprite_name ~= sname then
-        rendering.set_sprite(rt.renderid, sname)
+        rt.renderid.sprite = sname
         rt.sprite_name = sname
     end
     if x ~= rt.x or y ~= rt.y then
-        local processor = rendering.get_target(rt.renderid).entity
-        rendering.set_target(rt.renderid, processor, {
-            x = (props.offsetx or 0) + (x or 0) / 32,
-            y = (props.offsety or 0) + (y or 0) / 32
-        })
+        local processor = rt.renderid.target.entity
+        rt.renderid.target = {
+            entity = processor,
+            offset = {
+                x = (props.offsetx or 0) + (x or 0) / 32,
+                y = (props.offsety or 0) + (y or 0) / 32
+            }
+        }
         rt.x = x
         rt.y = y
     end
     if scale ~= rt.scale then
         local real_scale = (props.scale or 1) * ((scale or 100) / 100)
-        rendering.set_x_scale(rt.renderid, real_scale)
-        rendering.set_y_scale(rt.renderid, real_scale)
+        rt.renderid.x_scale = real_scale
+        rt.renderid.y_scale = real_scale
         rt.scale = scale
     end
 end
@@ -1092,7 +1124,7 @@ local function process_text(rt)
     if is_source_invalid(rt) then return end
 
     if rt.hidden then
-        if (rt.source.get_merged_signal(vs_hide) == 0) then
+        if is_hidden_cleared(rt) then
             rt.hidden = nil
             rt.text = nil
         else
@@ -1101,7 +1133,7 @@ local function process_text(rt)
     end
 
     if rt.freeze then
-        if (rt.source.get_merged_signal(vs_freeze) == 0) then
+        if is_freeze_cleared(rt) then
             rt.freeze = nil
         else
             return
@@ -1110,18 +1142,18 @@ local function process_text(rt)
 
     local function clear()
         if rt.renderid then
-            rendering.destroy(rt.renderid)
+            rt.renderid.destroy()
             rt.renderid = nil
         end
         if rt.renderids then
-            for _, id in pairs(rt.renderids) do rendering.destroy(id) end
+            for _, id in pairs(rt.renderids) do id.destroy() end
             rt.renderids = nil
         end
     end
 
     local props = rt.props --[[@as TextDisplay]]
 
-    local signals = rt.source.get_merged_signals()
+    local signals = rt.source.get_signals(circuit_red, circuit_green)
     if not signals and rt.text then
         return
     end
@@ -1197,8 +1229,10 @@ local function process_text(rt)
             rt.renderid = rendering.draw_text {
                 text = text,
                 surface = source.surface,
-                target = source,
-                target_offset = { x = x, y = y },
+                target = {
+                    offset = { x = x, y = y },
+                    entity = source
+                },
                 color = all_colors_rgb[color_index],
                 scale = scale,
                 forces = { source.force },
@@ -1209,20 +1243,23 @@ local function process_text(rt)
             }
         else
             if text ~= rt.text then
-                rendering.set_text(rt.renderid, text)
+                rt.renderid.text = text
             end
             if x ~= rt.x or y ~= rt.y then
-                local processor = rendering.get_target(rt.renderid).entity
-                rendering.set_target(rt.renderid, processor, {
-                    x = x,
-                    y = y
-                })
+                local processor = rt.renderid.target.entity
+                rt.renderid.target = {
+                    entity = processor,
+                    offset = {
+                        x = x,
+                        y = y
+                    }
+                }
             end
             if scale ~= rt.scale then
-                rendering.set_scale(rt.renderid, scale)
+                rt.renderid.scale = scale
             end
             if color_index ~= rt.color_index then
-                rendering.set_color(rt.renderid, all_colors_rgb[color_index])
+                rt.renderid.color = all_colors_rgb[color_index]
             end
         end
     else -- multi_line
@@ -1247,8 +1284,10 @@ local function process_text(rt)
             local renderid = rendering.draw_text {
                 text = lines[i],
                 surface = source.surface,
-                target = source,
-                target_offset = { x = x, y = yc },
+                target = {
+                    offset = { x = x, y = yc },
+                    entity = source,
+                },
                 color = all_colors_rgb[color_index],
                 scale = scale,
                 forces = { source.force },
@@ -1278,7 +1317,7 @@ local function process_meta(rt)
     if is_source_invalid(rt) then return end
 
     if rt.hidden then
-        if (rt.source.get_merged_signal(vs_hide) == 0) then
+        if is_hidden_cleared(rt) then
             rt.hidden = nil
             rt.signals = nil
         else
@@ -1287,7 +1326,7 @@ local function process_meta(rt)
     end
 
     if rt.freeze then
-        if (rt.source.get_merged_signal(vs_freeze) == 0) then
+        if is_freeze_cleared(rt) then
             rt.freeze = nil
         else
             return
@@ -1296,7 +1335,7 @@ local function process_meta(rt)
 
     local source = rt.source
 
-    local cn = source.get_circuit_network(defines.wire_type.red)
+    local cn = source.get_circuit_network(defines.wire_connector_id.circuit_red)
     if not cn then return end
 
     local signals = cn.signals
@@ -1311,12 +1350,14 @@ local function process_meta(rt)
 
     if not max_signal then return end
 
-    local connected = source.circuit_connected_entities.green
-    if not connected or #connected < 1 then return end
+    local connector = source.get_wire_connector(defines.wire_connector_id.combinator_output_green, false)
+    if not connector then return end
 
-    local dst_combinator = connected[1]
-    if dst_combinator.type ~= "arithmetic-combinator" and dst_combinator.type ~=
-        "decider-combinator" then
+    local connections = connector.connections
+    if #connections == 0 then return end
+
+    local dst_combinator = connections[1].target.owner
+    if dst_combinator.type ~= "arithmetic-combinator" then
         return
     end
 
@@ -1369,14 +1410,14 @@ local function process_multisignal(rt)
 
     local function clear()
         if rt.renderids then
-            for _, id in pairs(rt.renderids) do rendering.destroy(id) end
+            for _, id in pairs(rt.renderids) do id.destroy() end
             rt.renderids = nil
         end
         rt.signals = nil
     end
 
     if rt.hidden then
-        if (rt.source.get_merged_signal(vs_hide) == 0) then
+        if is_hidden_cleared(rt) then
             rt.hidden = nil
             rt.signals = nil
         else
@@ -1385,7 +1426,7 @@ local function process_multisignal(rt)
     end
 
     if rt.freeze then
-        if (rt.source.get_merged_signal(vs_freeze) == 0) then
+        if is_freeze_cleared(rt) then
             rt.freeze = nil
         else
             return
@@ -1409,7 +1450,7 @@ local function process_multisignal(rt)
         return
     end
 
-    local signals = rt.source.get_merged_signals()
+    local signals = rt.source.get_signals(circuit_green, circuit_red)
 
     local offsetx, offsety, scale
     offsetx = props.offsetx or 0
@@ -1421,7 +1462,7 @@ local function process_multisignal(rt)
         return
     end
 
-    if (rt.source.get_merged_signal(vs_freeze) ~= 0) then
+    if not is_freeze_cleared(rt) then
         rt.freeze = true
         return
     end
@@ -1430,6 +1471,8 @@ local function process_multisignal(rt)
 
     local index = 0
     local line_height = scale * 0.7
+
+    ---@type LuaRenderObject[]
     local renderids = nil
 
     local mode = props.mode or multi_signal_h_v
@@ -1506,6 +1549,7 @@ local function process_multisignal(rt)
     local signal_count = math.min(max, #signals)
     local linecount = math.ceil(signal_count / colcount)
 
+
     renderids = {}
     rt.renderids = renderids
 
@@ -1541,27 +1585,27 @@ local function process_multisignal(rt)
         local renderid = rendering.draw_rectangle {
             surface = source.surface,
             forces = { source.force },
-            left_top = source,
-            right_bottom = source,
-            left_top_offset = { x = x1, y = y1 },
-            right_bottom_offset = { x = x2, y = y2 },
+            left_top = { entity = source, offset = { x = x1, y = y1 } },
+            right_bottom = { entity = source, offset = { x = x2, y = y2 } },
             color = all_colors_rgb[background_color],
-            filled = true
+            filled = true,
+            draw_on_ground = true
         }
         table.insert(renderids, renderid)
+        renderid.move_to_back()
     end
 
     if has_frame then
         local renderid = rendering.draw_rectangle {
             surface = source.surface,
             forces = { source.force },
-            left_top = source,
-            right_bottom = source,
-            left_top_offset = { x = x1, y = y1 },
-            right_bottom_offset = { x = x2, y = y2 },
-            color = color
+            left_top = { entity = source, offset = { x = x1, y = y1 } },
+            right_bottom = { entity = source, offset = { x = x2, y = y2 } },
+            color = color,
+            draw_on_ground = true
         }
         table.insert(renderids, renderid)
+        renderid.move_to_back()
     end
 
     rt.has_frame = has_frame
@@ -1575,6 +1619,10 @@ local function process_multisignal(rt)
         linecount = temp
     end
 
+    local scale1 = scale * 0.65
+    local xoff = scale * 0.4
+    local yoff = scale * 0.4
+
     for _, signal in pairs(signals) do
         local s = signal.signal
         local sname = signal.signal.name
@@ -1586,25 +1634,63 @@ local function process_multisignal(rt)
         end
 
         local type = s.type
-        if type == "virtual" then type = "virtual-signal" end
-        local text = "[" .. type .. "=" .. sname .. "] " ..
-            tostring(signal.count - offset)
+        if type == nil then
+            type = "item"
+        elseif type == "virtual" then
+            type = "virtual-signal"
+        end
+        local text = tostring(signal.count - offset)
+
+        local renderid = rendering.draw_sprite {
+            sprite = type .. "." .. sname,
+            surface = source.surface,
+            target = {
+                offset = { x = x + xoff, y = y + yoff },
+                entity = source,
+            },
+            color = color,
+            x_scale = scale1,
+            y_scale = scale1,
+            forces = { source.force },
+            draw_on_ground = true
+        }
+        table.insert(renderids, renderid)
+
         local renderid = rendering.draw_text {
             text = text,
             surface = source.surface,
-            target = source,
-            target_offset = { x = x, y = y },
+            target = {
+                offset = { x = x + scale, y = y },
+                entity = source,
+            },
             color = color,
             scale = scale,
             forces = { source.force },
             orientation = 0,
             alignment = "left",
             vertical_alignment = "top",
-            use_rich_text = true,
             draw_on_ground = true
         }
-        index = index + 1
         table.insert(renderids, renderid)
+
+        local quality = (signal.signal --[[@as any]]).quality
+        if quality then
+            local renderid = rendering.draw_sprite {
+                sprite = "quality." .. quality,
+                surface = source.surface,
+                target = {
+                    offset = { x = x + scale * 0.2, y = y + scale * 0.5 },
+                    entity = source,
+                },
+                color = color,
+                x_scale = scale * 0.3,
+                y_scale = scale * 0.3,
+                forces = { source.force }
+            }
+            table.insert(renderids, renderid)
+        end
+
+        index = index + 1
         if col >= colcount then
             col = 1
             x = offsetx
@@ -1634,7 +1720,10 @@ local function process_display(rt)
     if is_source_invalid(rt) then return end
 
     if rt.id ~= rt.source.unit_number then
-        rt.renderid = rt.id
+        if rt.renderid then
+            rt.renderid.destroy()
+            rt.renderid = nil
+        end
         display_runtime.map[rt.id] = nil
         rt.id = rt.source.unit_number
         display_runtime.map[rt.id] = rt
@@ -1642,12 +1731,12 @@ local function process_display(rt)
         return
     end
 
-    rt.process = process_table[rt.props.type]
-    if not rt.process then
+    local process = process_table[rt.props.type]
+    if not process then
         display_runtime:remove(rt)
         return
     end
-    rt.process(rt)
+    process(rt)
 end
 
 --------------------
@@ -1700,7 +1789,7 @@ local function on_entity_settings_pasted(e)
     if not dst or not dst.valid or not src or not src.valid then return end
 
     if dst.name == display_name and src.name == display_name then
-        local si = global.display_infos[src.unit_number]
+        local si = storage.display_infos[src.unit_number]
         if not si or si.props == nil then return end
         display.register(dst, si.props)
     end
@@ -1748,6 +1837,19 @@ function display.update_processors()
         for _, rt in pairs(display_runtime.map) do
             ---@cast rt DisplayRuntime
             find_source(rt)
+        end
+    end
+end
+
+function display.update_rendering()
+    if display_runtime.map then
+        local translate = tools.render_translate
+        for _, rt in pairs(display_runtime.map) do
+            ---@cast rt any
+            if rt.renderid then
+                rt.renderid = translate(rt.renderid)
+            end
+            tools.render_translate_table(rt.renderids)
         end
     end
 end

@@ -23,8 +23,8 @@ ccutils.special_signals = {
 ---@param create boolean?
 ---@return ProcInfo?
 function ccutils.get_procinfo(processor, create)
-    if not global.procinfos then global.procinfos = {} end
-    local procinfo = global.procinfos[processor.unit_number]
+    if not storage.procinfos then storage.procinfos = {} end
+    local procinfo = storage.procinfos[processor.unit_number]
     if not procinfo and create then
         procinfo = {
             processor = processor,
@@ -32,7 +32,7 @@ function ccutils.get_procinfo(processor, create)
             iopoints = {}, -- external io point
             iopoint_infos = {} -- map: unit_number of internal iopoint => information on point
         }
-        global.procinfos[processor.unit_number] = procinfo
+        storage.procinfos[processor.unit_number] = procinfo
     end
     return procinfo
 end
@@ -42,11 +42,11 @@ end
 ---@return any
 function ccutils.check_signal(type, name)
     if type == "virtual" then
-        return game.virtual_signal_prototypes[name]
+        return prototypes.virtual_signal[name]
     elseif type == "item" then
-        return game.item_prototypes[name]
+        return prototypes.item[name]
     elseif type == "fluid" then
-        return game.fluid_prototypes[name]
+        return prototypes.fluid[name]
     end
     return true
 end
@@ -115,7 +115,7 @@ function ccutils.get_top_procinfo(procinfo)
         local surface = processor.surface
         if not string.find(surface.name, processor_pattern) then return procinfo end
 
-        procinfo = global.surface_map[surface.name]
+        procinfo = storage.surface_map[surface.name]
         if not procinfo then return nil end
      end 
 end
