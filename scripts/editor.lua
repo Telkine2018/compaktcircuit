@@ -1084,19 +1084,23 @@ local function on_build(entity, e)
     elseif procinfo and not is_allowed(name) then
         if settings.global[prefix .. "-allow-external"].value then
             if procinfo.is_packed then
-                entity.surface.create_entity {
-                    name = "flying-text",
-                    position = entity.position,
-                    text = { message_prefix .. ".not_allowed_packed" }
-                }
+                if e.player_index then
+                    local player = game.players[e.player_index]
+                    player.create_local_flying_text {
+                                        text = { message_prefix .. ".not_allowed_packed" },
+                                        position = entity.position
+                    }
+                end
             end
             return
         else
-            entity.surface.create_entity {
-                name = "flying-text",
-                position = entity.position,
-                text = { message_prefix .. ".not_allowed" }
-            }
+            if e.player_index then
+                local player = game.players[e.player_index]
+                player.create_local_flying_text {
+                        text = { message_prefix .. ".not_allowed" },
+                        position = entity.position
+                }
+            end
         end
         if not storage.destroy_list then
             storage.destroy_list = { entity }
