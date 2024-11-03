@@ -435,7 +435,7 @@ function combinators.create_internals()
 		random_symbol_sprites = invisible_sprite,
 		stack_size_sprites = invisible_sprite,
 		rocket_capacity_sprites = invisible_sprite,
-		quality_capacity_sprites = invisible_sprite
+		quality_symbol_sprites = invisible_sprite
 	}, energy_attr })
 	insert_flags(selector_combinator.flags)
 

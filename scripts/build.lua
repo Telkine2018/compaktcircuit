@@ -945,7 +945,7 @@ function build.connect_iopole(procinfo, iopole_info)
     local target_entity = iopole_info.entity
 
     local success1, success2
-    if target_entity then
+    if point and target_entity then
         success1 = point.get_wire_connector(defines.wire_connector_id.circuit_green, true)
             .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
         success2 = point.get_wire_connector(defines.wire_connector_id.circuit_red, true)

@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.1
+Date: 03.11.2024
+  Bugfixes:
+    - Fix crash on invalid entity in editor
+    - Hide processor surface
+    - Fix typo in selector combinator sprite
+---------------------------------------------------------------------------------------------------
 Version: 2.0.0
 Date: 26.10.2024
   Changes:

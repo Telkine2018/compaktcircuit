@@ -455,6 +455,10 @@ function editor.get_or_create_surface(procinfo)
         surface.force_generate_chunk_requests()
         surface.destroy_decoratives({})
 
+        for _, force in pairs(game.forces) do
+            force.set_surface_hidden(surface, true)
+        end
+
         local tiles = {}
         local tile_proto = prefix .. "-ground"
         if not prototypes.tile[tile_proto] then
@@ -840,11 +844,11 @@ function editor.draw_sprite(procinfo)
     if not (processor and processor.valid) then return end
 
     if procinfo.sprite_ids then
-        for _, id in pairs(procinfo.sprite_ids) do 
-            if type(id)=="number" then
+        for _, id in pairs(procinfo.sprite_ids) do
+            if type(id) == "number" then
                 rendering.get_object_by_id(id).destroy()
             else
-                id.destroy() 
+                id.destroy()
             end
         end
         procinfo.sprite_ids = nil
@@ -1029,6 +1033,22 @@ local function init_internal_point(entity, tags, procinfo)
     build.update_io_text(iopoint_info)
 end
 
+---@param player_index integer?
+---@param text LocalisedString
+---@param position MapPosition?
+local function fly_text(player_index, text, position)
+    if not player_index then return end
+
+    local player = game.players[player_index]
+    player.create_local_flying_text {
+        text = text,
+        create_at_cursor = not position and true,
+        position = position,
+        color = { r = 1.0, a = 0.5},
+        speed = 40
+    }
+end
+
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
@@ -1084,19 +1104,11 @@ local function on_build(entity, e)
     elseif procinfo and not is_allowed(name) then
         if settings.global[prefix .. "-allow-external"].value then
             if procinfo.is_packed then
-                entity.surface.create_entity {
-                    name = "flying-text",
-                    position = entity.position,
-                    text = { message_prefix .. ".not_allowed_packed" }
-                }
+                fly_text(e.player_index, { message_prefix .. ".not_allowed_packed" }, entity.position)
             end
             return
         else
-            entity.surface.create_entity {
-                name = "flying-text",
-                position = entity.position,
-                text = { message_prefix .. ".not_allowed" }
-            }
+            fly_text(e.player_index, { message_prefix .. ".not_allowed" }, entity.position)
         end
         if not storage.destroy_list then
             storage.destroy_list = { entity }
