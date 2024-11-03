@@ -27,7 +27,20 @@
             "hookControl": ["compaktcircuit", "factory_organizer" ],
             "adjustMods": {
                 "compaktcircuit" : true,
-                "stack4cc" : true
+                "factory_organizer" : true
+            }
+        },
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug + qoltools",
+            "hookSettings": false,
+            "hookData": false,
+            "hookMode": "debug",
+            "hookControl": ["compaktcircuit", "qoltools" ],
+            "adjustMods": {
+                "compaktcircuit" : true,
+                "qoltools" : true
             }
         },
         

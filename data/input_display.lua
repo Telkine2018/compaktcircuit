@@ -63,7 +63,7 @@ display_entity = tools.table_merge {
     display_entity, {
         name = commons.display_name,
         icon = png("item/display"),
-        active_energy_usage = '1KW',
+        active_energy_usage = '1kW',
         energy_source = {type = "void"},
         render_no_network_icon = false,
         render_no_power_icon = false,
@@ -71,10 +71,8 @@ display_entity = tools.table_merge {
     }
 }
 ---@diagnostic disable-next-line: undefined-field
-display_entity.picture_off.layers[1].filename = png("entity/display/display")
+display_entity.picture_off.layers[1].filename = png("entity/display/hr-display")
 ---@diagnostic disable-next-line: undefined-field
-display_entity.picture_off.layers[1].hr_version.filename = png(
-                                                               "entity/display/hr-display")
 
 local invisible_image = {
     filename = png("invisible"),
@@ -100,14 +98,14 @@ local packed_display_entity = {
     },
     circuit_wire_max_distance = 9,
     collision_box = {{-0.01, -0.01}, {0.01, 0.01}},
-    collision_mask = {},
+    collision_mask = { layers={} },
     draw_circuit_wires = false,
     draw_copper_wires = false,
     energy_source = {type = "void"},
-    energy_usage_per_tick = "1W",
+    energy_usage_per_tick = "1J",
     flags = {
         "hide-alt-info", "not-on-map", "not-upgradable", "not-deconstructable",
-        "not-blueprintable", "placeable-off-grid", "hidden"
+        "not-blueprintable", "placeable-off-grid"
     },
     glow_color_intensity = 0,
     glow_render_mode = "multiplicative",
@@ -162,7 +160,7 @@ input_entity = tools.table_merge {
         name = commons.input_name,
         icon = png("item/input"),
         item_slot_count = 32,
-        active_energy_usage = '1KW',
+        active_energy_usage = '1kW',
         energy_source = {type = "void"},
         render_no_network_icon = false,
         render_no_power_icon = false,
@@ -173,14 +171,10 @@ input_entity = tools.table_merge {
 ---@cast input_entity any
 local sprite = png("entity/constant-combinator/constant-combinator")
 local hr_sprite = png("entity/constant-combinator/hr-constant-combinator")
-input_entity.sprites.east.layers[1].filename = sprite
-input_entity.sprites.east.layers[1].hr_version.filename = hr_sprite
-input_entity.sprites.west.layers[1].filename = sprite
-input_entity.sprites.west.layers[1].hr_version.filename = hr_sprite
-input_entity.sprites.north.layers[1].filename = sprite
-input_entity.sprites.north.layers[1].hr_version.filename = hr_sprite
-input_entity.sprites.south.layers[1].filename = sprite
-input_entity.sprites.south.layers[1].hr_version.filename = hr_sprite
+input_entity.sprites.east.layers[1].filename = hr_sprite
+input_entity.sprites.west.layers[1].filename = hr_sprite
+input_entity.sprites.north.layers[1].filename = hr_sprite
+input_entity.sprites.south.layers[1].filename = hr_sprite
 
 local declarations = {
     display_item, display_entity, packed_display_entity, invisible_sprite_def,

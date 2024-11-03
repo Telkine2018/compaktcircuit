@@ -271,7 +271,7 @@ local function on_build(entity, e, revive)
                 procinfo.blueprint = tags.blueprint
             elseif tags.circuits then
                 procinfo.circuits = tags.circuits and
-                    game.json_to_table(tags.circuits --[[@as string]]) --[[@as Circuit[]]
+                    helpers.json_to_table(tags.circuits --[[@as string]]) --[[@as Circuit[]]
             end
             procinfo.model = tags.model
             procinfo.sprite1 = tags.sprite1
@@ -282,7 +282,7 @@ local function on_build(entity, e, revive)
             procinfo.value_id = tags.value_id
             if tags.input_values then
                 procinfo.input_values =
-                    game.json_to_table(tags.input_values --[[@as string]]) --[[@as table<string, any> ]]
+                    helpers.json_to_table(tags.input_values --[[@as string]]) --[[@as table<string, any> ]]
             end
             if procinfo.model then
                 local model = build.get_model(entity.force, entity.name,
@@ -326,7 +326,7 @@ end
 
 ---@param ev EventData.on_robot_built_entity
 local function on_robot_built(ev)
-    local entity = ev.created_entity
+    local entity = ev.entity
 
     on_build(entity, ev)
 end
@@ -347,7 +347,7 @@ end
 
 ---@param e EventData.on_built_entity
 local function on_player_built(e)
-    local entity = e.created_entity
+    local entity = e.entity
 
     on_build(entity, e)
 end
@@ -361,10 +361,10 @@ local function destroy_processor(processor)
         local surface = game.surfaces[surface_name]
 
         -- case clone
-        if surface and global.surface_map[surface_name] == procinfo then
+        if surface and storage.surface_map[surface_name] == procinfo then
             editor.clean_surface(procinfo)
             game.delete_surface(surface_name)
-            global.surface_map[surface_name] = nil
+            storage.surface_map[surface_name] = nil
         end
         tools.destroy_entities(processor, commons.entities_to_destroy)
         procinfos[processor.unit_number] = nil
@@ -499,7 +499,7 @@ local function register_mapping(bp, mapping, surface)
                             processor)
                     end
                 elseif entity.name == commons.internal_iopoint_name then
-                    local procinfo = global.surface_map[surface.name]
+                    local procinfo = storage.surface_map[surface.name]
                     if procinfo then
                         local entities =
                             surface.find_entities_filtered {
@@ -632,7 +632,10 @@ local function on_entity_cloned(ev)
             if src_procinfo.surface then
                 build.disconnect_all_iopoints(src_procinfo)
                 if src_procinfo.in_pole then
-                    src_procinfo.in_pole.disconnect_neighbour()
+                    local connectors = src_procinfo.in_pole.get_wire_connectors(false)
+                    for _, connector in pairs(connectors) do
+                        connector.disconnect_all()
+                    end
                 end
 
                 local surface = src_procinfo.surface
@@ -646,8 +649,8 @@ local function on_entity_cloned(ev)
                     dst_procinfo.processor)
                 local src_surface_name =
                     editor.get_surface_name(src_procinfo.processor)
-                global.surface_map[src_surface_name] = nil
-                global.surface_map[surface_name] = dst_procinfo
+                storage.surface_map[src_surface_name] = nil
+                storage.surface_map[surface_name] = dst_procinfo
                 if surface then surface.name = surface_name end
 
                 dst_procinfo.iopoint_infos = tools.table_dup(
@@ -799,14 +802,14 @@ local function factory_organizer_install()
 end
 
 local function on_init()
-    global.procinfos = {}
-    global.surface_map = {}
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    storage.procinfos = {}
+    storage.surface_map = {}
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     picker_dolly_install()
 end
 
 local function on_load()
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     picker_dolly_install()
     factory_organizer_install()
 end
@@ -873,34 +876,36 @@ local function on_entity_settings_pasted(e)
             local surface = src_processor.surface
             local cc_name = prefix .. "-cc"
 
+            ---@param pole LuaEntity
+            ---@return {connector_id:defines.wire_connector_id, dst_connector:LuaWireConnector}[]
             local function disconnect_neighbours(pole)
-                local connections = pole.circuit_connection_definitions
-                if not connections then return nil end
+                local connectors = pole.get_wire_connectors(false)
+                ---@type {connector_id:defines.wire_connector_id, dst_connector:LuaWireConnector}[]
                 local result = {}
-                for _, connection in pairs(connections) do
-                    local t = connection.target_entity
-                    if t.surface == surface and t.name ~= cc_name and
-                        (connection.wire == defines.wire_type.green or
-                            connection.wire == defines.wire_type.red) then
-                        pole.disconnect_neighbour {
-                            wire = connection.wire,
-                            target_entity = connection.target_entity,
-                            target_circuit_id = connection.target_circuit_id
-                        }
-                        table.insert(result, connection)
+                for connector_id, connector in pairs(connectors) do
+                    for _, connection in pairs(connector.real_connections) do
+                        local t = connection.target.owner
+                        if t.surface == surface and t.name ~= cc_name and
+                            (connector.wire_type == defines.wire_type.red or
+                                connector.wire_type == defines.wire_type.green) then
+                            connector.disconnect_from(connection.target)
+                            table.insert(result, {
+                                    connector_id=connector_id,
+                                    dst_connector=connection.target
+                                })
+                        end
                     end
                 end
                 return result
             end
 
+            ---@param pole LuaEntity
+            ---@param connections {connector_id:defines.wire_connector_id, dst_connector:LuaWireConnector}[]
             local function connect_neighbours(pole, connections)
                 if not connections then return end
                 for _, connection in pairs(connections) do
-                    pole.connect_neighbour {
-                        wire = connection.wire,
-                        target_entity = connection.target_entity,
-                        target_circuit_id = connection.target_circuit_id
-                    }
+                    local connector = pole.get_wire_connector(connection.connector_id, true)
+                    connector.connect_to(connection.dst_connector, false)
                 end
             end
 
@@ -977,7 +982,7 @@ show_names = function(player, processor)
     local ids = {}
     get_vars(player).id_names = ids
 
-    local proto = game.entity_prototypes[processor.name]
+    local proto = prototypes.entity[processor.name]
     local width = proto.tile_width
     local scale = width / 2
 
@@ -1007,8 +1012,11 @@ show_names = function(player, processor)
             local id = rendering.draw_text {
                 text = line,
                 surface = surface,
-                target = processor,
-                target_offset = { x = 0, y = y },
+
+                target = {
+                    entity = processor,
+                    offset = { x = 0, y = y }
+                },
                 alignment = "center",
                 color = { 1, 1, 1, 0.8 },
                 scale = 0.6 * scale,
@@ -1073,8 +1081,11 @@ show_names = function(player, processor)
             local id = rendering.draw_text {
                 text = label,
                 surface = surface,
-                target = point,
-                target_offset = offset,
+                target = {
+                    entity = point,
+                    offset = offset,
+                },
+
                 orientation = orientation,
                 alignment = alignment,
                 color = { 1, 1, 1, 1 },
@@ -1118,11 +1129,11 @@ clear_rendering = function(player)
     local vars = get_vars(player)
 
     if vars.id_names then
-        for _, id in ipairs(vars.id_names) do rendering.destroy(id) end
+        for _, id in ipairs(vars.id_names) do id.destroy() end
         vars.id_names = nil
     end
     if vars.selected_id then
-        rendering.destroy(vars.selected_id)
+        vars.selected_id.destroy()
         vars.selected_id = nil
     end
 end
@@ -1135,7 +1146,7 @@ show_iopoint_label = function(player)
     local found_iopoint = player.selected
     local vars = get_vars(player)
     if not found_iopoint then return end
-    
+
     local pos = found_iopoint.position
     local entities = found_iopoint.surface.find_entities_filtered {
         area = { { pos.x - 1, pos.y - 1 }, { pos.x + 1, pos.y + 1 } },
@@ -1187,16 +1198,16 @@ show_iopoint_label = function(player)
         color = disconnect_color
     end
     if vars.selected_id then
-        rendering.set_text(vars.selected_id, label)
+        local otext = vars.selected_id --[[@as LuaRenderObject]]
+        otext.text = label
     else
         vars.selected_id = rendering.draw_text {
             text = label,
             surface = found_iopoint.surface,
-            target = found_iopoint,
             color = color,
             only_in_alt_mode = false,
             alignment = "center",
-            target_offset = { 0, -0.7 },
+            target = { entity = found_iopoint, offset = { 0, -0.7 } },
             use_rich_text = true
         }
     end
@@ -1249,9 +1260,9 @@ end)
 local function purge(player_index)
     log("Purge: on_configuration_changed")
 
-    if not global.procinfos then return end
+    if not storage.procinfos then return end
 
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     local names = {}
     local missings = {}
     local founds = {}
@@ -1275,7 +1286,7 @@ local function purge(player_index)
 
     for _, name in pairs(todelete) do
         game.delete_surface(name)
-        global.surface_map[name] = nil
+        storage.surface_map[name] = nil
     end
 
     for _, procinfo in pairs(missings) do
@@ -1291,7 +1302,7 @@ end
 local function migration_1_0_7(data)
     purge()
 
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     if procinfos then
         for _, procinfo in pairs(procinfos) do
             if not procinfo.draw_version then
@@ -1331,13 +1342,13 @@ local function migration_1_0_14(data)
 end
 
 local function migration_1_0_15(data)
-    global.models = {
+    storage.models = {
 
         [commons.processor_name] = {},
         [commons.processor_name_1x1] = {}
     }
 
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     if not procinfos then return end
 
     for _, procinfo in pairs(procinfos) do
@@ -1363,19 +1374,19 @@ local function migration_1_0_15(data)
 end
 
 local function migration_1_0_17(data)
-    local ids = rendering.get_all_ids("compaktcircuit")
+    local ids = rendering.get_all_objects("compaktcircuit")
     for _, id in ipairs(ids) do
-        local target = rendering.get_target(id)
+        local target = id.target
         if target then
             if not target.entity.valid then
-                rendering.destroy(id)
+                id.destroy()
             elseif target.entity.name == iopoint_name then
-                rendering.destroy(id)
+                id.destroy()
             end
         end
     end
 
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     for _, procinfo in pairs(procinfos) do
         if procinfo.processor and procinfo.processor.valid then
             draw_iopoints(procinfo)
@@ -1407,12 +1418,16 @@ local function migration_1_1_11()
     display.update_processors()
 end
 
+local function migration_2_0_0()
+    display.update_rendering()
+end
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
     ["1.0.8"] = function()
-        if not global.procinfos then return end
-        procinfos = global.procinfos --[[@as ProcInfoTable]]
+        if not storage.procinfos then return end
+        procinfos = storage.procinfos --[[@as ProcInfoTable]]
         for _, procinfo in pairs(procinfos) do
             local processor = procinfo.processor
             if processor and processor.valid then
@@ -1426,7 +1441,8 @@ local migrations_table = {
     ["1.0.17"] = migration_1_0_17,
     ["1.0.25"] = migration_1_0_25,
     ["1.1.7"] = migration_1_1_7,
-    ["1.1.11"] = migration_1_1_11
+    ["1.1.11"] = migration_1_1_11,
+    ["2.0.0"] = migration_2_0_0,
 }
 
 local function on_configuration_changed(data)
@@ -1446,7 +1462,7 @@ local function all_pack(player_index)
     end
 
     local pack_count = 0
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     for _, procinfo in pairs(procinfos) do
         if procinfo.processor and procinfo.processor.valid and
             procinfo.processor.force == force then
@@ -1465,7 +1481,7 @@ local function all_pack(player_index)
 end
 
 regenerate_packed = function()
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     if not procinfos then return end
     local pack_count = 0
     for _, procinfo in pairs(procinfos) do
@@ -1483,7 +1499,7 @@ local function repaire_iopoints()
     local pack_count = 0
     local error_list = {}
 
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     for i, procinfo in pairs(procinfos) do
         if procinfo.processor and procinfo.processor.valid then
             local surface = procinfo.processor.surface
@@ -1513,7 +1529,7 @@ local function repaire_iopoints()
 end
 
 local function destroy_all()
-    procinfos = global.procinfos --[[@as ProcInfoTable]]
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
     local copy = tools.table_dup(procinfos)
 
     local count = 0

@@ -20,7 +20,7 @@
 ---@field origin_surface_position MapPosition
 ---@field in_pole LuaEntity?            @ Energy pole
 ---@field generator LuaEntity?          @ Electrical generator
----@field sprite_ids number[]
+---@field sprite_ids LuaRenderObject[]
 ---@field accu LuaEntity
 ---@field name string
 ---@field input_list InputProperty[]    @ Properties of the processor
@@ -65,7 +65,7 @@
 ---@field output boolean
 ---@field red_display integer
 ---@field green_display integer
----@field text_id integer
+---@field text_id LuaRenderObject
 ---@field iopoint_text_color Color
 ---@field red_wired boolean
 ---@field green_wired boolean
@@ -130,13 +130,13 @@
 ---@field id integer
 ---@field props Display
 ---@field entity LuaEntity
----@field typeid integer?
----@field dataid integer?
+---@field typeid LuaRenderObject?
+---@field dataid LuaRenderObject?
 ---@field internal DisplayRuntime?
 
 ---@class DisplayRuntime : EntityWithIdAndProcess
----@field renderid integer?
----@field renderids integer[]?
+---@field renderid LuaRenderObject?
+---@field renderids LuaRenderObject[]?
 ---@field props Display
 ---@field source LuaEntity
 ---@field proc LuaEntity
@@ -186,8 +186,8 @@
 ---@field type integer
 ---@field label string
 ---@field value_id integer
----@field typeid integer
----@field dataid integer
+---@field typeid LuaRenderObject?
+---@field dataid LuaRenderObject?
 
 ---@class IntegerInput : Input
 ---@field min integer?

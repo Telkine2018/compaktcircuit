@@ -64,7 +64,7 @@ end
 ---@param player LuaPlayer
 function models_lib.create_panel(player)
 
-    local procinfo = global.surface_map[player.surface.name]
+    local procinfo = storage.surface_map[player.surface.name]
     if not procinfo then return end
 
     ccutils.close_all(player)
@@ -243,7 +243,7 @@ local function refresh_model_list(player, procinfo)
 end
 
 local function add_model(player)
-    local procinfo = global.surface_map[player.surface.name]
+    local procinfo = storage.surface_map[player.surface.name]
     local model_flow = get_model_flow(player)
     local model_name = model_flow[prefix .. "-model_name"].text
 
@@ -273,7 +273,7 @@ end
 ---@param player LuaPlayer
 local function import_model(player)
     --- @type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
+    local procinfo = storage.surface_map[player.surface.name]
     if procinfo.model == nil then return end
 
     local models = build.get_models(player.force, procinfo.processor.name)
@@ -314,7 +314,7 @@ end
 ---@param player LuaPlayer
 local function rename_model(player)
     ---@type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
+    local procinfo = storage.surface_map[player.surface.name]
     if procinfo.model == nil then return end
 
     --[[
@@ -337,7 +337,7 @@ local function rename_model(player)
 
     local old_model = procinfo.model
 
-    for i, p in pairs(global.procinfos) do
+    for i, p in pairs(storage.procinfos) do
         ---@cast p ProcInfo
         if p.processor and p.processor.valid and p.processor.force ==
             player.force and p.processor.name == pmodel then
@@ -441,7 +441,7 @@ end
 ---@param player LuaPlayer
 local function apply_model(player)
     ---@type ProcInfo
-    local model_procinfo = global.surface_map[player.surface.name]
+    local model_procinfo = storage.surface_map[player.surface.name]
     if not model_procinfo.model then return end
 
     local force = player.force
@@ -464,7 +464,7 @@ local function apply_model(player)
 
     local outer_list = {}
     local inner_list = {}
-    for _, procinfo in pairs(global.procinfos) do
+    for _, procinfo in pairs(storage.procinfos) do
         ---@cast procinfo ProcInfo
         if procinfo.processor and procinfo.processor.valid and
             procinfo.processor.force == force and
@@ -525,7 +525,7 @@ end
 ---@param player LuaPlayer
 local function remove_model(player)
     ---@type ProcInfo
-    local procinfo = global.surface_map[player.surface.name]
+    local procinfo = storage.surface_map[player.surface.name]
 
     if not procinfo.model then return end
     local models = build.get_models(player.force, procinfo.processor.name)
@@ -558,7 +558,7 @@ tools.on_event(defines.events.on_gui_selection_state_changed,
         if not e.element.valid or e.element.name ~= prefix .. "-model_list" then return end
 
         local player = game.players[e.player_index]
-        local procinfo = global.surface_map[player.surface.name]
+        local procinfo = storage.surface_map[player.surface.name]
         if e.element.selected_index == 1 then
             procinfo.model = nil
         else
@@ -587,7 +587,7 @@ tools.on_gui_click(prefix .. "-rename_button",
     function(e)
         local player = game.players[e.player_index]
 
-        local procinfo = global.surface_map[player.surface.name]
+        local procinfo = storage.surface_map[player.surface.name]
         if procinfo.model == nil then return end
 
         local model_flow = get_model_flow(player)
@@ -628,9 +628,10 @@ tools.on_gui_click(prefix .. "-export_models", ---@param e EventData.on_gui_clic
         player.clear_cursor()
 
         local item = player.cursor_stack
+        if not item then return end
         item.set_stack({ name = "blueprint-book", count = 1 })
 
-        local inventory = item.get_inventory(defines.inventory.item_main --[[@as integer]])
+        local inventory = item.get_inventory(defines.inventory.item_main)
         ---@cast inventory -nil
 
         local index = 1
@@ -672,7 +673,7 @@ tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_clic
             return
         end
 
-        local inventory = stack.get_inventory(defines.inventory.item_main --[[@as integer]])
+        local inventory = stack.get_inventory(defines.inventory.item_main)
         ---@cast inventory -nil
 
         for i = 1, #inventory do
@@ -686,7 +687,8 @@ tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_clic
                     if proc.name == commons.processor_name or proc.name == commons.processor_name_1x1 then
                         local tags = proc.tags
 
-                        if not build.get_model(player.force, proc.name, model_name) then
+                        ---@cast model_name -nil
+                        if not build.get_model(player.force, proc.name, model_name) and tags then
                             local models = build.get_models(player.force, proc.name)
                             models[model_name] = {
                                 blueprint = tags.blueprint --[[@as string]],
@@ -701,7 +703,7 @@ tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_clic
                 end
             end
         end
-        local procinfo = global.surface_map[player.surface.name]
+        local procinfo = storage.surface_map[player.surface.name]
         refresh_model_list(player, procinfo)
     end)
 

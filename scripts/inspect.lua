@@ -64,12 +64,10 @@ function inspectlib.show(player, processor)
         local cb = iopoint.get_control_behavior()
         if cb and info then
 
-            local red_circuit = cb.get_circuit_network(defines.wire_type.red)
-            local green_circuit =
-                cb.get_circuit_network(defines.wire_type.green)
+            local red_circuit = cb.get_circuit_network(defines.wire_connector_id.circuit_red)
+            local green_circuit = cb.get_circuit_network(defines.wire_connector_id.circuit_green)
             local red_signals = red_circuit and red_circuit.signals or empty
-            local green_signals = green_circuit and green_circuit.signals or
-                                      empty
+            local green_signals = green_circuit and green_circuit.signals or empty
             if info.red_display == commons.display_none then
                 red_signals = empty
             end
@@ -109,6 +107,7 @@ function inspectlib.show(player, processor)
                     for index, signal in pairs(signals) do
                         local s = signal.signal
                         if s.name then
+                            if not s.type then s.type="item" end
                             local sprite =
                                 (s.type == "virtual" and "virtual-signal" or
                                     s.type) .. "/" .. s.name
@@ -118,6 +117,16 @@ function inspectlib.show(player, processor)
                                 number = signal.count
                             }
                             sprite_button.style = color
+                            local quality = signal.signal.quality
+                            if quality and quality ~= "normal" then
+                                local sprite = sprite_button.add{ 
+                                    type="sprite",
+                                    sprite="quality." .. quality,
+                                    resize_to_sprite = false
+                                }
+                                sprite.style.size = 10
+                                sprite.style.left_margin = 2
+                            end
                             if index >= max then
                                 break
                             end

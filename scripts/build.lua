@@ -31,6 +31,7 @@ IsProcessorRebuilding = false
 local allowed_name_map = {
     ["constant-combinator"] = prefix .. "-cc",
     ["decider-combinator"] = prefix .. "-dc",
+    ["selector-combinator"] = prefix .. "-sc",
     ["arithmetic-combinator"] = prefix .. "-ac",
     ["big-electric-pole"] = prefix .. "-cc",
     ["small-electric-pole"] = prefix .. "-cc",
@@ -301,21 +302,6 @@ end
 
 local check_signal_o = ccutils.check_signal_o
 
----@param type string @ combinator type
----@param parameters any
----@return nil
-local function check_parameters(type, parameters)
-    if type == "constant-combinator" then
-        for _, r in pairs(parameters) do
-            if not check_signal_o(r.signal) then return nil end
-        end
-    elseif type == "arithmetic-combinator" or type == "decider-combinator" then
-        if not check_signal_o(parameters.first_signal) then return nil end
-        if not check_signal_o(parameters.second_signal) then return nil end
-        if not check_signal_o(parameters.output_signal) then return nil end
-    end
-    return parameters
-end
 
 ---------------------------------------------------------------
 
@@ -331,7 +317,7 @@ function build.restore_packed_circuits2(procinfo)
     local force = procinfo.processor.force
     procinfo.iopoint_infos = {}
 
-    global.surface_restoring = true
+    storage.surface_restoring = true
     local inv = game.create_inventory(1)
     ---@type LuaItemStack
     local bp = inv[1]
@@ -343,7 +329,7 @@ function build.restore_packed_circuits2(procinfo)
             local x1, y1, x2, y2
             for _, e in pairs(bp_entities) do
                 local name = e.name
-                local proto = game.entity_prototypes[name]
+                local proto = prototypes.entity[name]
                 local direction = e.direction
                 local w, h
                 if direction == defines.direction.north or direction ==
@@ -388,112 +374,14 @@ function build.restore_packed_circuits2(procinfo)
         end
     end
     inv.destroy()
-    global.surface_restoring = false
+    storage.surface_restoring = false
     IsProcessorRebuilding = false
     return true
 end
 
 ---@param procinfo ProcInfo
 function build.restore_packed_circuits(procinfo)
-    if build.restore_packed_circuits2(procinfo) then return end
-
-    if not procinfo.circuits then return end
-
-    ---@type LuaEntity[]
-    local entities = {}
-    local force = procinfo.processor.force
-    procinfo.iopoint_infos = {}
-    for _, circuit in ipairs(procinfo.circuits) do
-        local name = circuit.name
-        if not game.entity_prototypes[name] then
-            table.insert(entities, {})
-        elseif circuit.sprite_type then
-            local entity = procinfo.surface.create_entity {
-                name = "entity-ghost",
-                inner_name = name,
-                position = circuit.position,
-                direction = circuit.direction,
-                force = force,
-                create_build_effect_smoke = false
-            }
-
-            ---@cast entity -nil
-            entity.tags = {
-                ["display-plate-sprite-type"] = circuit.sprite_type,
-                ["display-plate-sprite-name"] = circuit.sprite_name
-            }
-
-            entity = entity.revive { raise_revive = true }
-            table.insert(entities, entity)
-        else
-            local entity
-            local remote_driver = remote_name_map[name]
-            if remote_driver then
-                entity = remote.call(remote_driver.interface_name,
-                    "create_entity", circuit, procinfo.surface,
-                    force)
-                table.insert(entities, entity)
-            else
-                entity = procinfo.surface.create_entity {
-                    name = name,
-                    position = circuit.position,
-                    direction = circuit.direction,
-                    force = force,
-                    create_build_effect_smoke = false
-                }
-                ---@cast entity -nil
-
-                if circuit.graphics_variation then
-                    entity.graphics_variation = circuit.graphics_variation
-                end
-                table.insert(entities, entity)
-
-                if circuit.parameters then
-                    local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
-                    local parameters = check_parameters(entity.type,
-                        circuit.parameters)
-                    if parameters then
-                        cb.parameters = parameters
-                    end
-                    if entity.type == "constant-combinator" then
-                        cb.enabled = (circuit.enabled == nil and true or
-                            circuit.enabled) --[[@as boolean]]
-                    end
-                elseif name == internal_iopoint_name then
-                    local iopoint_info =
-                        build.create_iopoint(procinfo, entity, circuit)
-                    build.update_io_text(iopoint_info)
-                elseif name == "small-lamp" then
-                    if circuit.circuit_condition then
-                        local cb = entity.get_or_create_control_behavior()
-                        ---@cast cb LuaLampControlBehavior
-                        cb.circuit_condition = circuit.circuit_condition
-                        cb.use_colors = circuit.use_colors
-                    end
-                end
-            end
-
-            if circuit.connections then
-                for _, connection in ipairs(circuit.connections) do
-                    local target = entities[connection.target_entity]
-                    if target and target.name then
-                        local success = entity.connect_neighbour {
-                            wire = connection.wire,
-                            target_entity = target,
-                            source_circuit_id = connection.source_circuit_id,
-                            target_circuit_id = connection.target_circuit_id
-                        }
-                        if not success then
-                            debug(
-                                "Fail connect restore:(" .. entity.name .. ":" ..
-                                entity.unit_number .. "=>" .. target.name ..
-                                ":" .. target.unit_number .. ")")
-                        end
-                    end
-                end
-            end
-        end
-    end
+    build.restore_packed_circuits2(procinfo)
 end
 
 ---------------------------------------------------------------
@@ -608,55 +496,73 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     if name == "constant-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
                         if bpentity.control_behavior then
-                            if bpentity.control_behavior.filters then
-                                cb.parameters =
-                                    bpentity.control_behavior.filters
+                            local bp_cb = bpentity.control_behavior --[[@as any]]
+                            local lsections = bp_cb.sections
+                            if lsections then
+                                local sections = lsections.sections --[[@as LuaLogisticSection[] ]]
+                                if sections then
+                                    for _, bp_section in pairs(sections) do
+                                        local section = cb.get_section(bp_section.index)
+                                        if not section then
+                                            section = cb.add_section(bp_section.group or "")
+                                        else
+                                            section.group = bp_section.group or ""
+                                        end
+                                        if bp_section.filters then
+                                            ---@type LogisticFilter[]
+                                            local filters = {}
+                                            for _, entry in pairs(bp_section.filters) do
+                                                ---@cast entry any
+                                                ---@type LogisticFilter
+                                                local filter = {
+                                                    value = {
+                                                        name = entry.name,
+                                                        type = entry.type,
+                                                        quality = entity.quality,
+                                                        comparator = entry.comparator
+                                                    },
+                                                    min = entry.count
+                                                }
+                                                table.insert(filters, filter)
+                                            end
+                                            section.filters = filters
+                                        end
+                                    end
+                                end
                             end
-                            cb.enabled =
-                                bpentity.control_behavior.is_on ~= false
+                            cb.enabled = bp_cb.is_on ~= false
                         end
                     elseif name == "arithmetic-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaArithmeticCombinatorControlBehavior]]
                         if bpentity.control_behavior and cb then
-                            local parameters = cb.parameters
-                            parameters.first_signal = nil
-                            parameters.second_signal = nil
-                            for name, value in pairs(
-                                bpentity.control_behavior
-                                .arithmetic_conditions) do
-                                parameters[name] = value
-                            end
+                            local parameters = bpentity.control_behavior.arithmetic_conditions
                             cb.parameters = parameters
                         end
                     elseif name == "decider-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaDeciderCombinatorControlBehavior]]
                         if bpentity.control_behavior and cb then
-                            local parameters = cb.parameters
-                            parameters.first_signal = nil
-                            parameters.second_signal = nil
-                            for name, value in pairs(
-                                bpentity.control_behavior
-                                .decider_conditions) do
-                                parameters[name] = value
-                            end
+                            local parameters = {
+                                conditions = bpentity.control_behavior.decider_conditions.conditions,
+                                outputs = bpentity.control_behavior.decider_conditions.outputs
+                            }
+                            cb.parameters = parameters
+                        end
+                    elseif name == "selector-combinator" then
+                        local cb = entity.get_or_create_control_behavior() --[[@as LuaSelectorCombinatorControlBehavior]]
+                        if bpentity.control_behavior and cb then
+                            local parameters = bpentity.control_behavior --[[@as any]]
                             cb.parameters = parameters
                         end
                     elseif name == internal_iopoint_name then
                         if tags then
                             local iopoint = procinfo.iopoints[tags.index]
                             if iopoint then
-                                iopoint.get_or_create_control_behavior()
                                 iopoint.active = false
-                                local success1 =
-                                    iopoint.connect_neighbour({
-                                        wire = defines.wire_type.green,
-                                        target_entity = entity
-                                    })
-                                local success2 =
-                                    iopoint.connect_neighbour({
-                                        wire = defines.wire_type.red,
-                                        target_entity = entity
-                                    })
+
+                                local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+                                local success2 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
                                 if not success1 or not success2 then
                                     debug("Failed to connect iopoint: " ..
                                         tags.index .. "," ..
@@ -674,29 +580,28 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                         if bpentity.control_behavior then
                             local cb = entity.get_or_create_control_behavior()
                             ---@cast cb LuaLampControlBehavior
-                            cb.use_colors = bpentity.control_behavior.use_colors
-                            local circuit_condition = cb.circuit_condition
+                            local bcontrol = bpentity.control_behavior --[[@as any]]
+                            if bcontrol.use_colors then
+                                cb.color_mode = defines.control_behavior.lamp.color_mode.color_mapping
+                                cb.use_colors = true
+                            end
                             if bpentity.control_behavior.circuit_condition then
-                                for name, value in pairs(
-                                    bpentity.control_behavior
-                                    .circuit_condition) do
-                                    circuit_condition.condition[name] = value
+                                local condition = {}
+                                for name, value in pairs(bpentity.control_behavior.circuit_condition) do
+                                    condition[name] = value
                                 end
-                                cb.circuit_condition = circuit_condition
+                                cb.circuit_condition = condition
+                                cb.circuit_enable_disable = true
                             end
 
-                            if bpentity.control_behavior
-                                .connect_to_logistic_network then
+                            if bcontrol.connect_to_logistic_network then
                                 cb.connect_to_logistic_network = true
-                                if bpentity.control_behavior.logistic_condition then
-                                    circuit_condition = cb.logistic_condition
-                                    for name, value in pairs(
-                                        bpentity.control_behavior
-                                        .logistic_condition) do
-                                        circuit_condition.condition[name] =
-                                            value
+                                if bcontrol.logistic_condition then
+                                    local condition = {} condition = cb.logistic_condition
+                                    for name, value in pairs(bcontrol.logistic_condition) do
+                                        condition[name] = value
                                     end
-                                    cb.logistic_condition = circuit_condition
+                                    cb.logistic_condition =condition
                                 end
                             end
                         end
@@ -715,13 +620,14 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             display.start(tags, entity)
                         end
                     elseif name == input_name then
+                        ---@cast tags -nil
                         ---@type InputProperty
                         local input_prop = {
                             input = tags,
                             x = pos.x,
                             y = pos.y,
                             entity = entity,
-                            value_id = (tags and tags.value_id) or tools.get_id()  --[[@as string]],
+                            value_id = (tags and tags.value_id) or tools.get_id() --[[@as string]],
                             label = tags.label --[[@as string]]
                         }
                         table.insert(input_list, input_prop)
@@ -775,40 +681,26 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
             local dst_index = index_map[index]
             local entity = entities[dst_index]
             if entity then
-                if bpentity.connections then
-                    for connection_name, colors in pairs(bpentity.connections) do
-                        for color, links in pairs(colors) do
-                            for _, link in pairs(links) do
-                                local src_circuit_id =
-                                    tonumber(connection_name) or 0
-                                local target_circuit_id = link.circuit_id
-                                local wire = defines.wire_type[color]
-                                local target_index = link.entity_id
-                                if index > target_index or
-                                    (index == target_index and src_circuit_id >
-                                        target_circuit_id) then
-                                    local target =
-                                        entities[index_map[target_index]]
-                                    if target and
-                                        (wire == defines.wire_type.red or wire ==
-                                            defines.wire_type.green) then
-                                        local success =
-                                            entity.connect_neighbour {
-                                                source_circuit_id = src_circuit_id,
-                                                wire = wire,
-                                                target_entity = target,
-                                                target_circuit_id = target_circuit_id
-                                            }
-                                        if not success then
-                                            debug(
-                                                "Failed to connect: " .. index ..
-                                                " to " .. link.entity_id ..
-                                                "(" ..
-                                                tools.get_constant_name(
-                                                    wire, defines.wire_type) ..
-                                                ")")
-                                        end
-                                    end
+                if bpentity.wires then
+                    -- need CHECKee
+                    for _, wire in pairs(bpentity.wires) do
+                        if wire[2] < 5 and wire[4] < 5 then
+                            local index1 = index_map[wire[1]]
+                            local index2 = index_map[wire[3]]
+                            if index1 <= index2 then
+                                local src_entity = entities[index1]
+                                local dst_entity = entities[index2]
+
+                                local connector1 = src_entity.get_wire_connector(wire[2], true)
+                                local connector2 = dst_entity.get_wire_connector(wire[4], true)
+                                local success = connector1.connect_to(connector2, false)
+                                if not success then
+                                    debug(
+                                        "Failed to connect: " .. wire[1] ..
+                                        " to " .. wire[3] ..
+                                        "(" ..
+                                        tools.get_constant_name(wire[2] --[[@as integer]], defines.wire_type) ..
+                                        ")")
                                 end
                             end
                         end
@@ -821,7 +713,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
             proc.processor = processor
             if proc.blueprint then
                 local res, update_count1, newErrorModel, externals1 = build.create_packed_circuit_internal(proc, true,
-                        recursionSet, top, proc.inner_input.inner_inputs)
+                    recursionSet, top, proc.inner_input.inner_inputs)
                 update_count = update_count + update_count1
                 if externals1 then
                     for _, e in pairs(externals1) do
@@ -845,145 +737,8 @@ end
 ---@return string[]?
 function build.create_packed_circuit(procinfo)
     local result, update_count, recursionError, externals = build.create_packed_circuit_v2(procinfo)
-    if result then
-        procinfo.circuits = nil
-        return update_count, recursionError, externals
-    end
-
-    build.destroy_packed_circuit(procinfo)
-
-    if not procinfo.circuits then return end
-
-    ---@type LuaEntity[]
-    local entities = {}
-    local processor = procinfo.processor
-    local position = processor.position
-    local surface = processor.surface
-    local force = processor.force
-    if not surface.valid then return end
-
-    local selection_box = procinfo.processor.selection_box
-    local selection_width = selection_box.right_bottom.x -
-        selection_box.left_top.x
-    local scale = selection_width / 2.4
-
-    local externals = {}
-    for index, circuit in ipairs(procinfo.circuits) do
-        local name = circuit.name
-        local packed_name = allowed_name_map[name]
-
-        local entity = nil
-        if packed_name then
-            local pos = position
-            if circuit.ext_name then
-                packed_name = circuit.ext_name
-                pos = {
-                    x = position.x + circuit.ext_position.x,
-                    y = position.y + circuit.ext_position.y
-                }
-            else
-                pos = {
-                    x = pos.x + circuit.position.x / 32 * scale,
-                    y = pos.y + circuit.position.y / 32 * scale
-                }
-            end
-
-            entity = surface.create_entity {
-                name = packed_name,
-                position = pos,
-                direction = circuit.direction,
-                force = force
-            }
-            ---@cast entity -nil
-
-            table.insert(entities, entity)
-
-            if circuit.parameters then
-                local cb = entity.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
-                local parameters = check_parameters(entity.type,
-                    circuit.parameters)
-                if parameters then
-                    cb.parameters = parameters
-                    if entity.type == "constant-combinator" then
-                        cb.enabled = (circuit.enabled == nil and true or
-                            circuit.enabled) --[[@as boolean]]
-                    end
-                end
-            elseif name == internal_iopoint_name then
-                local iopoint = procinfo.iopoints[circuit.index]
-                iopoint.get_or_create_control_behavior()
-                iopoint.active = false
-                local success1 = iopoint.connect_neighbour({
-                    wire = defines.wire_type.green,
-                    target_entity = entity
-                })
-                local success2 = iopoint.connect_neighbour({
-                    wire = defines.wire_type.red,
-                    target_entity = entity
-                })
-                if not success1 or not success2 then
-                    debug("Failed to connect iopoint: " .. "," ..
-                        strip(entity.position) .. " to " ..
-                        strip(iopoint.position))
-                    debug(
-                        "Failed to connect iopoint: " .. entity.name .. " to " ..
-                        iopoint.name)
-                    debug("Failed to connect iopoint: " .. entity.unit_number ..
-                        " to " .. iopoint.unit_number)
-                end
-            elseif name == "small-lamp" then
-                if circuit.circuit_condition then
-                    local cb = entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior]]
-                    cb.circuit_condition = circuit.circuit_condition
-                    cb.use_colors = circuit.use_colors
-                end
-            end
-        elseif textplate_map[name] then
-            table.insert(entities, {})
-        elseif remote_name_map[name] then
-            local remote_driver = remote_name_map[name]
-            local pos = {
-                x = position.x + circuit.position.x / 32,
-                y = position.y + circuit.position.y / 32
-            }
-            entity = remote.call(remote_driver.interface_name,
-                "create_packed_entity", circuit, surface, pos,
-                force)
-            if entity then
-                table.insert(entities, entity)
-            else
-                table.insert(entities, {})
-                table.insert(externals, name)
-            end
-        else
-            table.insert(entities, {})
-            table.insert(externals, name)
-        end
-
-        if entity and circuit.connections then
-            for _, connection in ipairs(circuit.connections) do
-                local targetc = entities[connection.target_entity]
-                if targetc and targetc.name then
-                    local success = entity.connect_neighbour {
-                        wire = connection.wire,
-                        target_entity = targetc,
-                        source_circuit_id = connection.source_circuit_id,
-                        target_circuit_id = connection.target_circuit_id
-                    }
-                    if not success then
-                        debug(
-                            "Failed to connect: " .. connection.target_entity ..
-                            "," .. strip(entity.position) .. " to " ..
-                            strip(targetc.position))
-                        debug("Failed to connect: " .. entity.name .. " to " ..
-                            targetc.name)
-                        debug("Failed to connect: " .. entity.unit_number ..
-                            " to " .. targetc.unit_number)
-                    end
-                end
-            end
-        end
-    end
+    procinfo.circuits = nil
+    return update_count, recursionError, externals
 end
 
 ---@param procinfo ProcInfo
@@ -1019,9 +774,9 @@ function build.get_iopoint_map(procinfo)
     local map = {}
     local bpentities = bp.get_blueprint_entities()
     if bpentities then
-        for _, entity in ipairs(bpentities) do
-            if entity.name == commons.internal_iopoint_name then
-                local tags = entity.tags
+        for _, bpentity in ipairs(bpentities) do
+            if bpentity.name == commons.internal_iopoint_name then
+                local tags = bpentity.tags
                 if tags then
                     local index = tags.index
                     local prev = map[index]
@@ -1039,10 +794,17 @@ function build.get_iopoint_map(procinfo)
                     else
                         map[index] = tags
                     end
-                    if entity.connections then
-                        for _, points in pairs(entity.connections) do
-                            for color, _ in pairs(points) do
-                                tags[color .. "_wired"] = true
+
+
+                    if bpentity.wires then
+                        -- need CHECK
+                        for _, wire in pairs(bpentity.wires) do
+                            if wire[2] == defines.wire_connector_id.combinator_input_green or
+                                wire[2] == defines.wire_connector_id.combinator_output_green then
+                                tags["green_wired"] = true
+                            elseif wire[2] == defines.wire_connector_id.combinator_input_red or
+                                wire[2] == defines.wire_connector_id.combinator_output_red then
+                                tags["red_wired"] = true
                             end
                         end
                     end
@@ -1059,12 +821,12 @@ end
 ---@param entity LuaEntity
 function build.set_processor_tags(bp, index, entity)
     ---@type ProcInfo
-    local procinfo = global.procinfos[entity.unit_number]
+    local procinfo = storage.procinfos[entity.unit_number]
     if procinfo and (procinfo.blueprint or procinfo.circuits) then
         bp.set_blueprint_entity_tags(index, {
             blueprint = procinfo.blueprint,
             circuits = procinfo.circuits and
-                game.table_to_json(procinfo.circuits),
+                helpers.table_to_json(procinfo.circuits),
             model = procinfo.model,
             sprite1 = procinfo.sprite1,
             sprite2 = procinfo.sprite2,
@@ -1072,7 +834,7 @@ function build.set_processor_tags(bp, index, entity)
             value_id = procinfo.value_id,
             label = procinfo.label,
             input_values = procinfo.input_values and
-                game.table_to_json(procinfo.input_values) or nil
+                helpers.table_to_json(procinfo.input_values) or nil
         })
     end
 end
@@ -1082,7 +844,7 @@ end
 ---@param entity LuaEntity
 function build.set_iopoint_tags(bp, index, entity)
     ---@type ProcInfo
-    local procinfo = global.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map[entity.surface.name]
     if procinfo then
         local unit_number = entity.unit_number
         for id, iopoint_info in pairs(procinfo.iopoint_infos) do
@@ -1103,15 +865,15 @@ function build.set_iopoint_tags(bp, index, entity)
 end
 
 ---Get sprite id from entity unit number
----@param map table<integer, number>
----@return table<integer, number>
+---@param map table<integer, LuaRenderObject>
+---@return table<integer, LuaRenderObject>
 function build.get_reverse_sprite_map(map)
     if map then return map end
 
     map = {}
-    local ids = rendering.get_all_ids()
+    local ids = rendering.get_all_objects()
     for _, id in pairs(ids) do
-        local target = rendering.get_target(id)
+        local target = id.target
         if target then
             local entity = target.entity
             if entity and entity.valid and entity.unit_number then
@@ -1132,14 +894,14 @@ local function split_string(s)
 end
 
 ---Get sprite (type, name) from entity
----@param map table<integer, number>
+---@param map table<integer, LuaRenderObject>
 ---@param entity LuaEntity
 ---@return unknown
 ---@return unknown
 function build.get_render_sprite_info(map, entity)
     local id = map[entity.unit_number]
     if id then
-        local sprite = rendering.get_sprite(id)
+        local sprite = id.sprite
         ---@cast sprite -nil
         local strings = split_string(sprite)
         return strings[1], strings[2]
@@ -1183,15 +945,11 @@ function build.connect_iopole(procinfo, iopole_info)
     local target_entity = iopole_info.entity
 
     local success1, success2
-    if target_entity then
-        success1 = point.connect_neighbour({
-            wire = defines.wire_type.green,
-            target_entity = target_entity
-        })
-        success2 = point.connect_neighbour({
-            wire = defines.wire_type.red,
-            target_entity = target_entity
-        })
+    if point and target_entity then
+        success1 = point.get_wire_connector(defines.wire_connector_id.circuit_green, true)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+        success2 = point.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
     end
     if not success1 or not success2 then debug("Failed connect to iopole") end
 end
@@ -1213,14 +971,16 @@ function build.disconnect_iopole(procinfo, iopoint_info)
 
     local target_entity = iopoint_info.entity
     if target_entity then
-        point.disconnect_neighbour({
-            wire = defines.wire_type.green,
-            target_entity = target_entity
-        })
-        point.disconnect_neighbour({
-            wire = defines.wire_type.red,
-            target_entity = target_entity
-        })
+        local point_connectors = point.get_wire_connectors(false)
+        for _, connector in pairs(point_connectors) do
+            if connector.wire_type == defines.wire_type.green or connector.wire_type == defines.wire_type.red then
+                for _, connection in pairs(connector.connections) do
+                    if connection.target.owner == target_entity then
+                        connector.disconnect_from(connection.target)
+                    end
+                end
+            end
+        end
     end
     return true
 end
@@ -1246,22 +1006,24 @@ end
 function build.update_io_text(iopoint_info)
     if iopoint_info.label == "" then
         if iopoint_info.text_id then
-            rendering.destroy(iopoint_info.text_id)
+            iopoint_info.text_id.destroy()
             iopoint_info.text_id = nil
         end
     elseif iopoint_info.text_id then
-        rendering.set_text(iopoint_info.text_id, iopoint_info.label)
-        rendering.set_color(iopoint_info.text_id, iopoint_text_color)
+        iopoint_info.text_id.text = iopoint_info.label
+        iopoint_info.text_id.color = iopoint_text_color
     else
         iopoint_info.text_id = rendering.draw_text {
             text = iopoint_info.label,
             surface = iopoint_info.entity.surface,
-            target = iopoint_info.entity,
+            target = {
+                entity = iopoint_info.entity,
+                offset = { 0, -4 }
+            },
             color = iopoint_text_color,
             only_in_alt_mode = true,
             alignment = "center",
             use_rich_text = true,
-            target_offset = { 0, -4 }
         }
     end
 end
@@ -1272,7 +1034,7 @@ end
 function build.get_models(force, processor_name)
     local ty = type(force)
     if ty ~= "string" then
-        if ty == "table" then
+        if ty == "table" or ty == "userdata" then
             force = force.name
         else
             force = game.forces[force]
@@ -1282,11 +1044,11 @@ function build.get_models(force, processor_name)
     local key = "/model/" .. force .. "/" .. processor_name
 
     ---@type table<string, Model>
-    local models = global[key]
+    local models = storage[key]
 
     if not models then
         models = {}
-        global[key] = models
+        storage[key] = models
     end
     return models
 end

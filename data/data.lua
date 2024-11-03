@@ -13,10 +13,11 @@ local recipe1 = {
     name = commons.processor_name,
     enabled = false,
     ingredients = {
-        { 'electronic-circuit', 20 }, { 'advanced-circuit', 30 }
+        { type = 'item', name = 'electronic-circuit', amount = 20 },
+        { type = 'item', name = 'advanced-circuit',   amount = 30 }
 
     },
-    result = commons.processor_name
+    results = { { type = 'item', name = commons.processor_name, amount = 1 } }
 }
 
 local recipe2 = {
@@ -24,75 +25,74 @@ local recipe2 = {
     name = commons.processor_name_1x1,
     enabled = false,
     ingredients = {
-        { 'electronic-circuit', 10 }, { 'advanced-circuit', 10 }
+        { type = 'item', name = 'electronic-circuit', amount = 10 },
+        { type = 'item', name = 'advanced-circuit',   amount = 10 }
     },
-    result = commons.processor_name_1x1
+    results = { { type = 'item', name = commons.processor_name_1x1, amount = 1 } }
 }
 
 if mods["nullius"] then
-
     recipe1.name = "nullius-" .. recipe1.name
     recipe1.ingredients = {
-		{"arithmetic-combinator", 10},
-		{"copper-cable", 10}
-	}
-	recipe1.category = "tiny-crafting"
-	recipe1.always_show_made_in = true
+        { type = 'item', name = "arithmetic-combinator", amount = 10 },
+        { type = 'item', name = "copper-cable",          amount = 10 }
+    }
+    recipe1.category = "tiny-crafting"
+    recipe1.always_show_made_in = true
 
     recipe2.name = "nullius-" .. recipe2.name
     recipe2.ingredients = {
-		{"arithmetic-combinator", 20},
-		{"copper-cable", 20}
-	}
-	recipe2.category = "tiny-crafting"
-	recipe2.always_show_made_in = true
-
-end
-
-local preq = "advanced-electronics"
-if not no_processor_in_build then
-    table.insert(recipe1.ingredients, { 'processing-unit', 10 })
-    table.insert(recipe2.ingredients, { 'processing-unit', 3 })
-    preq = "advanced-electronics-2"
-end
-
-    -- Technology
-local tech = {
-        type = 'technology',
-        name = prefix .. '-tech',
-        icon_size = 128,
-        icon = png('tech'),
-        effects = {
-            { type = 'unlock-recipe', recipe = recipe1.name },
-            { type = 'unlock-recipe', recipe = recipe2.name }
-        },
-        prerequisites = { preq },
-        unit = {
-            count = 100,
-            ingredients = {
-                { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
-                { 'chemical-science-pack',   1 }
-            },
-            time = 15
-        },
-        order = 'a-d-d-z'
+        { type = 'item', name = "arithmetic-combinator", amount = 20 },
+        { type = 'item', name = "copper-cable",          amount = 20 }
     }
+    recipe2.category = "tiny-crafting"
+    recipe2.always_show_made_in = true
+end
+
+local preq = "advanced-circuit"
+if not no_processor_in_build then
+    table.insert(recipe1.ingredients, { type = 'item', name = 'processing-unit', amount = 10 })
+    table.insert(recipe2.ingredients, { type = 'item', name = 'processing-unit', amount = 3 })
+    preq = "processing-unit"
+end
+
+-- Technology
+local tech = {
+    type = 'technology',
+    name = prefix .. '-tech',
+    icon_size = 128,
+    icon = png('tech'),
+    effects = {
+        { type = 'unlock-recipe', recipe = recipe1.name },
+        { type = 'unlock-recipe', recipe = recipe2.name }
+    },
+    prerequisites = { preq },
+    unit = {
+        count = 100,
+        ingredients = {
+            { 'automation-science-pack', 1 }, { 'logistic-science-pack', 1 },
+            { 'chemical-science-pack',   1 }
+        },
+        time = 15
+    },
+    order = 'a-d-d-z'
+}
 
 if mods["nullius"] then
     tech.name = "nullius-" .. tech.name
-	tech.order = "nullius-z-z-z"
-	tech.unit = {
-		count = 100,
-		ingredients = {
-			{"nullius-geology-pack", 1}, {"nullius-climatology-pack", 1}, {"nullius-electrical-pack", 1}
-		},
-		time = 25
-	}
-	tech.prerequisites = {"nullius-computation" }
-	tech.ignore_tech_tech_cost_multiplier = true
+    tech.order = "nullius-z-z-z"
+    tech.unit = {
+        count = 100,
+        ingredients = {
+            { "nullius-geology-pack", 1 }, { "nullius-climatology-pack", 1 }, { "nullius-electrical-pack", 1 }
+        },
+        time = 25
+    }
+    tech.prerequisites = { "nullius-computation" }
+    tech.ignore_tech_tech_cost_multiplier = true
 end
-   
-    
+
+
 
 data:extend {
 
@@ -127,7 +127,7 @@ data:extend {
     order = 'p[rocessor]',
     place_result = commons.processor_name,
     stack_size = 1,
-    flags = { "hidden", "not-stackable" }
+    flags = { "not-stackable" }
 }, {
     type = 'item',
     name = commons.iopoint_name,
@@ -137,7 +137,7 @@ data:extend {
     order = '[logistic]-b[elt]',
     place_result = commons.iopoint_name,
     stack_size = 50,
-    flags = { "hidden", "hide-from-bonus-gui" }
+    flags = { "hide-from-bonus-gui" }
 }, -- Recipes
     recipe1,
     recipe2,
@@ -227,12 +227,12 @@ local device = {
     picture_off = { layers = { invisible_sprite } },
     always_on = false,
     max_health = 1000,
-    collision_mask = {},
+    collision_mask = { layers={} },
     flags = {
         "hide-alt-info", "not-upgradable", "not-blueprintable",
         "placeable-off-grid"
     },
-    energy_usage_per_tick = "1KJ",
+    energy_usage_per_tick = "1kJ",
     energy_source = { type = "electric", usage_priority = "secondary-input" },
     circuit_wire_connection_point = nil,
     selectable_in_game = false
@@ -252,7 +252,7 @@ local iopoint = {
     type = "lamp",
     name = prefix .. "-iopoint",
     collision_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
-    collision_mask = {},
+    collision_mask = { layers={} },
     selection_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
     selection_priority = 70,
     minable = nil,
@@ -276,7 +276,7 @@ if false then
         type = "constant-combinator",
         name = prefix .. "-iopoint-2",
         collision_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
-        collision_mask = {},
+        collision_mask = {layers={}},
         selection_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
         selection_priority = 70,
         minable = nil,
@@ -311,7 +311,7 @@ local energy_source = {
     picture = invisible_sprite,
     energy_production = "2000MW",
     gui_mode = "none",
-    flags = { "not-on-map", "hidden", "hide-alt-info", "not-blueprintable" }
+    flags = { "not-on-map", "hide-alt-info", "not-blueprintable" }
 }
 
 local energy_pole = table.deepcopy(
@@ -323,7 +323,7 @@ combinators.merge_table(energy_pole, {
         draw_copper_wires = false,
         draw_circuit_wires = false,
         supply_area_distance = 64,
-        flags = { "not-on-map", "hidden", "hide-alt-info", "not-blueprintable" }
+        flags = { "not-on-map", "hide-alt-info", "not-blueprintable" }
     }
 })
 
@@ -341,13 +341,12 @@ local internal_iopoint = table.deepcopy(
 
 internal_iopoint.name = prefix .. "-internal_iopoint"
 internal_iopoint.pictures.layers[1].tint = { 0, 0, 1, 1 }
-internal_iopoint.pictures.layers[1].hr_version.tint = { 0, 0, 1, 1 }
 internal_iopoint.minable = { mining_time = 0.1 }
 internal_iopoint.maximum_wire_distance = 64
 internal_iopoint.draw_copper_wires = false
 internal_iopoint.connection_points[1].wire.copper = nil
 internal_iopoint.connection_points[1].shadow.copper = nil
-internal_iopoint.flags = { "placeable-neutral", "player-creation", "hidden" }
+internal_iopoint.flags = { "placeable-neutral", "player-creation" }
 
 local internal_iopoint_item = {
     type = 'item',
@@ -363,7 +362,7 @@ local internal_iopoint_item = {
     order = 'a[miniaturization]-b[internal-iopoint]',
     place_result = prefix .. '-internal_iopoint',
     stack_size = 1,
-    flags = { "hidden", "hide-from-bonus-gui" }
+    flags = { "hide-from-bonus-gui" }
 }
 
 ---------------------------
@@ -381,7 +380,7 @@ local processor = {
     collision_box = { { -0.95, -0.95 }, { 0.95, 0.95 } },
     selection_box = { { -1.2, -1.2 }, { 1.2, 1.2 } },
     selection_priority = 60,
-    collision_mask = { "floor-layer", "object-layer", "water-tile" },
+    collision_mask = { layers = { ["floor"]=true, ["object"]=true, ["water_tile"]=true } },
     flags = { "placeable-neutral", "player-creation" }
 }
 
@@ -401,7 +400,7 @@ local processor_1x1 = {
     collision_box = { { -0.45, -0.45 }, { 0.45, 0.45 } },
     selection_box = { { -0.6, -0.6 }, { 0.6, 0.6 } },
     selection_priority = 60,
-    collision_mask = { "floor-layer", "object-layer", "water-tile" },
+    collision_mask = { layers = { ["floor"]=true, ["object"]=true, ["water_tile"]=true } },
     flags = { "placeable-neutral", "player-creation" }
 }
 
@@ -459,7 +458,7 @@ local internal_connector_item = {
     order = 'a[miniaturization]-b[internal-iopoint]',
     place_result = commons.internal_connector_name,
     stack_size = 1,
-    flags = { "hidden", "hide-from-bonus-gui" }
+    flags = { "hide-from-bonus-gui" }
 
 }
 
@@ -528,16 +527,6 @@ local internal_connector = {
                 filename = png("entity/iconnector/iconnector"),
                 height = 136,
                 scale = 0.5,
-                hr_version = {
-                    direction_count = 4,
-                    filename = png("entity/iconnector/hr-iconnector"),
-                    height = 270,
-                    priority = "high",
-                    scale = 0.25,
-                    shift = { 0, -0.484 },
-                    width = 138,
-                    tint = tint
-                },
                 priority = "high",
                 shift = { 0, -0.484 },
                 width = 70,
@@ -547,17 +536,6 @@ local internal_connector = {
             draw_as_shadow = true,
             filename = png("entity/iconnector/iconnector-shadow"),
             height = 52,
-            hr_version = {
-                direction_count = 4,
-                draw_as_shadow = true,
-                filename = png("entity/iconnector/hr-iconnector-shadow"),
-                height = 104,
-                priority = "high",
-                scale = 0.25,
-                shift = { 0.969, 0.156 },
-                width = 370,
-                tint = tint
-            },
             scale = 0.5,
             priority = "high",
             shift = { 0.969, 0.156 },

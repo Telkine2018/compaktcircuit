@@ -1,4 +1,3 @@
-
 local tools = {}
 local tracing = false
 
@@ -7,7 +6,6 @@ tools.trace_console = false
 
 ---@param msg LocalisedString?
 function tools.print(msg)
-
     if game then game.print(msg) end
     log(msg)
 end
@@ -50,16 +48,16 @@ local function cdebug(cond, msg) if cond then debug(msg) end end
 tools.cdebug = cdebug
 
 ---@param value boolean
-function tools.set_tracing(value) 
-    tracing = value 
+function tools.set_tracing(value)
+    tracing = value
     tools.tracing = value
 end
 
 function tools.is_tracing() return tracing end
 
 ---@param o any
-function tools.strip(o) 
-    local s = string.gsub(serpent.block(o), "%s", "") 
+function tools.strip(o)
+    local s = string.gsub(serpent.block(o), "%s", "")
     return s
 end
 
@@ -70,10 +68,10 @@ local strip = tools.strip
 ---@return {[string]:any}
 function tools.get_vars(player)
     ---@type {[integer]: {[string]:any}}
-    local players = global.players
+    local players = storage.players
     if players == nil then
         players = {}
-        global.players = players
+        storage.players = players
     end
     local vars = players[player.index]
     if vars == nil then
@@ -87,11 +85,10 @@ end
 ---@param force LuaForce
 ---@return table<string, any>
 function tools.get_force_vars(force)
-
-    local forces = global.forces
+    local forces = storage.forces
     if forces == nil then
         forces = {}
-        global.forces = forces
+        storage.forces = forces
     end
     local vars = forces[force.index]
     if vars == nil then
@@ -105,13 +102,11 @@ end
 ---@param close_proc any
 ---@param field string ?
 function tools.close_ui(unit_number, close_proc, field)
-
     if not field then field = "selected" end
-    if not global.players then return end
-    for index, vars in pairs(global.players) do
+    if not storage.players then return end
+    for index, vars in pairs(storage.players) do
         local selected = vars[field]
         if selected and selected.valid and selected.unit_number == unit_number then
-
             vars.selected = nil
             close_proc(game.players[index])
             return
@@ -121,8 +116,8 @@ end
 
 ---@return integer
 function tools.get_id()
-    local id = global.id or 1
-    global.id = id + 1
+    local id = storage.id or 1
+    storage.id = id + 1
     return id
 end
 
@@ -131,9 +126,9 @@ function tools.upgrade_id(newid)
     if not newid then
         return
     end
-    local id = global.id or 1
+    local id = storage.id or 1
     if id <= newid then
-        global.id = newid + 1
+        storage.id = newid + 1
     end
 end
 
@@ -204,7 +199,6 @@ function tools.table_copy(src)
     return copy
 end
 
-
 ---@generic T
 ---@param src T[]?
 ---@return T[]?
@@ -214,7 +208,6 @@ function tools.table_dup(src)
     for key, value in pairs(src) do copy[key] = value end
     return copy
 end
-
 
 ---@generic KEY
 ---@generic VALUE
@@ -259,7 +252,6 @@ end
 
 ---@param t table
 function tools.table_clear(t)
-
     while true do
         local key = next(t)
         if key then
@@ -300,7 +292,7 @@ function tools.on_event(event, handler, filters)
         elseif filters == nil then
             new_filters = prev_filters
         else
-            new_filters = tools.table_concat{prev_filters, filters}
+            new_filters = tools.table_concat { prev_filters, filters }
         end
 
         ---@cast new_filters EventFilter
@@ -310,7 +302,6 @@ function tools.on_event(event, handler, filters)
         end, new_filters)
     end
 end
-
 
 local ntick_handlers = {}
 
@@ -359,9 +350,8 @@ local load_on_init_flag
 
 ---@param handler fun()
 function tools.on_init(handler)
-
     if not on_init_handlers then
-        on_init_handlers = {handler}
+        on_init_handlers = { handler }
         script.on_init(function()
             for _, handler in pairs(on_init_handlers) do handler() end
             if load_on_init_flag and on_load_handler then
@@ -396,7 +386,6 @@ end
 local on_debug_init_handler
 
 function tools.on_debug_init(f)
-
     if on_debug_init_handler then
         local previous_init = on_debug_init_handler
         ---@param e EventData.on_tick
@@ -406,14 +395,14 @@ function tools.on_debug_init(f)
         end
     else
         on_debug_init_handler = f
-        tools.on_event(defines.events.on_tick ,
-        ---@param e EventData.on_tick
+        tools.on_event(defines.events.on_tick,
+            ---@param e EventData.on_tick
             function(e)
-            if (on_debug_init_handler) then
-                on_debug_init_handler(e)
-                on_debug_init_handler = nil
-            end
-        end)
+                if (on_debug_init_handler) then
+                    on_debug_init_handler(e)
+                    on_debug_init_handler = nil
+                end
+            end)
     end
 end
 
@@ -422,7 +411,6 @@ local on_gui_click_map
 
 ---@param e EventData.on_gui_click
 local function on_gui_click_handler(e)
-
     if e.element.valid then
         local handler = on_gui_click_map[e.element.name]
         if handler then handler(e) end
@@ -432,7 +420,6 @@ end
 ---@param button_name string
 ---@param f fun(e:EventData.on_gui_click)
 function tools.on_gui_click(button_name, f)
-
     if not on_gui_click_map then
         on_gui_click_map = {}
         tools.on_event(defines.events.on_gui_click, on_gui_click_handler)
@@ -467,7 +454,6 @@ end
 ---@param event integer | defines.events
 ---@param callback fun(e:EventData)
 function tools.on_named_event(name, event, callback)
-
     if not handler_registered[event] then
         handler_registered[event] = true
         tools.on_event(event, call_handler)
@@ -481,7 +467,7 @@ end
 ---@param tags Tags?
 function tools.set_name_handler(element, handler_name, tags)
     if not tags then
-        element.tags = {[handler_tag] = handler_name}
+        element.tags = { [handler_tag] = handler_name }
     else
         tags[handler_tag] = handler_name
         element.tags = tags
@@ -513,7 +499,6 @@ tools.get_child = get_child
 ---@param component LuaGuiElement
 ---@param parent_name string
 function tools.is_child_of(component, parent_name)
-
     while component do
         if component.name == parent_name then return true end
         component = component.parent
@@ -546,14 +531,12 @@ function tools.get_fields(parent)
     return fields
 end
 
-
 ---@param parent LuaGuiElement
 ---@param def LuaGuiElement.add_param
 ---@param path (string|integer)[]
 ---@param refmap table<string, LuaGuiElement>
 ---@return LuaGuiElement
 local function recursive_build_gui(parent, def, path, refmap)
-
     local ref = def.ref
     local children = def.children
     local style_mods = def.style_mods
@@ -611,7 +594,7 @@ local function recursive_build_gui(parent, def, path, refmap)
 
                 local ui_tab = recursive_build_gui(element, tab, path, refmap)
                 local ui_content = recursive_build_gui(element, content, path,
-                                                       refmap)
+                    refmap)
                 element.add_tab(ui_tab, ui_content)
 
                 table.remove(path)
@@ -651,7 +634,6 @@ end
 ---@param def table
 ---@return  table<string, any>
 function tools.build_gui(parent, def)
-
     local refmap = {}
     if not def.type then
         for index, subdef in ipairs(def) do
@@ -663,19 +645,16 @@ function tools.build_gui(parent, def)
     return refmap
 end
 
-
 ---@type table<string, fun(any)>
 local user_event_handlers = {}
 
 ---@param name string
 ---@param handler fun(any)
 function tools.register_user_event(name, handler)
-
     local previous = user_event_handlers[name]
     if not previous then
         user_event_handlers[name] = handler
     else
-
         local new_handler = function(data)
             previous(data)
             handler(data)
@@ -687,7 +666,6 @@ end
 ---@param name string
 ---@param data any
 function tools.fire_user_event(name, data)
-
     local handler = user_event_handlers[name]
     if handler then handler(data) end
 end
@@ -699,6 +677,8 @@ function tools.signal_to_sprite(signal)
     local type = signal.type
     if type == "virtual" then
         return "virtual-signal/" .. signal.name
+    elseif type == nil then
+        return "item/" .. signal.name
     else
         return type .. "/" .. signal.name
     end
@@ -712,6 +692,7 @@ function tools.sprite_to_signal(sprite)
     if not sprite then return nil end
     local split = gmatch(sprite, "([^/]+)[/]([^/]+)")
     local type, name = split()
+    if name == nil then return { type = "item", name = type } end
     if type == "virtual-signal" then type = "virtual" end
     return { type = type, name = name }
 end
@@ -730,7 +711,7 @@ function tools.get_event_name(index)
     for name, i in pairs(defines.events) do
         if i == index then return name end
     end
-    return "[unknown:"..index.."]"
+    return "[unknown:" .. index .. "]"
 end
 
 ---@param type string
@@ -738,11 +719,11 @@ end
 ---@return any
 local function check_signal(type, name)
     if type == "virtual" then
-        return game.virtual_signal_prototypes[name]
+        return prototypes.virtual_signal[name]
     elseif type == "item" then
-        return game.item_prototypes[name]
+        return prototypes.item[name]
     elseif type == "fluid" then
-        return game.fluid_prototypes[name]
+        return prototypes.fluid[name]
     end
     return true
 end
@@ -761,7 +742,6 @@ function tools.check_sprite(sprite, default)
     end
 end
 
-
 --- Find dimension of an entity
 ---@param master LuaEntity
 ---@return number
@@ -769,9 +749,9 @@ end
 function tools.get_radius(master)
     local selection_box = master.selection_box
     local xradius = math.floor(selection_box.right_bottom.x -
-                                   selection_box.left_top.x) / 2 - 0.1
+        selection_box.left_top.x) / 2 - 0.1
     local yradius = math.floor(selection_box.right_bottom.y -
-                                   selection_box.left_top.y) / 2 - 0.1
+        selection_box.left_top.y) / 2 - 0.1
     return xradius, yradius
 end
 
@@ -779,19 +759,18 @@ end
 ---@param master LuaEntity
 ---@param entity_names string[]
 function tools.destroy_entities(master, entity_names)
-
     if not master.surface.valid then return end
     local pos = master.position
     local proto = master.prototype
     local xradius = proto.tile_width / 2 - 0.01
     local yradius = proto.tile_height / 2 - 0.01
-	local entities = master.surface.find_entities_filtered {
+    local entities = master.surface.find_entities_filtered {
         area = {
-            left_top = {x = pos.x - xradius, y = pos.y - yradius},
-            right_bottom = {x = pos.x + xradius, y = pos.y + yradius}
+            left_top = { x = pos.x - xradius, y = pos.y - yradius },
+            right_bottom = { x = pos.x + xradius, y = pos.y + yradius }
         },
-		name = entity_names
-	}
+        name = entity_names
+    }
     for _, e in pairs(entities) do if e.valid then e.destroy() end end
 end
 
@@ -800,88 +779,87 @@ end
 ---@return string
 function tools.get_constant_name(index, base)
     if base then
-    for name, i in pairs(base) do if i == index then return name end end
+        for name, i in pairs(base) do if i == index then return name end end
     end
-    return  tostring(index)
+    return tostring(index)
 end
 
 ------------------------------------------------
 
 local define_directions = defines.direction
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_local_disp(direction, pos)
-
-	if direction == define_directions.north then
-		return { x = pos[1], y = pos[2] }
-	elseif direction == define_directions.south then
-		return { x = -pos[1], y = -pos[2] }
-	elseif direction == define_directions.west then
-		return { x = pos[2], y = -pos[1] }
-	elseif direction == define_directions.east then
-		return { x = -pos[2], y = pos[1] }
-	else
-		error("Invalid direction: " .. direction)
-	end
+    if direction == define_directions.north then
+        return { x = pos[1], y = pos[2] }
+    elseif direction == define_directions.south then
+        return { x = -pos[1], y = -pos[2] }
+    elseif direction == define_directions.west then
+        return { x = pos[2], y = -pos[1] }
+    elseif direction == define_directions.east then
+        return { x = -pos[2], y = pos[1] }
+    else
+        error("Invalid direction: " .. direction)
+    end
 end
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_front(direction, pos)
-	if direction == define_directions.north then
-		return { x = pos.x, y = pos.y - 1 }
-	elseif direction == define_directions.south then
-		return { x = pos.x, y = pos.y + 1 }
-	elseif direction == define_directions.west then
-		return { x = pos.x - 1, y = pos.y }
-	elseif direction == define_directions.east then
-		return { x = pos.x + 1, y = pos.y }
-	else
-		error("Invalid direction: " .. tostring(direction))
-	end
+    if direction == define_directions.north then
+        return { x = pos.x, y = pos.y - 1 }
+    elseif direction == define_directions.south then
+        return { x = pos.x, y = pos.y + 1 }
+    elseif direction == define_directions.west then
+        return { x = pos.x - 1, y = pos.y }
+    elseif direction == define_directions.east then
+        return { x = pos.x + 1, y = pos.y }
+    else
+        error("Invalid direction: " .. tostring(direction))
+    end
 end
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@param pos MapPosition
 ---@return MapPosition
 function tools.get_back(direction, pos)
-	if direction == define_directions.north then
-		return { x = pos.x, y = pos.y + 1 }
-	elseif direction == define_directions.south then
-		return { x = pos.x, y = pos.y - 1 }
-	elseif direction == define_directions.west then
-		return { x = pos.x + 1, y = pos.y }
-	elseif direction == define_directions.east then
-		return { x = pos.x - 1, y = pos.y }
-	else
-		error("Invalid direction: " .. tostring(direction))
-	end
+    if direction == define_directions.north then
+        return { x = pos.x, y = pos.y + 1 }
+    elseif direction == define_directions.south then
+        return { x = pos.x, y = pos.y - 1 }
+    elseif direction == define_directions.west then
+        return { x = pos.x + 1, y = pos.y }
+    elseif direction == define_directions.east then
+        return { x = pos.x - 1, y = pos.y }
+    else
+        error("Invalid direction: " .. tostring(direction))
+    end
 end
 
 tools.opposite_directions = {
-    [define_directions.north ] = define_directions.south,
-    [define_directions.south ] = define_directions.north,
-    [define_directions.east ] = define_directions.west,
-    [define_directions.west ] = define_directions.east
+    [define_directions.north] = define_directions.south,
+    [define_directions.south] = define_directions.north,
+    [define_directions.east] = define_directions.west,
+    [define_directions.west] = define_directions.east
 }
 
----@param direction integer
+---@param direction integer | defines.direction
 ---@return integer
 function tools.get_opposite_direction(direction)
-	if direction == define_directions.north then
-		return define_directions.south
-	elseif direction == define_directions.south then
-		return define_directions.north
-	elseif direction == defines.direction.west then
-		return define_directions.east
-	elseif direction == defines.direction.east then
-		return define_directions.west
-	else
-		error("Invalid direction: " .. tostring(direction))
-	end
+    if direction == define_directions.north then
+        return define_directions.south
+    elseif direction == define_directions.south then
+        return define_directions.north
+    elseif direction == defines.direction.west then
+        return define_directions.east
+    elseif direction == defines.direction.east then
+        return define_directions.west
+    else
+        error("Invalid direction: " .. tostring(direction))
+    end
 end
 
 ---@param p1 MapPosition
@@ -911,7 +889,7 @@ function tools.starts_with(str, start) return str:sub(1, #start) == start end
 ---@param ending string
 ---@return boolean
 function tools.ends_with(str, ending)
-    return ending == "" or str:sub(-#ending) == ending
+    return ending == "" or str:sub(- #ending) == ending
 end
 
 ------------------------------------------------
@@ -920,13 +898,12 @@ local stack_size_map = {}
 
 ---@param name string
 function tools.get_item_stack_size(name)
-
     local stack_size = stack_size_map[name]
     if stack_size then return stack_size end
 
     local signal = tools.sprite_to_signal(name) --[[@as SignalID]]
     if signal.type == "item" then
-        local proto = game.item_prototypes[signal.name]
+        local proto = prototypes.item[signal.name]
         if proto then
             stack_size = proto.stack_size
         else
@@ -949,7 +926,7 @@ function tools.get_item_prototype(name)
     local proto = item_prototypes_map[name]
     if proto then return proto end
 
-    proto = game.item_prototypes[name]
+    proto = prototypes.item[name]
     item_prototypes_map[name] = proto
     return proto
 end
@@ -982,8 +959,7 @@ end
 function tools.trim(s)
     if not s then return "" end
     return s:match "^%s*(.-)%s*$"
- end
-
+end
 
 ---@param text string?
 ---@return number?
@@ -1085,7 +1061,7 @@ function tools.create_standard_panel(player, params)
             tooltip = params.close_button_tooltip,
             style = "frame_action_button",
             mouse_button_filter = params.close_button_filter or { "left" },
-            sprite = "utility/close_white",
+            sprite = "utility/close",
             hovered_sprite = "utility/close_black"
         }
     end
@@ -1126,5 +1102,22 @@ local function fround(value)
 end
 
 tools.fround = fround
+
+---@param id string | LuaRenderObject
+---@return LuaRenderObject
+function tools.render_translate(id)
+    if id and type(id) == "number" then
+        return rendering.get_object_by_id(id)
+    end
+    return id --[[@as LuaRenderObject]]
+end
+
+---@param ids (string | LuaRenderObject)[]?
+function tools.render_translate_table(ids)
+    if not ids then return end
+    for i = 1, #ids do
+        ids[i] = tools.render_translate(ids[i])
+    end
+end
 
 return tools
