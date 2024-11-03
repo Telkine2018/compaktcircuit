@@ -553,3 +553,8 @@ data:extend { internal_connector, internal_connector_item }
 
 ---------------------------
 combinators.create_internals()
+
+data:extend {{
+    type = "custom-event",
+    name = "on_script_setup_blueprint"
+}}
