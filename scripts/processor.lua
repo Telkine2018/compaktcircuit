@@ -587,8 +587,7 @@ tools.on_event(defines.events.on_player_setup_blueprint,
 script.on_event("on_script_setup_blueprint",
     ---@param e EventData.on_player_setup_blueprint
     function(e)
-        ---@type table<integer, LuaEntity>
-        local mapping = e.mapping
+        local mapping = e.mapping --[[@as table<integer, LuaEntity>]]
         register_mapping(e.stack, mapping, e.surface)
     end)
     
