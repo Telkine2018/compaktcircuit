@@ -584,6 +584,14 @@ tools.on_event(defines.events.on_player_setup_blueprint,
         if bp then register_mapping(bp, mapping, player.surface) end
     end)
 
+script.on_event("on_script_setup_blueprint",
+    ---@param e EventData.on_player_setup_blueprint
+    function(e)
+        ---@type table<integer, LuaEntity>
+        local mapping = e.mapping
+        register_mapping(e.stack, mapping, e.surface)
+    end)
+    
 tools.on_event(defines.events.on_gui_closed, on_register_bp)
 
 ---@param ev EventData.on_entity_cloned
