@@ -226,11 +226,22 @@ function editor.find_room(surface, x, y)
     return x, y
 end
 
+local allow_controller_types = {
+
+    [defines.controllers.god] = true,
+    [defines.controllers.character] = true,
+    [defines.controllers.remote] = true
+}
+
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
     if storage.last_click and storage.last_click > game.tick - 120 then return end
     storage.last_click = game.tick
+
+    if not allow_controller_types[player.controller_type] then
+        return
+    end
 
     if not processor or not processor.valid then return end
 
@@ -249,7 +260,17 @@ function editor.edit_selected(player, processor)
     local x, y = editor.find_room(surface, 0, 0)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
-    player.teleport({ x, y }, surface)
+    procinfo.origin_controller_type = player.controller_type
+    if player.controller_type == defines.controllers.character or 
+        player.controller_type == defines.controllers.god then
+        player.teleport({ x, y }, surface)
+    else
+        player.set_controller {
+            type = player.controller_type,
+            position = { x, y },
+            surface = surface
+        }
+    end
 end
 
 ---@param procinfo ProcInfo
@@ -257,13 +278,24 @@ end
 local function exit_player(procinfo, player)
     local origin_surface_name = procinfo.origin_surface_name
     local origin_surface_position = procinfo.origin_surface_position
+    local origin_controller_type = procinfo.origin_controller_type
 
     local origin_surface = game.surfaces[origin_surface_name]
     if not origin_surface or not origin_surface.valid then
         origin_surface_name = "nauvis"
         origin_surface_position = { x = 0, y = 0 }
     end
-    player.teleport(origin_surface_position, origin_surface_name)
+    if origin_controller_type == defines.controllers.character 
+        or origin_controller_type == defines.controllers.god
+    then
+        player.teleport(origin_surface_position, origin_surface_name)
+    else
+        player.set_controller {
+            type = origin_controller_type,
+            position = origin_surface_position,
+            surface = origin_surface_name
+        }
+    end
 end
 
 ---@param e EventData.on_gui_click
@@ -530,6 +562,17 @@ function editor.connect_energy(procinfo)
         }
         procinfo.generator = generator
         generator.destructible = false
+    end
+
+    local radar_name = prefix .. "-radar"
+    local radar_proto = prototypes.entity[radar_name]
+    if radar_proto then
+        local radar = procinfo.surface.create_entity {
+            name = radar_name,
+            position = { EDITOR_SIZE / 2 + 10, 16 },
+            force = processor.force
+        }
+        radar.destructible = false
     end
 
     -- Old stuff
@@ -1044,7 +1087,7 @@ local function fly_text(player_index, text, position)
         text = text,
         create_at_cursor = not position and true,
         position = position,
-        color = { r = 1.0, a = 0.5},
+        color = { r = 1.0, a = 0.5 },
         speed = 40
     }
 end

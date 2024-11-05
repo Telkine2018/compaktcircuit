@@ -11,10 +11,9 @@
             "hookSettings": false,
             "hookData": false,
             "hookMode": "debug",
-            "hookControl": ["compaktcircuit", "stack4cc" ],
+            "hookControl": ["compaktcircuit" ],
             "adjustMods": {
-                "compaktcircuit" : true,
-                "stack4cc" : true
+                "compaktcircuit" : true
             }
         },
         {
@@ -49,10 +48,9 @@
             "request": "launch",
             "name": "Factorio Mod Debug (Profile)",
             "hookMode": "profile",
-            "hookControl": ["compaktcircuit", "stack4cc" ],
+            "hookControl": ["compaktcircuit" ],
             "adjustMods": {
-                "compaktcircuit" : true,
-                "stack4cc" : true
+                "compaktcircuit" : true
             }
         }
     ]
