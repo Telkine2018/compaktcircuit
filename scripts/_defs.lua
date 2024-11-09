@@ -31,7 +31,14 @@
 ---@field input_values table<string, any> 
 ---@field draw_version integer
 ---@field energ_pole LuaEntity?
+---@field wires WireDefinition[]
 
+---@class WireDefinition
+---@field iopoint_index integer
+---@field src_connector defines.wire_connector_id
+---@field dst_connector  defines.wire_connector_id
+---@field dst_name string
+---@field dst_pos MapPosition
 
 ---@class Circuit
 ---@field name string

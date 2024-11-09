@@ -276,7 +276,7 @@ end
 
 ------------------------------------------------
 
----@param event integer
+---@param event integer | defines.events
 ---@param handler fun(EventData)
 ---@param filters ({["filter"]:string}|{["name"]:string})[]?
 function tools.on_event(event, handler, filters)
@@ -758,7 +758,8 @@ end
 ---Destroy a set of entities
 ---@param master LuaEntity
 ---@param entity_names string[]
-function tools.destroy_entities(master, entity_names)
+---@param player_index integer?
+function tools.destroy_entities(master, entity_names, player_index)
     if not master.surface.valid then return end
     local pos = master.position
     local proto = master.prototype
@@ -771,7 +772,11 @@ function tools.destroy_entities(master, entity_names)
         },
         name = entity_names
     }
-    for _, e in pairs(entities) do if e.valid then e.destroy() end end
+    for _, e in pairs(entities) do
+        if e.valid then
+            e.destroy { player = player_index }
+        end
+    end
 end
 
 ---@param index integer | defines.train_state | defines.events

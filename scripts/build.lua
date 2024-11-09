@@ -816,14 +816,13 @@ function build.get_iopoint_map(procinfo)
     return map
 end
 
----@param bp LuaItemStack
----@param index Entity.unit_number
 ---@param entity LuaEntity
-function build.set_processor_tags(bp, index, entity)
+---@return Tags?
+function build.get_processor_tags(entity)
     ---@type ProcInfo
     local procinfo = storage.procinfos[entity.unit_number]
-    if procinfo and (procinfo.blueprint or procinfo.circuits) then
-        bp.set_blueprint_entity_tags(index, {
+    if procinfo and procinfo.blueprint then
+        return {
             blueprint = procinfo.blueprint,
             circuits = procinfo.circuits and
                 helpers.table_to_json(procinfo.circuits),
@@ -835,7 +834,20 @@ function build.set_processor_tags(bp, index, entity)
             label = procinfo.label,
             input_values = procinfo.input_values and
                 helpers.table_to_json(procinfo.input_values) or nil
-        })
+        }
+    end
+    return { }
+end
+
+local get_processor_tags = build.get_processor_tags
+
+---@param bp LuaItemStack
+---@param index Entity.unit_number
+---@param entity LuaEntity
+function build.set_processor_tags(bp, index, entity)
+    local tags = get_processor_tags(entity)
+    if tags then
+        bp.set_blueprint_entity_tags(index, tags)
     end
 end
 

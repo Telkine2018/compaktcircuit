@@ -278,7 +278,7 @@ end
 local function exit_player(procinfo, player)
     local origin_surface_name = procinfo.origin_surface_name
     local origin_surface_position = procinfo.origin_surface_position
-    local origin_controller_type = procinfo.origin_controller_type
+    local origin_controller_type = procinfo.origin_controller_type or defines.controllers.character
 
     local origin_surface = game.surfaces[origin_surface_name]
     if not origin_surface or not origin_surface.valid then
@@ -1285,7 +1285,9 @@ local function on_mined(ev)
 end
 
 ---@param ev EventData.on_player_mined_entity|EventData.on_robot_mined_entity|EventData.on_entity_died|EventData.script_raised_destroy
-local function on_player_mined_entity(ev) on_mined(ev) end
+local function on_player_mined_entity(ev) 
+    on_mined(ev) 
+end
 
 local mine_filter = {
     { filter = 'name', name = internal_iopoint_name },
