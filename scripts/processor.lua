@@ -320,6 +320,44 @@ local function set_tags(procinfo, tags, entity)
 end
 
 ---@param entity LuaEntity
+---@param tags Tags
+local function create_processor(entity, tags)
+    local procinfo = get_procinfo(entity, true)
+    ---@cast procinfo -nil
+
+    if tags then
+        set_tags(procinfo, tags, entity)
+    end
+
+    if not IsProcessorRebuilding then
+        procinfo.value_id = tools.get_id()
+    else
+        tools.upgrade_id(procinfo.value_id)
+    end
+
+    init_procinfo(procinfo)
+end
+
+
+---@param ghost LuaEntity
+---@param player_index integer
+local function revive_processor(ghost, player_index)
+    local tags = ghost.tags
+    if tags then
+        if player_index then
+            local player = game.players[player_index]
+            if player.get_item_count(ghost.ghost_name) > 0 then
+                local _, processor = ghost.silent_revive()
+                if processor then
+                    create_processor(processor, tags)
+                    player.remove_item { name = processor.name }
+                end
+            end
+        end
+    end
+end
+
+---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.script_raised_revive | EventData.on_built_entity
 ---@param  revive boolean?
 local function on_build(entity, e, revive)
@@ -327,26 +365,13 @@ local function on_build(entity, e, revive)
 
     local name = entity.name
     if string.find(name, processor_pattern) then
-        local procinfo = get_procinfo(entity, true)
-        ---@cast procinfo -nil
-
         local tags = e.tags
         ---@cast tags ProcInfo
         if not tags then
             tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags) --[[@as ProcInfo]]
         end
 
-        if tags then
-            set_tags(procinfo, tags, entity)
-        end
-
-        if not IsProcessorRebuilding then
-            procinfo.value_id = tools.get_id()
-        else
-            tools.upgrade_id(procinfo.value_id)
-        end
-
-        init_procinfo(procinfo)
+        create_processor(entity, tags)
     elseif name == display_name then
         local tags = e.tags
         if not tags then
@@ -364,6 +389,10 @@ local function on_build(entity, e, revive)
             tools.upgrade_id(tags.value_id)
         end
         input.register(entity, tags --[[@as Input]])
+    elseif name == "entity-ghost" and string.find(entity.ghost_name, processor_pattern) then
+        if entity.surface.platform then
+            revive_processor(entity, e.player_index)
+        end
     end
 end
 
@@ -420,22 +449,24 @@ local function get_wire_connections(procinfo)
     local wires = {}
     for i = 1, #procinfo.iopoints do
         local iopoint = procinfo.iopoints[i]
-        local connectors = iopoint.get_wire_connectors(false)
-        for connector_id, connector in pairs(connectors) do
-            for _, connection in pairs(connector.connections) do
-                local dst_name = connection.target.owner.name
-                if dst_name == "ghost-entity" then
-                    dst_name = connection.target.owner.ghost_name
-                end
-                if dst_name ~= "compaktcircuit-cc" then
-                    table.insert(wires,
-                        {
-                            iopoint_index = i,
-                            src_connector = connector_id,
-                            dst_connector = connection.target.wire_connector_id,
-                            dst_name = dst_name,
-                            dst_pos = connection.target.owner.position
-                        })
+        if iopoint.valid then
+            local connectors = iopoint.get_wire_connectors(false)
+            for connector_id, connector in pairs(connectors) do
+                for _, connection in pairs(connector.connections) do
+                    local dst_name = connection.target.owner.name
+                    if dst_name == "ghost-entity" then
+                        dst_name = connection.target.owner.ghost_name
+                    end
+                    if dst_name ~= "compaktcircuit-cc" then
+                        table.insert(wires,
+                            {
+                                iopoint_index = i,
+                                src_connector = connector_id,
+                                dst_connector = connection.target.wire_connector_id,
+                                dst_name = dst_name,
+                                dst_pos = connection.target.owner.position
+                            })
+                    end
                 end
             end
         end
@@ -478,6 +509,8 @@ local function destroy_processor(processor, player_index)
 
         ---@cast unit_number -nil
         procinfos[unit_number] = nil
+    else
+        tools.destroy_entities(processor, commons.entities_to_destroy)
     end
     return procinfo
 end
@@ -1119,6 +1152,8 @@ show_names = function(player, processor)
         return
     end
 
+    if not processor.valid then return end
+
     local procinfo = get_procinfo(processor, false)
     if not procinfo then return end
     if not procinfo.iopoints then return end
@@ -1177,6 +1212,7 @@ show_names = function(player, processor)
 
     local iopoint_map = build.get_iopoint_map(procinfo)
     for index, point in ipairs(procinfo.iopoints) do
+        if not point.valid then return end
         local info = iopoint_map[index]
         if info then
             local io_position = point.position
@@ -1568,6 +1604,14 @@ local function migration_2_0_0()
     display.update_rendering()
 end
 
+local function migration_2_0_4()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    for _, procinfo in pairs(procinfos) do
+        editor.draw_sprite(procinfo)
+    end
+end
+
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
@@ -1589,6 +1633,8 @@ local migrations_table = {
     ["1.1.7"] = migration_1_1_7,
     ["1.1.11"] = migration_1_1_11,
     ["2.0.0"] = migration_2_0_0,
+    ["2.0.4"] = migration_2_0_4,
+
 }
 
 local function on_configuration_changed(data)
@@ -1706,18 +1752,43 @@ local function on_player_rotated_entity(e) local entity = e.entity end
 tools.on_event(defines.events.on_player_rotated_entity, on_player_rotated_entity)
 
 ---@param actions (UndoRedoAction)[]
-local function apply_actions(actions)
+---@param player_index integer
+local function apply_actions(actions, player_index)
     for _, action in pairs(actions) do
         if action.tags then
             local tags = action.tags.content
             if action.type == "removed-entity" and
                 string.find(action.target.name, processor_pattern) then
                 local surface = game.surfaces[action.surface_index]
-                local entities = surface.find_entities_filtered
-                    { name = "entity-ghost", ghost_name = action.target.name, position = action.target.position }
-                if tags and #entities == 1 then
-                    local processor = entities[1]
-                    processor.tags = tags
+
+                local name = action.target.name
+                if not surface.platform then
+                    local entities = surface.find_entities_filtered
+                        { name = "entity-ghost", ghost_name = name, position = action.target.position }
+                    if tags and #entities == 1 then
+                        local ghost = entities[1]
+                        ghost.tags = tags
+                    end
+                elseif player_index then
+                    local entities = surface.find_entities_filtered
+                        { name = name, position = action.target.position }
+                    if #entities == 1 then
+                        local processor = entities[1]
+                        create_processor(processor, tags)
+                    else
+                        local player = game.players[player_index]
+                        if player.get_item_count(name) > 0 then
+                            local processor = surface.create_entity {
+                                name = action.target.name,
+                                force = player.force,
+                                position = action.target.position,
+                                direction = action.target.direction }
+                            if processor then
+                                create_processor(processor, tags)
+                                player.remove_item { name = name }
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -1727,14 +1798,14 @@ end
 tools.on_event(defines.events.on_undo_applied,
     ---@param e EventData.on_undo_applied
     function(e)
-        apply_actions(e.actions)
+        apply_actions(e.actions, e.player_index)
     end
 )
 
 tools.on_event(defines.events.on_redo_applied,
     ---@param e EventData.on_redo_applied
     function(e)
-        apply_actions(e.actions)
+        apply_actions(e.actions, e.player_index)
     end
 )
 
@@ -1794,13 +1865,20 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
     ---@param e EventData.on_marked_for_deconstruction
     function(e)
         local processor = e.entity
-        if e.player_index and string.find(processor.name, processor_pattern) then
+        local name = processor.name
+        if e.player_index and string.find(name, processor_pattern) then
             local tags = build.get_processor_tags(processor)
             local procinfo = procinfos[processor.unit_number]
             if procinfo then
                 tags.wires = get_wire_connections(procinfo)
             end
-            save_undo_tags(e.player_index, processor.position, tags)
+            if not processor.surface.platform then
+                save_undo_tags(e.player_index, processor.position, tags)
+            elseif e.player_index then
+                destroy_processor(processor, e.player_index)
+                local player = game.players[e.player_index]
+                player.insert { name = name }
+            end
         end
     end
 )

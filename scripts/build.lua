@@ -556,7 +556,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     elseif name == internal_iopoint_name then
                         if tags then
                             local iopoint = procinfo.iopoints[tags.index]
-                            if iopoint then
+                            if iopoint and iopoint.valid then
                                 iopoint.active = false
 
                                 local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
@@ -982,7 +982,7 @@ function build.disconnect_iopole(procinfo, iopoint_info)
     local point = procinfo.iopoints[index]
 
     local target_entity = iopoint_info.entity
-    if target_entity then
+    if target_entity and point then
         local point_connectors = point.get_wire_connectors(false)
         for _, connector in pairs(point_connectors) do
             if connector.wire_type == defines.wire_type.green or connector.wire_type == defines.wire_type.red then

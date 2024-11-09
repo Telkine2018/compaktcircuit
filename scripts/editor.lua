@@ -478,7 +478,8 @@ function editor.get_or_create_surface(procinfo)
     if not surface or not surface.valid then
         surface = game.create_surface(surface_name, {
             width = EDITOR_SIZE,
-            height = EDITOR_SIZE
+            height = EDITOR_SIZE,
+            no_enemies_mode = true
         })
 
         surface.always_day = true
@@ -889,7 +890,10 @@ function editor.draw_sprite(procinfo)
     if procinfo.sprite_ids then
         for _, id in pairs(procinfo.sprite_ids) do
             if type(id) == "number" then
-                rendering.get_object_by_id(id).destroy()
+                local o = rendering.get_object_by_id(id)
+                if o then
+                    o.destroy()
+                end
             else
                 id.destroy()
             end

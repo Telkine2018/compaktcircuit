@@ -61,6 +61,7 @@ function inspectlib.show(player, processor)
             info = iopoint_map[index]
         end
 
+        if not iopoint.valid then return end
         local cb = iopoint.get_control_behavior()
         if cb and info then
 
