@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.3
+Date: 09. 11. 2024.
+  Bugfixes:
+    - Fix teleport in/out circuit editor
+  Changes:
+    - Add undo/redo management (work well after undo->redo a delete, lose externals wires after undo->redo a build)
+    - Add proper ghost when destroying a compakt circuit
+---------------------------------------------------------------------------------------------------
 Version: 2.0.2
 Date: 03.11.2024
   Changes:
