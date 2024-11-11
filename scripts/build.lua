@@ -851,17 +851,16 @@ function build.set_processor_tags(bp, index, entity)
     end
 end
 
----@param bp LuaItemStack
----@param index integer
 ---@param entity LuaEntity
-function build.set_iopoint_tags(bp, index, entity)
+---@return Tags?
+function build.get_internal_iopoint_tags(entity)
     ---@type ProcInfo
     local procinfo = storage.surface_map[entity.surface.name]
     if procinfo then
         local unit_number = entity.unit_number
         for id, iopoint_info in pairs(procinfo.iopoint_infos) do
             if id == unit_number then
-                bp.set_blueprint_entity_tags(index, {
+                return {
                     label = iopoint_info.label,
                     index = iopoint_info.index,
                     input = iopoint_info.input,
@@ -869,10 +868,20 @@ function build.set_iopoint_tags(bp, index, entity)
                     red_display = iopoint_info.red_display,
                     green_display = iopoint_info.green_display,
                     tick = game.tick
-                })
-                break
+                }
             end
         end
+    end
+    return nil
+end
+
+---@param bp LuaItemStack
+---@param index integer
+---@param entity LuaEntity
+function build.set_internal_iopoint_tags(bp, index, entity)
+    local tags = build.get_internal_iopoint_tags(entity)
+    if tags then
+        bp.set_blueprint_entity_tags(index, tags)
     end
 end
 
@@ -935,6 +944,12 @@ function build.create_iopoint(procinfo, entity, circuit)
         red_display = circuit.red_display,
         green_display = circuit.green_display
     }
+    
+    local old_pointinfo = procinfo.iopoint_infos[entity.unit_number]
+    if old_pointinfo then
+        build.disconnect_iopole(procinfo, old_pointinfo)
+    end
+
     procinfo.iopoint_infos[entity.unit_number] = iopoint_info
     if not procinfo.is_packed then
         build.connect_iopole(procinfo, iopoint_info)

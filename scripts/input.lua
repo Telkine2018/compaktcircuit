@@ -477,18 +477,28 @@ function input.register(entity, props)
     input.set_icon(props, entity)
 end
 
----@param bp LuaItemStack
----@param index integer
----@param entity LuaEntity
-function input.set_bp_tags(bp, index, entity)
-    local unit_number = entity.unit_number
 
+---@param entity LuaEntity
+---@return Tags?
+function input.get_tags(entity)
+    local unit_number = entity.unit_number
     local info = input.get(unit_number)
     if info then
         local copy = tools.table_dup(info) --[[@as Input]]
         copy.dataid = nil
         copy.typeid = nil
-        bp.set_blueprint_entity_tags(index, copy --[[@as any]])
+        return copy
+    end
+    return nil
+end
+
+---@param bp LuaItemStack
+---@param index integer
+---@param entity LuaEntity
+function input.set_bp_tags(bp, index, entity)
+    local tags = input.get_tags(entity)
+    if tags then
+        bp.set_blueprint_entity_tags(index, tags --[[@as any]])
     end
 end
 

@@ -46,6 +46,7 @@ local accu_name = prefix .. "-accu"
 local device_name = commons.device_name
 local display_name = commons.display_name
 local input_name = commons.input_name
+local internal_iopoint_name = commons.internal_iopoint_name
 
 local iopoint_with_alt = settings.startup["compaktcircuit-iopoint_with_alt"]
     .value
@@ -364,32 +365,15 @@ local function on_build(entity, e, revive)
     if not entity or not entity.valid then return end
 
     local name = entity.name
+    local tags = e.tags
+    if tags and tags.__ then tags = tags.__ end
     if string.find(name, processor_pattern) then
-        local tags = e.tags
-        ---@cast tags ProcInfo
         if not tags then
             tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags) --[[@as ProcInfo]]
         end
-
         create_processor(entity, tags)
-    elseif name == display_name then
-        local tags = e.tags
-        if not tags then
-            tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags) --[[@as Display]]
-        end
-        if tags then display.register(entity, tags --[[@as Display]]) end
-    elseif name == input_name then
-        local tags = e.tags
-        if not tags then
-            tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags) --[[@as Display]]
-        end
-        if not IsProcessorRebuilding and tags then
-            tags.value_id = tools.get_id()
-        elseif tags then
-            tools.upgrade_id(tags.value_id)
-        end
-        input.register(entity, tags --[[@as Input]])
     elseif name == "entity-ghost" and string.find(entity.ghost_name, processor_pattern) then
+        if tags then entity.tags = tags end
         if entity.surface.platform then
             revive_processor(entity, e.player_index)
         end
@@ -428,6 +412,7 @@ end
 ---@param pos MapPosition
 ---@param tags Tags
 local function save_undo_tags(player_index, pos, tags)
+    if not tags then return end
     local undo_tags = storage.undo_tags
     if not undo_tags then
         undo_tags = {}
@@ -544,12 +529,6 @@ local function on_mined(e)
         end
     elseif entity.name == iopoint_name then
         if e.buffer then e.buffer.clear() end
-    elseif entity.name == display_name then
-        if e.buffer then e.buffer.clear() end
-        display.mine(entity)
-    elseif entity.name == input_name then
-        if e.buffer then e.buffer.clear() end
-        input.mine(entity)
     end
 end
 
@@ -645,8 +624,8 @@ local function register_mapping(bp, mapping, surface)
             if entity and entity.valid then
                 if string.find(entity.name, processor_pattern) then
                     build.set_processor_tags(bp, index, entity)
-                elseif entity.name == commons.internal_iopoint_name then
-                    build.set_iopoint_tags(bp, index, entity)
+                elseif entity.name == internal_iopoint_name then
+                    build.set_internal_iopoint_tags(bp, index, entity)
                 elseif entity.name == display_name then
                     display.set_bp_tags(bp, index, entity)
                 elseif entity.name == input_name then
@@ -670,7 +649,7 @@ local function register_mapping(bp, mapping, surface)
                         build.set_processor_tags(bp, entity.entity_number,
                             processor)
                     end
-                elseif entity.name == commons.internal_iopoint_name then
+                elseif entity.name == internal_iopoint_name then
                     local procinfo = storage.surface_map[surface.name]
                     if procinfo then
                         local entities =
@@ -680,7 +659,7 @@ local function register_mapping(bp, mapping, surface)
                                 radius = 0.1
                             }
                         if #entities > 0 then
-                            build.set_iopoint_tags(bp, index, entities[1])
+                            build.set_internal_iopoint_tags(bp, index, entities[1])
                         end
                     end
                 elseif entity.name == display_name then
@@ -890,18 +869,19 @@ local function move_processor(context)
     local move_list = {}
     local failed = false
     for _, e in pairs(entities) do
+        ---@cast e LuaEntity
         name = e.name
         if name ~= processor_name and name ~= processor_name_1x1 then
             local p = e.position
             e.teleport({ x = p.x + dx, y = p.y + dy })
             table.insert(move_list, e)
             if name == iopoint_name then
-                local connections = e.circuit_connected_entities
-                if connections then
-                    for _, entities in pairs(connections) do
-                        for _, dst in pairs(entities) do
-                            if e.surface == dst.surface and
-                                not e.can_wires_reach(dst) then
+                local connectors = e.get_wire_connectors(false)
+                if connectors then
+                    for _, connector in pairs(connectors) do
+                        for _, connection in pairs(connector.connections) do
+                            if e.surface == connection.target.owner.surface and
+                                not connector.can_wire_reach(connection.target.owner) then
                                 failed = true
                                 player.create_local_flying_text {
                                     text = { prefix .. "-message.wires_too_long" },
@@ -1751,63 +1731,20 @@ local function on_player_rotated_entity(e) local entity = e.entity end
 
 tools.on_event(defines.events.on_player_rotated_entity, on_player_rotated_entity)
 
----@param actions (UndoRedoAction)[]
----@param player_index integer
-local function apply_actions(actions, player_index)
-    for _, action in pairs(actions) do
-        if action.tags then
-            local tags = action.tags.content
-            if action.type == "removed-entity" and
-                string.find(action.target.name, processor_pattern) then
-                local surface = game.surfaces[action.surface_index]
+local processor_classes = {
+    [processor_name] = true,
+    [processor_name_1x1] = true
+}
 
-                local name = action.target.name
-                if not surface.platform then
-                    local entities = surface.find_entities_filtered
-                        { name = "entity-ghost", ghost_name = name, position = action.target.position }
-                    if tags and #entities == 1 then
-                        local ghost = entities[1]
-                        ghost.tags = tags
-                    end
-                elseif player_index then
-                    local entities = surface.find_entities_filtered
-                        { name = name, position = action.target.position }
-                    if #entities == 1 then
-                        local processor = entities[1]
-                        create_processor(processor, tags)
-                    else
-                        local player = game.players[player_index]
-                        if player.get_item_count(name) > 0 then
-                            local processor = surface.create_entity {
-                                name = action.target.name,
-                                force = player.force,
-                                position = action.target.position,
-                                direction = action.target.direction }
-                            if processor then
-                                create_processor(processor, tags)
-                                player.remove_item { name = name }
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
 
-tools.on_event(defines.events.on_undo_applied,
-    ---@param e EventData.on_undo_applied
-    function(e)
-        apply_actions(e.actions, e.player_index)
-    end
-)
-
-tools.on_event(defines.events.on_redo_applied,
-    ---@param e EventData.on_redo_applied
-    function(e)
-        apply_actions(e.actions, e.player_index)
-    end
-)
+local undo_classes = {
+    [processor_name] = true,
+    [processor_name_1x1] = true,
+    [input_name] = true,
+    [display_name] = true,
+    [iopoint_name] = true,
+    [internal_iopoint_name] = true
+}
 
 local function background_process_entities()
     ---@type table<integer, table<string, Tags>>
@@ -1819,10 +1756,10 @@ local function background_process_entities()
                 local item = stack.get_undo_item(1)
                 for index, action in pairs(item) do
                     if action and action.type == "removed-entity" then
-                        if string.find(action.target.name, processor_pattern) then
+                        if undo_classes[action.target.name] then
                             local tags = player_map[action.target.position.x .. "," .. action.target.position.y]
                             if tags then
-                                stack.set_undo_tag(player_index, index, "content", tags)
+                                stack.set_undo_tag(player_index, index, "__", tags)
                             end
                         end
                     end
@@ -1832,10 +1769,10 @@ local function background_process_entities()
                 local item = stack.get_redo_item(1)
                 for index, action in pairs(item) do
                     if action and action.type == "removed-entity" then
-                        if string.find(action.target.name, processor_pattern) then
+                        if undo_classes[action.target.name] then
                             local tags = player_map[action.target.position.x .. "," .. action.target.position.y]
                             if tags then
-                                stack.set_redo_tag(player_index, index, "content", tags)
+                                stack.set_redo_tag(player_index, index, "__", tags)
                             end
                         end
                     end
@@ -1864,23 +1801,28 @@ tools.on_event(defines.events.on_tick, background_process_entities)
 tools.on_event(defines.events.on_marked_for_deconstruction,
     ---@param e EventData.on_marked_for_deconstruction
     function(e)
-        local processor = e.entity
-        local name = processor.name
-        if e.player_index and string.find(name, processor_pattern) then
-            local tags = build.get_processor_tags(processor)
-            local procinfo = procinfos[processor.unit_number]
-            if procinfo then
-                tags.wires = get_wire_connections(procinfo)
-            end
-            if not processor.surface.platform then
-                save_undo_tags(e.player_index, processor.position, tags)
-            elseif e.player_index then
-                destroy_processor(processor, e.player_index)
-                local player = game.players[e.player_index]
-                player.insert { name = name }
+        local entity = e.entity
+        if not entity.valid then return end
+        local name = entity.name
+        if e.player_index then
+            if processor_classes[name] then
+                local tags = build.get_processor_tags(entity)
+                local procinfo = procinfos[entity.unit_number]
+                if procinfo then
+                    tags.wires = get_wire_connections(procinfo)
+                end
+                if not entity.surface.platform then
+                    save_undo_tags(e.player_index, entity.position, tags)
+                elseif e.player_index then
+                    destroy_processor(entity, e.player_index)
+                    local player = game.players[e.player_index]
+                    player.insert { name = name }
+                end
             end
         end
     end
 )
+
+editor.save_undo_tags = save_undo_tags
 
 ------------------

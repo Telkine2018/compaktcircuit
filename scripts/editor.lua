@@ -261,7 +261,7 @@ function editor.edit_selected(player, processor)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
-    if player.controller_type == defines.controllers.character or 
+    if player.controller_type == defines.controllers.character or
         player.controller_type == defines.controllers.god then
         player.teleport({ x, y }, surface)
     else
@@ -285,7 +285,7 @@ local function exit_player(procinfo, player)
         origin_surface_name = "nauvis"
         origin_surface_position = { x = 0, y = 0 }
     end
-    if origin_controller_type == defines.controllers.character 
+    if origin_controller_type == defines.controllers.character
         or origin_controller_type == defines.controllers.god
     then
         player.teleport(origin_surface_position, origin_surface_name)
@@ -1057,14 +1057,13 @@ local function check_ipoint_index(procinfo, index)
     return 1
 end
 
+
 ---@param entity LuaEntity
 ---@param tags Tags
 ---@param procinfo ProcInfo
 local function init_internal_point(entity, tags, procinfo)
     ---@type IOPointInfo
     local circuit = { label = "" }
-    local label = ""
-    local index
     if tags then
         local iotags = tags --[[@as IOPointInfo ]]
         circuit.label = iotags.label
@@ -1079,6 +1078,9 @@ local function init_internal_point(entity, tags, procinfo)
     local iopoint_info = build.create_iopoint(procinfo, entity, circuit)
     build.update_io_text(iopoint_info)
 end
+
+editor.init_internal_point = init_internal_point
+
 
 ---@param player_index integer?
 ---@param text LocalisedString
@@ -1096,50 +1098,50 @@ local function fly_text(player_index, text, position)
     }
 end
 
+local ghost_classes = {
+    [internal_iopoint_name]   = true,
+    [internal_connector_name] = true,
+    [display_name]            = true,
+    [input_name]              = true
+
+}
+
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
     if not entity or not entity.valid then return end
 
     local name = entity.name
-    local procinfo = storage.surface_map and
-        storage.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+    if not procinfo then
+        return
+    end
 
-    if name == internal_iopoint_name then
-        if not procinfo then
-            entity.destroy()
-            return
-        end
-        init_internal_point(entity, e.tags, procinfo)
-    elseif name == internal_connector_name then
-        if not procinfo then
-            entity.destroy()
-            return
-        end
-        entity.operable = false
-    elseif name == display_name then
-        if not procinfo then
-            entity.destroy()
-            return
+    local tags = e.tags
+    if not tags then
+        tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags)
+    end
+    if tags and tags.__ then tags = tags.__ end
+
+    if name == display_name then
+        if tags then
+            display.register(entity, tags --[[@as Display]])
         end
     elseif name == input_name then
-        if not procinfo then
-            entity.destroy()
-            return
+        if not IsProcessorRebuilding and tags then
+            tags.value_id = tools.get_id()
+        elseif tags then
+            tools.upgrade_id(tags.value_id)
         end
+        input.register(entity, tags --[[@as Input]])
+    elseif name == internal_iopoint_name then
+        init_internal_point(entity, tags, procinfo)
+    elseif name == internal_connector_name then
+        entity.operable = false
     elseif name == "entity-ghost" and is_allowed(entity.ghost_name) then
-        if entity.ghost_name == internal_iopoint_name or
-            entity.ghost_name == internal_connector_name or
-            entity.ghost_name == display_name or
-            entity.ghost_name == input_name
-        then
-            if not procinfo then
-                entity.destroy()
-                return
-            end
+        if ghost_classes[entity.ghost_name] then
             local d, new = entity.silent_revive { raise_revive = true }
         else
-            if not procinfo then return end
             if e.player_index then
                 local player = game.players[e.player_index]
                 local controller_type = player.controller_type
@@ -1220,6 +1222,12 @@ local function on_player_built(ev)
     on_build(entity, ev)
 end
 
+local class_to_save = {
+    [input_name] = true,
+    [display_name] = true,
+    [internal_iopoint_name] = true
+}
+
 ---@param e EventData.on_marked_for_deconstruction
 local function on_marked_for_deconstruction(e)
     local player_index = e.player_index
@@ -1231,12 +1239,32 @@ local function on_marked_for_deconstruction(e)
         storage.surface_map[entity.surface.name]
     if not procinfo then return end
 
+    local name = entity.name
+    if e.player_index then
+        if name == internal_iopoint_name then
+            editor.save_undo_tags(e.player_index, entity.position, build.get_internal_iopoint_tags(entity))
+            entity.mine { raise_destroyed = true }
+        elseif name == input_name then
+            local tags = input.get_tags(entity)
+            editor.save_undo_tags(e.player_index, entity.position, tags)
+            entity.mine { raise_destroyed = true }
+        elseif name == display_name then
+            local tags = display.get_tags(entity)
+            editor.save_undo_tags(e.player_index, entity.position, tags)
+            entity.mine { raise_destroyed = true }
+        elseif name == commons.internal_connector_name then
+            entity.mine { raise_destroyed = true }
+        end
+    end
+
     local controller_type = player.controller_type
-    if controller_type == defines.controllers.god then
+    if entity.valid and controller_type == defines.controllers.god then
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
-        entity.destroy()
+        if entity.valid then
+            entity.mine { raise_destroyed = true }
+        end
     end
 end
 
@@ -1277,20 +1305,33 @@ end
 local function on_mined(ev)
     local entity = ev.entity
     if entity.name == internal_iopoint_name then
+        if ev.player_index then
+            editor.save_undo_tags(ev.player_index, entity.position, build.get_internal_iopoint_tags(entity))
+        end
         editor.destroy_internal_iopoint(entity)
         if ev.buffer then ev.buffer.clear() end
     elseif entity.name == internal_connector_name then
         if ev.buffer then ev.buffer.clear() end
     elseif entity.name == display_name then
         if ev.buffer then ev.buffer.clear() end
+        if ev.player_index then
+            local tags = display.get_tags(entity)
+            editor.save_undo_tags(ev.player_index, entity.position, tags)
+        end
+        display.mine(entity)
     elseif entity.name == input_name then
         if ev.buffer then ev.buffer.clear() end
+        if ev.player_index then
+            local tags = input.get_tags(entity)
+            editor.save_undo_tags(ev.player_index, entity.position, tags)
+        end
+        input.mine(entity)
     end
 end
 
 ---@param ev EventData.on_player_mined_entity|EventData.on_robot_mined_entity|EventData.on_entity_died|EventData.script_raised_destroy
-local function on_player_mined_entity(ev) 
-    on_mined(ev) 
+local function on_player_mined_entity(ev)
+    on_mined(ev)
 end
 
 local mine_filter = {
@@ -1299,8 +1340,7 @@ local mine_filter = {
     { filter = 'name', name = display_name },
     { filter = 'name', name = input_name }
 }
-tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity,
-    mine_filter)
+tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity, mine_filter)
 tools.on_event(defines.events.on_robot_mined_entity, on_mined, mine_filter)
 tools.on_event(defines.events.on_entity_died, on_mined, mine_filter)
 tools.on_event(defines.events.script_raised_destroy, on_mined, mine_filter)
@@ -1401,5 +1441,11 @@ remote.add_interface(prefix, {
             (position, direction, name) is in 'info' structure
 
 --]]
+
+---@param player_index integer
+---@param pos MapPosition
+---@param tags Tags
+function editor.save_undo_tags(player_index, pos, tags)
+end
 
 return editor
