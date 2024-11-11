@@ -1144,8 +1144,7 @@ local function on_build(entity, e)
         else
             if e.player_index then
                 local player = game.players[e.player_index]
-                local controller_type = player.controller_type
-                if controller_type == defines.controllers.god then
+                if commons.remote_controllers[player.controller_type]  then
                     entity.revive { raise_revive = true }
                 end
             end
@@ -1235,36 +1234,37 @@ local function on_marked_for_deconstruction(e)
 
     local player = game.players[e.player_index]
     local entity = e.entity
-    local procinfo = storage.surface_map and
-        storage.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
     if not procinfo then return end
 
+    if not entity.valid then return end
+
     local name = entity.name
+    local need_mining = false
     if e.player_index then
         if name == internal_iopoint_name then
             editor.save_undo_tags(e.player_index, entity.position, build.get_internal_iopoint_tags(entity))
-            entity.mine { raise_destroyed = true }
+            need_mining = true
         elseif name == input_name then
             local tags = input.get_tags(entity)
             editor.save_undo_tags(e.player_index, entity.position, tags)
-            entity.mine { raise_destroyed = true }
+            need_mining = true
         elseif name == display_name then
             local tags = display.get_tags(entity)
             editor.save_undo_tags(e.player_index, entity.position, tags)
-            entity.mine { raise_destroyed = true }
+            need_mining = true
         elseif name == commons.internal_connector_name then
-            entity.mine { raise_destroyed = true }
+            need_mining = true
+        elseif commons.processor_names[name] then
+            return
         end
     end
 
-    local controller_type = player.controller_type
-    if entity.valid and controller_type == defines.controllers.god then
+    if entity.valid and (commons.remote_controllers[player.controller_type] or need_mining) then
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
-        if entity.valid then
-            entity.mine { raise_destroyed = true }
-        end
+        entity.mine { raise_destroyed = true }
     end
 end
 

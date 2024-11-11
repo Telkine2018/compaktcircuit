@@ -33,6 +33,17 @@ commons.packed_entities = {
 	commons.packed_input_name
 }
 
+commons.processor_names = {
+	[commons.processor_name] = true,
+	[commons.processor_name_1x1] = true
+}
+
+commons.remote_controllers = {
+	[defines.controllers.god] = true,
+	[defines.controllers.remote] = true,
+	[defines.controllers.editor] = true
+}
+
 for i = 1, 8 do
 	table.insert(commons.packed_entities, prefix .. "-lamp" .. i)
 end

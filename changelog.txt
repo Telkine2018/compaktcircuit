@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.6
+Date: 11. 11. 2024.
+  Changes:
+    - Add object creation/destruction in remote mode 
+    - There is a 35s delay before being able to change entity properties when entering a packed processor. Don't know why.
+---------------------------------------------------------------------------------------------------
 Version: 2.0.5
 Date: 11. 11. 2024.
   Bugfixes:

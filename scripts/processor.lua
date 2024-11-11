@@ -1731,10 +1731,7 @@ local function on_player_rotated_entity(e) local entity = e.entity end
 
 tools.on_event(defines.events.on_player_rotated_entity, on_player_rotated_entity)
 
-local processor_classes = {
-    [processor_name] = true,
-    [processor_name_1x1] = true
-}
+local processor_names = commons.processor_names
 
 
 local undo_classes = {
@@ -1805,17 +1802,24 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
         if not entity.valid then return end
         local name = entity.name
         if e.player_index then
-            if processor_classes[name] then
+            if processor_names[name] then
                 local tags = build.get_processor_tags(entity)
                 local procinfo = procinfos[entity.unit_number]
                 if procinfo then
                     tags.wires = get_wire_connections(procinfo)
                 end
+
+                local player = game.players[e.player_index]
+                local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+                if procinfo and commons.remote_controllers[player.controller_type] then
+                    save_undo_tags(e.player_index, entity.position, tags)
+                    entity.mine { raise_destroyed = true }
+                    return
+                end
                 if not entity.surface.platform then
                     save_undo_tags(e.player_index, entity.position, tags)
-                elseif e.player_index then
+                else 
                     destroy_processor(entity, e.player_index)
-                    local player = game.players[e.player_index]
                     player.insert { name = name }
                 end
             end
