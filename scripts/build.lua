@@ -518,7 +518,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                                     value = {
                                                         name = entry.name,
                                                         type = entry.type,
-                                                        quality = entity.quality,
+                                                        quality = entry.quality,
                                                         comparator = entry.comparator
                                                     },
                                                     min = entry.count
