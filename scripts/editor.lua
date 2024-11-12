@@ -1121,7 +1121,13 @@ local function on_build(entity, e)
     if not tags then
         tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags)
     end
-    if tags and tags.__ then tags = tags.__ end
+    if tags then
+        if tags.__ then tags = tags.__ end
+        if tags.__delete then 
+            entity.destroy() 
+            return
+        end
+    end
 
     if name == display_name then
         if tags then

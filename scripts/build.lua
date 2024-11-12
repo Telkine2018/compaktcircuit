@@ -234,7 +234,11 @@ function build.save_packed_circuits2(procinfo)
         for _, io in pairs(iopoints) do
             local id = io.id
             local ref = iopoint_map_to_proc[id]
-            bp.set_blueprint_entity_tags(io.index, ref)
+            if ref then
+                bp.set_blueprint_entity_tags(io.index, ref)
+            else
+                bp.set_blueprint_entity_tags(io.index, { __delete = true })
+            end
         end
 
         if area then
@@ -597,23 +601,28 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             if bcontrol.connect_to_logistic_network then
                                 cb.connect_to_logistic_network = true
                                 if bcontrol.logistic_condition then
-                                    local condition = {} condition = cb.logistic_condition
+                                    local condition = {}
+                                    condition = cb.logistic_condition
                                     for name, value in pairs(bcontrol.logistic_condition) do
                                         condition[name] = value
                                     end
-                                    cb.logistic_condition =condition
+                                    cb.logistic_condition = condition
                                 end
                             end
                         end
                     elseif name == iopoint_name then
                         if tags then
-                            local proc_index = tags.proc_index
-                            local proc = inner_processors[proc_index]
-                            if not proc then
-                                proc = { iopoints = {} }
-                                inner_processors[proc_index] = proc
+                            if tags.__delete then
+                                entity.destroy()
+                            else
+                                local proc_index = tags.proc_index
+                                local proc = inner_processors[proc_index]
+                                if not proc then
+                                    proc = { iopoints = {} }
+                                    inner_processors[proc_index] = proc
+                                end
+                                proc.iopoints[tags.iopoint_index] = entity
                             end
-                            proc.iopoints[tags.iopoint_index] = entity
                         end
                     elseif name == display_name then
                         if tags and not tags.is_internal then
@@ -836,7 +845,7 @@ function build.get_processor_tags(entity)
                 helpers.table_to_json(procinfo.input_values) or nil
         }
     end
-    return { }
+    return {}
 end
 
 local get_processor_tags = build.get_processor_tags
@@ -944,7 +953,7 @@ function build.create_iopoint(procinfo, entity, circuit)
         red_display = circuit.red_display,
         green_display = circuit.green_display
     }
-    
+
     local old_pointinfo = procinfo.iopoint_infos[entity.unit_number]
     if old_pointinfo then
         build.disconnect_iopole(procinfo, old_pointinfo)
