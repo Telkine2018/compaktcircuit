@@ -19,6 +19,9 @@
 ---@field origin_surface_name string
 ---@field origin_surface_position MapPosition
 ---@field origin_controller_type defines.controllers
+---@field physical_surface_index integer
+---@field physical_position MapPosition
+---@field physical_controller_type defines.controllers
 ---@field in_pole LuaEntity?            @ Energy pole
 ---@field generator LuaEntity?          @ Electrical generator
 ---@field sprite_ids LuaRenderObject[]

@@ -261,16 +261,10 @@ function editor.edit_selected(player, processor)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
-    if player.controller_type == defines.controllers.character or
-        player.controller_type == defines.controllers.god then
-        player.teleport({ x, y }, surface)
-    else
-        player.set_controller {
-            type = player.controller_type,
-            position = { x, y },
-            surface = surface
-        }
-    end
+    procinfo.physical_surface_index = player.physical_surface_index
+    procinfo.physical_controller_type = player.physical_controller_type
+    procinfo.physical_position = player.physical_position
+    player.teleport({ x, y }, surface)
 end
 
 ---@param procinfo ProcInfo
@@ -290,6 +284,9 @@ local function exit_player(procinfo, player)
     then
         player.teleport(origin_surface_position, origin_surface_name)
     else
+        if procinfo.physical_controller_type then
+            player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
+        end
         player.set_controller {
             type = origin_controller_type,
             position = origin_surface_position,
