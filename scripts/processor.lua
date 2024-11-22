@@ -355,6 +355,13 @@ local function revive_processor(ghost, player_index)
                 end
             end
         end
+    elseif player_index then
+        local _, processor = ghost.silent_revive()
+        local player = game.players[player_index]
+        if processor then
+            create_processor(processor, tags)
+            player.remove_item { name = processor.name }
+        end
     end
 end
 
