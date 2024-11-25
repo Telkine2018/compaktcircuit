@@ -257,40 +257,65 @@ function editor.edit_selected(player, processor)
         input.apply_parameters(procinfo)
     end
 
-    local x, y = editor.find_room(surface, 0, 0)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
+    if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
+            not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
+        vars.physical_surface_index = player.physical_surface_index
+        vars.physical_controller_type = player.physical_controller_type
+        vars.physical_position = player.physical_position
+    end
     procinfo.physical_surface_index = player.physical_surface_index
     procinfo.physical_controller_type = player.physical_controller_type
     procinfo.physical_position = player.physical_position
+
+    local x, y = editor.find_room(surface, 0, 0)
     player.teleport({ x, y }, surface)
 end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
-local function exit_player(procinfo, player)
-    local origin_surface_name = procinfo.origin_surface_name
-    local origin_surface_position = procinfo.origin_surface_position
-    local origin_controller_type = procinfo.origin_controller_type or defines.controllers.character
+---@param to_origin boolean?
+local function exit_player(procinfo, player, to_origin)
+    ---@type string
+    local ret_surface_name
+    ---@type MapPosition
+    local ret_surface_position
+    ---@type defines.controllers
+    local ret_controller_type
+    ---@type LuaSurface
+    local ret_surface
 
-    local origin_surface = game.surfaces[origin_surface_name]
-    if not origin_surface or not origin_surface.valid then
-        origin_surface_name = "nauvis"
-        origin_surface_position = { x = 0, y = 0 }
+    local vars = tools.get_vars(player)
+    if not to_origin then
+        ret_surface_name = procinfo.origin_surface_name
+        ret_surface_position = procinfo.origin_surface_position
+        ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
+        ret_surface = game.surfaces[ret_surface_name]
+    elseif vars.physical_surface_index then
+        ret_surface = game.surfaces[vars.physical_surface_index]
+        ret_surface_position = vars.physical_position
+        ret_controller_type = vars.physical_controller_type
+        ret_surface_name = ret_surface.name
     end
-    if origin_controller_type == defines.controllers.character
-        or origin_controller_type == defines.controllers.god
+    
+    if not ret_surface or not ret_surface.valid then
+        ret_surface_name = "nauvis"
+        ret_surface_position = { x = 0, y = 0 }
+    end
+    if ret_controller_type == defines.controllers.character
+        or ret_controller_type == defines.controllers.god
     then
-        player.teleport(origin_surface_position, origin_surface_name)
+        player.teleport(ret_surface_position, ret_surface_name)
     else
         if procinfo.physical_controller_type then
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
         end
         player.set_controller {
-            type = origin_controller_type,
-            position = origin_surface_position,
-            surface = origin_surface_name
+            type = ret_controller_type,
+            position = ret_surface_position,
+            surface = ret_surface_name
         }
     end
 end
@@ -304,8 +329,7 @@ local function on_exit_editor(e)
     local vars = get_vars(player)
     local procinfo = vars.procinfo
     vars.is_standard_exit = true
-
-    exit_player(procinfo, player)
+    exit_player(procinfo, player, e.control)
 end
 
 ---@param player LuaPlayer

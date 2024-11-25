@@ -8,6 +8,7 @@ local prefix = commons.prefix
 commons.processor_name = prefix .. "-processor"
 commons.processor_name_1x1 = prefix .. "-processor_1x1"
 commons.processor_pattern = "^" .. prefix .. "%-processor"
+commons.surface_name_pattern = "^proc%_%d+"
 
 commons.processor_with_tags = prefix .. "-processor_with_tags"
 commons.processor_with_tags_1x1 = prefix .. "-processor_with_tags_1x1"

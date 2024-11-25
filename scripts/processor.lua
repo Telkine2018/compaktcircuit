@@ -1763,7 +1763,7 @@ local function background_process_entities()
                         if undo_classes[action.target.name] then
                             local tags = player_map[action.target.position.x .. "," .. action.target.position.y]
                             if tags then
-                                stack.set_undo_tag(player_index, index, "__", tags)
+                                stack.set_undo_tag(1, index, "__", tags)
                             end
                         end
                     end
@@ -1776,7 +1776,7 @@ local function background_process_entities()
                         if undo_classes[action.target.name] then
                             local tags = player_map[action.target.position.x .. "," .. action.target.position.y]
                             if tags then
-                                stack.set_redo_tag(player_index, index, "__", tags)
+                                stack.set_redo_tag(1, index, "__", tags)
                             end
                         end
                     end
