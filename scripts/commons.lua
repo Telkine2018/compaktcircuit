@@ -8,6 +8,7 @@ local prefix = commons.prefix
 commons.processor_name = prefix .. "-processor"
 commons.processor_name_1x1 = prefix .. "-processor_1x1"
 commons.processor_pattern = "^" .. prefix .. "%-processor"
+commons.surface_name_pattern = "^proc%_%d+"
 
 commons.processor_with_tags = prefix .. "-processor_with_tags"
 commons.processor_with_tags_1x1 = prefix .. "-processor_with_tags_1x1"
@@ -31,6 +32,17 @@ commons.packed_entities = {
 	prefix .. "-pole",
 	commons.packed_display_name,
 	commons.packed_input_name
+}
+
+commons.processor_names = {
+	[commons.processor_name] = true,
+	[commons.processor_name_1x1] = true
+}
+
+commons.remote_controllers = {
+	[defines.controllers.god] = true,
+	[defines.controllers.remote] = true,
+	[defines.controllers.editor] = true
 }
 
 for i = 1, 8 do

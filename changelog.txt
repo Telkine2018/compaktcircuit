@@ -1,4 +1,54 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.11
+Date: 25. 11. 2024.
+  Bugfixes:
+    - Fix crash on undo
+  Changes:
+    - Add control key to exit all processors (Control + "Exit editor" button)
+---------------------------------------------------------------------------------------------------
+Version: 2.0.10
+Date: 22. 11. 2024.
+  Bugfixes:
+    - Fix crash when putting a processor on a space station
+---------------------------------------------------------------------------------------------------
+Version: 2.0.9
+Date: 21. 11. 2024.
+  Bugfixes:
+    - Fix edition of processor in remote mode and packed mode. 
+---------------------------------------------------------------------------------------------------
+Version: 2.0.8
+Date: 13. 11. 2024.
+  Bugfixes:
+    - Fix crash on exiting editor
+---------------------------------------------------------------------------------------------------
+Version: 2.0.7
+Date: 12. 11. 2024.
+  Bugfixes:
+    - Fix quality on constant combinator in packed mode
+---------------------------------------------------------------------------------------------------
+Version: 2.0.6
+Date: 11. 11. 2024.
+  Changes:
+    - Add object creation/destruction in remote mode 
+    - There is a 35s delay before being able to change entity properties when entering a packed processor. Don't know why.
+---------------------------------------------------------------------------------------------------
+Version: 2.0.5
+Date: 11. 11. 2024.
+  Bugfixes:
+    - Fix crash with picker dollies
+  Changes:
+    - Add undo/redo on input/display/iopoint
+---------------------------------------------------------------------------------------------------
+Version: 2.0.4
+Date: 09. 11. 2024.
+  Bugfixes:
+    - Fix teleport in/out circuit editor
+  Changes:
+    - Add undo/redo management (work well after undo->redo a delete, lose externals wires after undo->redo a build)
+    - Add proper ghost when destroying a compakt circuit
+    - Fix construction / undo / redo of compakt circuit on a space plateform
+    - Add migration to display light properly in 2.0
+---------------------------------------------------------------------------------------------------
 Version: 2.0.2
 Date: 03.11.2024
   Changes:

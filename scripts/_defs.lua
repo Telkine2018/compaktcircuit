@@ -18,6 +18,10 @@
 ---@field references string[]
 ---@field origin_surface_name string
 ---@field origin_surface_position MapPosition
+---@field origin_controller_type defines.controllers
+---@field physical_surface_index integer
+---@field physical_position MapPosition
+---@field physical_controller_type defines.controllers
 ---@field in_pole LuaEntity?            @ Energy pole
 ---@field generator LuaEntity?          @ Electrical generator
 ---@field sprite_ids LuaRenderObject[]
@@ -30,7 +34,14 @@
 ---@field input_values table<string, any> 
 ---@field draw_version integer
 ---@field energ_pole LuaEntity?
+---@field wires WireDefinition[]
 
+---@class WireDefinition
+---@field iopoint_index integer
+---@field src_connector defines.wire_connector_id
+---@field dst_connector  defines.wire_connector_id
+---@field dst_name string
+---@field dst_pos MapPosition
 
 ---@class Circuit
 ---@field name string

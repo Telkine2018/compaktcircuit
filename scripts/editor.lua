@@ -226,11 +226,22 @@ function editor.find_room(surface, x, y)
     return x, y
 end
 
+local allow_controller_types = {
+
+    [defines.controllers.god] = true,
+    [defines.controllers.character] = true,
+    [defines.controllers.remote] = true
+}
+
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
     if storage.last_click and storage.last_click > game.tick - 120 then return end
     storage.last_click = game.tick
+
+    if not allow_controller_types[player.controller_type] then
+        return
+    end
 
     if not processor or not processor.valid then return end
 
@@ -246,24 +257,67 @@ function editor.edit_selected(player, processor)
         input.apply_parameters(procinfo)
     end
 
-    local x, y = editor.find_room(surface, 0, 0)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
+    procinfo.origin_controller_type = player.controller_type
+    if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
+            not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
+        vars.physical_surface_index = player.physical_surface_index
+        vars.physical_controller_type = player.physical_controller_type
+        vars.physical_position = player.physical_position
+    end
+    procinfo.physical_surface_index = player.physical_surface_index
+    procinfo.physical_controller_type = player.physical_controller_type
+    procinfo.physical_position = player.physical_position
+
+    local x, y = editor.find_room(surface, 0, 0)
     player.teleport({ x, y }, surface)
 end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
-local function exit_player(procinfo, player)
-    local origin_surface_name = procinfo.origin_surface_name
-    local origin_surface_position = procinfo.origin_surface_position
+---@param to_origin boolean?
+local function exit_player(procinfo, player, to_origin)
+    ---@type string
+    local ret_surface_name
+    ---@type MapPosition
+    local ret_surface_position
+    ---@type defines.controllers
+    local ret_controller_type
+    ---@type LuaSurface
+    local ret_surface
 
-    local origin_surface = game.surfaces[origin_surface_name]
-    if not origin_surface or not origin_surface.valid then
-        origin_surface_name = "nauvis"
-        origin_surface_position = { x = 0, y = 0 }
+    local vars = tools.get_vars(player)
+    if not to_origin then
+        ret_surface_name = procinfo.origin_surface_name
+        ret_surface_position = procinfo.origin_surface_position
+        ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
+        ret_surface = game.surfaces[ret_surface_name]
+    elseif vars.physical_surface_index then
+        ret_surface = game.surfaces[vars.physical_surface_index]
+        ret_surface_position = vars.physical_position
+        ret_controller_type = vars.physical_controller_type
+        ret_surface_name = ret_surface.name
     end
-    player.teleport(origin_surface_position, origin_surface_name)
+    
+    if not ret_surface or not ret_surface.valid then
+        ret_surface_name = "nauvis"
+        ret_surface_position = { x = 0, y = 0 }
+    end
+    if ret_controller_type == defines.controllers.character
+        or ret_controller_type == defines.controllers.god
+    then
+        player.teleport(ret_surface_position, ret_surface_name)
+    else
+        if procinfo.physical_controller_type then
+            player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
+        end
+        player.set_controller {
+            type = ret_controller_type,
+            position = ret_surface_position,
+            surface = ret_surface_name
+        }
+    end
 end
 
 ---@param e EventData.on_gui_click
@@ -275,8 +329,7 @@ local function on_exit_editor(e)
     local vars = get_vars(player)
     local procinfo = vars.procinfo
     vars.is_standard_exit = true
-
-    exit_player(procinfo, player)
+    exit_player(procinfo, player, e.control)
 end
 
 ---@param player LuaPlayer
@@ -446,7 +499,8 @@ function editor.get_or_create_surface(procinfo)
     if not surface or not surface.valid then
         surface = game.create_surface(surface_name, {
             width = EDITOR_SIZE,
-            height = EDITOR_SIZE
+            height = EDITOR_SIZE,
+            no_enemies_mode = true
         })
 
         surface.always_day = true
@@ -530,6 +584,17 @@ function editor.connect_energy(procinfo)
         }
         procinfo.generator = generator
         generator.destructible = false
+    end
+
+    local radar_name = prefix .. "-radar"
+    local radar_proto = prototypes.entity[radar_name]
+    if radar_proto then
+        local radar = procinfo.surface.create_entity {
+            name = radar_name,
+            position = { EDITOR_SIZE / 2 + 10, 16 },
+            force = processor.force
+        }
+        radar.destructible = false
     end
 
     -- Old stuff
@@ -846,7 +911,10 @@ function editor.draw_sprite(procinfo)
     if procinfo.sprite_ids then
         for _, id in pairs(procinfo.sprite_ids) do
             if type(id) == "number" then
-                rendering.get_object_by_id(id).destroy()
+                local o = rendering.get_object_by_id(id)
+                if o then
+                    o.destroy()
+                end
             else
                 id.destroy()
             end
@@ -1010,14 +1078,13 @@ local function check_ipoint_index(procinfo, index)
     return 1
 end
 
+
 ---@param entity LuaEntity
 ---@param tags Tags
 ---@param procinfo ProcInfo
 local function init_internal_point(entity, tags, procinfo)
     ---@type IOPointInfo
     local circuit = { label = "" }
-    local label = ""
-    local index
     if tags then
         local iotags = tags --[[@as IOPointInfo ]]
         circuit.label = iotags.label
@@ -1033,6 +1100,9 @@ local function init_internal_point(entity, tags, procinfo)
     build.update_io_text(iopoint_info)
 end
 
+editor.init_internal_point = init_internal_point
+
+
 ---@param player_index integer?
 ---@param text LocalisedString
 ---@param position MapPosition?
@@ -1044,10 +1114,18 @@ local function fly_text(player_index, text, position)
         text = text,
         create_at_cursor = not position and true,
         position = position,
-        color = { r = 1.0, a = 0.5},
+        color = { r = 1.0, a = 0.5 },
         speed = 40
     }
 end
+
+local ghost_classes = {
+    [internal_iopoint_name]   = true,
+    [internal_connector_name] = true,
+    [display_name]            = true,
+    [input_name]              = true
+
+}
 
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
@@ -1055,48 +1133,45 @@ local function on_build(entity, e)
     if not entity or not entity.valid then return end
 
     local name = entity.name
-    local procinfo = storage.surface_map and
-        storage.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+    if not procinfo then
+        return
+    end
 
-    if name == internal_iopoint_name then
-        if not procinfo then
-            entity.destroy()
+    local tags = e.tags
+    if not tags then
+        tags = (e.stack and e.stack.is_item_with_tags and e.stack.tags)
+    end
+    if tags then
+        if tags.__ then tags = tags.__ end
+        if tags.__delete then 
+            entity.destroy() 
             return
         end
-        init_internal_point(entity, e.tags, procinfo)
-    elseif name == internal_connector_name then
-        if not procinfo then
-            entity.destroy()
-            return
-        end
-        entity.operable = false
-    elseif name == display_name then
-        if not procinfo then
-            entity.destroy()
-            return
+    end
+
+    if name == display_name then
+        if tags then
+            display.register(entity, tags --[[@as Display]])
         end
     elseif name == input_name then
-        if not procinfo then
-            entity.destroy()
-            return
+        if not IsProcessorRebuilding and tags then
+            tags.value_id = tools.get_id()
+        elseif tags then
+            tools.upgrade_id(tags.value_id)
         end
+        input.register(entity, tags --[[@as Input]])
+    elseif name == internal_iopoint_name then
+        init_internal_point(entity, tags, procinfo)
+    elseif name == internal_connector_name then
+        entity.operable = false
     elseif name == "entity-ghost" and is_allowed(entity.ghost_name) then
-        if entity.ghost_name == internal_iopoint_name or
-            entity.ghost_name == internal_connector_name or
-            entity.ghost_name == display_name or
-            entity.ghost_name == input_name
-        then
-            if not procinfo then
-                entity.destroy()
-                return
-            end
+        if ghost_classes[entity.ghost_name] then
             local d, new = entity.silent_revive { raise_revive = true }
         else
-            if not procinfo then return end
             if e.player_index then
                 local player = game.players[e.player_index]
-                local controller_type = player.controller_type
-                if controller_type == defines.controllers.god then
+                if commons.remote_controllers[player.controller_type]  then
                     entity.revive { raise_revive = true }
                 end
             end
@@ -1173,6 +1248,12 @@ local function on_player_built(ev)
     on_build(entity, ev)
 end
 
+local class_to_save = {
+    [input_name] = true,
+    [display_name] = true,
+    [internal_iopoint_name] = true
+}
+
 ---@param e EventData.on_marked_for_deconstruction
 local function on_marked_for_deconstruction(e)
     local player_index = e.player_index
@@ -1180,16 +1261,37 @@ local function on_marked_for_deconstruction(e)
 
     local player = game.players[e.player_index]
     local entity = e.entity
-    local procinfo = storage.surface_map and
-        storage.surface_map[entity.surface.name]
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
     if not procinfo then return end
 
-    local controller_type = player.controller_type
-    if controller_type == defines.controllers.god then
+    if not entity.valid then return end
+
+    local name = entity.name
+    local need_mining = false
+    if e.player_index then
+        if name == internal_iopoint_name then
+            editor.save_undo_tags(e.player_index, entity.position, build.get_internal_iopoint_tags(entity))
+            need_mining = true
+        elseif name == input_name then
+            local tags = input.get_tags(entity)
+            editor.save_undo_tags(e.player_index, entity.position, tags)
+            need_mining = true
+        elseif name == display_name then
+            local tags = display.get_tags(entity)
+            editor.save_undo_tags(e.player_index, entity.position, tags)
+            need_mining = true
+        elseif name == commons.internal_connector_name then
+            need_mining = true
+        elseif commons.processor_names[name] then
+            return
+        end
+    end
+
+    if entity.valid and (commons.remote_controllers[player.controller_type] or need_mining) then
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
-        entity.destroy()
+        entity.mine { raise_destroyed = true }
     end
 end
 
@@ -1230,19 +1332,34 @@ end
 local function on_mined(ev)
     local entity = ev.entity
     if entity.name == internal_iopoint_name then
+        if ev.player_index then
+            editor.save_undo_tags(ev.player_index, entity.position, build.get_internal_iopoint_tags(entity))
+        end
         editor.destroy_internal_iopoint(entity)
         if ev.buffer then ev.buffer.clear() end
     elseif entity.name == internal_connector_name then
         if ev.buffer then ev.buffer.clear() end
     elseif entity.name == display_name then
         if ev.buffer then ev.buffer.clear() end
+        if ev.player_index then
+            local tags = display.get_tags(entity)
+            editor.save_undo_tags(ev.player_index, entity.position, tags)
+        end
+        display.mine(entity)
     elseif entity.name == input_name then
         if ev.buffer then ev.buffer.clear() end
+        if ev.player_index then
+            local tags = input.get_tags(entity)
+            editor.save_undo_tags(ev.player_index, entity.position, tags)
+        end
+        input.mine(entity)
     end
 end
 
 ---@param ev EventData.on_player_mined_entity|EventData.on_robot_mined_entity|EventData.on_entity_died|EventData.script_raised_destroy
-local function on_player_mined_entity(ev) on_mined(ev) end
+local function on_player_mined_entity(ev)
+    on_mined(ev)
+end
 
 local mine_filter = {
     { filter = 'name', name = internal_iopoint_name },
@@ -1250,8 +1367,7 @@ local mine_filter = {
     { filter = 'name', name = display_name },
     { filter = 'name', name = input_name }
 }
-tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity,
-    mine_filter)
+tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity, mine_filter)
 tools.on_event(defines.events.on_robot_mined_entity, on_mined, mine_filter)
 tools.on_event(defines.events.on_entity_died, on_mined, mine_filter)
 tools.on_event(defines.events.script_raised_destroy, on_mined, mine_filter)
@@ -1352,5 +1468,11 @@ remote.add_interface(prefix, {
             (position, direction, name) is in 'info' structure
 
 --]]
+
+---@param player_index integer
+---@param pos MapPosition
+---@param tags Tags
+function editor.save_undo_tags(player_index, pos, tags)
+end
 
 return editor

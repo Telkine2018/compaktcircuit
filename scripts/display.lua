@@ -774,14 +774,23 @@ function display.set_icon(display_info)
     end
 end
 
+---@param entity LuaEntity
+---@return Tags?
+function display.get_tags(entity)
+    local unit_number = entity.unit_number
+    local info = display.get(unit_number)
+    if not info then return nil end
+    return info.props
+end
+
 ---@param bp LuaItemStack
 ---@param index integer
 ---@param entity LuaEntity
 function display.set_bp_tags(bp, index, entity)
-    local unit_number = entity.unit_number
-
-    local info = display.get(unit_number)
-    if info then bp.set_blueprint_entity_tags(index, info.props) end
+    local tags = display.get_tags(entity)
+    if tags then
+        bp.set_blueprint_entity_tags(index, tags)
+    end
 end
 
 ---@param e EventData.on_gui_confirmed

@@ -327,6 +327,14 @@ combinators.merge_table(energy_pole, {
     }
 })
 
+local radar = data.raw["radar"]["radar"]
+if radar then
+    radar = table.deepcopy(radar)
+    radar.name = prefix .. "-radar"
+    radar.pictures = invisible_sprite
+    data:extend { radar }
+end
+
 if not commons.debug_mode then
     energy_pole.pictures = invisible_sprite
     energy_pole.connection_points = { { wire = {}, shadow = {} } }
