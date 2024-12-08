@@ -1598,6 +1598,36 @@ local function migration_2_0_4()
     end
 end
 
+local function migration_2_0_4()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    for _, procinfo in pairs(procinfos) do
+        editor.draw_sprite(procinfo)
+    end
+end
+
+local function migration_2_0_12()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+
+    local names = commons.packed_entities
+
+    for _, surface in pairs(game.surfaces) do
+        local sc_list = surface.find_entities_filtered { name = names }
+        for _, sc in pairs(sc_list) do
+            local position = sc.position
+            local area = { { position.x - 1, position.y - 1 }, { position.x + 1, position.y + 1 } }
+            local processors = surface.find_entities_filtered
+                { name = commons.processor_name, area = area }
+            if #processors == 0 then
+                local area = { { position.x - 0.5, position.y - 0.5 }, { position.x + 0.5, position.y + 0.5 } }
+                local processors = surface.find_entities_filtered
+                    { name = commons.processor_name_1x1, area = area }
+                if #processors == 0 then
+                    sc.destroy()
+                end
+            end
+        end
+    end
+end
 
 local migrations_table = {
 
@@ -1621,6 +1651,7 @@ local migrations_table = {
     ["1.1.11"] = migration_1_1_11,
     ["2.0.0"] = migration_2_0_0,
     ["2.0.4"] = migration_2_0_4,
+    ["2.0.12"] = migration_2_0_12
 
 }
 
@@ -1825,7 +1856,7 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
                 end
                 if not entity.surface.platform then
                     save_undo_tags(e.player_index, entity.position, tags)
-                else 
+                else
                     destroy_processor(entity, e.player_index)
                     player.insert { name = name }
                 end
