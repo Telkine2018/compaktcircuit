@@ -3,6 +3,8 @@ Version: 2.0.13
 Date: 25. 12. 2024.
   Changes:
     - Add ru locale, thanks to MikdadAgasiev
+  Bugfixes:
+    - Fix processor create/remove on space platform
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.12
 Date: 08. 12. 2024.
