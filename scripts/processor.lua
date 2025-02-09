@@ -366,7 +366,7 @@ local function revive_processor(ghost, player_index)
 end
 
 ---@param entity LuaEntity
----@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.script_raised_revive | EventData.on_built_entity
+---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.script_raised_revive | EventData.on_built_entity | EventData.on_space_platform_built_entity
 ---@param  revive boolean?
 local function on_build(entity, e, revive)
     if not entity or not entity.valid then return end
@@ -381,9 +381,6 @@ local function on_build(entity, e, revive)
         create_processor(entity, tags)
     elseif name == "entity-ghost" and string.find(entity.ghost_name, processor_pattern) then
         if tags then entity.tags = tags end
-        if entity.surface.platform then
-            revive_processor(entity, e.player_index)
-        end
     end
 end
 
@@ -410,6 +407,13 @@ end
 
 ---@param e EventData.on_built_entity
 local function on_player_built(e)
+    local entity = e.entity
+
+    on_build(entity, e)
+end
+
+---@param e EventData.on_space_platform_built_entity 
+local function on_space_platform_built_entity (e)
     local entity = e.entity
 
     on_build(entity, e)
@@ -539,6 +543,11 @@ local function on_mined(e)
     end
 end
 
+---@param e EventData.on_space_platform_mined_entity
+local function on_space_platform_mined_entity(e) 
+    on_mined(e)
+end
+
 ---@param e EventData.on_entity_died
 local function on_entity_died(e)
     local processor = e.entity
@@ -602,6 +611,7 @@ tools.on_event(defines.events.on_built_entity, on_player_built)
 tools.on_event(defines.events.on_robot_built_entity, on_robot_built)
 tools.on_event(defines.events.script_raised_built, on_script_built)
 tools.on_event(defines.events.script_raised_revive, on_script_revive)
+tools.on_event(defines.events.on_space_platform_built_entity, on_space_platform_built_entity)
 
 local mine_filter = {
     { filter = 'name', name = processor_name },
@@ -617,6 +627,7 @@ tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity,
 tools.on_event(defines.events.on_robot_mined_entity, on_mined, mine_filter)
 tools.on_event(defines.events.on_entity_died, on_entity_died, mine_filter)
 tools.on_event(defines.events.script_raised_destroy, on_mined, mine_filter)
+tools.on_event(defines.events.on_space_platform_mined_entity, on_space_platform_mined_entity, mine_filter)
 
 ---@param bp LuaItemStack
 ---@param mapping table<integer, LuaEntity>
@@ -1404,7 +1415,9 @@ end
 tools.on_event(defines.events.on_selected_entity_changed,
     on_selected_entity_changed)
 
-script.on_event(prefix .. "-click", function(event)
+script.on_event(prefix .. "-click", 
+    ---@param event EventData.on_lua_shortcut
+    function(event)
     local player = game.players[event.player_index]
     local selected = player.selected
     if selected and string.find(selected.name, processor_pattern) and
@@ -1413,7 +1426,9 @@ script.on_event(prefix .. "-click", function(event)
     end
 end)
 
-script.on_event(prefix .. "-control-click", function(event)
+script.on_event(prefix .. "-control-click", 
+    ---@param event EventData.on_lua_shortcut
+    function(event)
     local player = game.players[event.player_index]
     local selected = player.selected
     if selected and string.find(selected.name, processor_pattern) and
@@ -1598,6 +1613,36 @@ local function migration_2_0_4()
     end
 end
 
+local function migration_2_0_4()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    for _, procinfo in pairs(procinfos) do
+        editor.draw_sprite(procinfo)
+    end
+end
+
+local function migration_2_0_12()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+
+    local names = commons.packed_entities
+
+    for _, surface in pairs(game.surfaces) do
+        local sc_list = surface.find_entities_filtered { name = names }
+        for _, sc in pairs(sc_list) do
+            local position = sc.position
+            local area = { { position.x - 1, position.y - 1 }, { position.x + 1, position.y + 1 } }
+            local processors = surface.find_entities_filtered
+                { name = commons.processor_name, area = area }
+            if #processors == 0 then
+                local area = { { position.x - 0.5, position.y - 0.5 }, { position.x + 0.5, position.y + 0.5 } }
+                local processors = surface.find_entities_filtered
+                    { name = commons.processor_name_1x1, area = area }
+                if #processors == 0 then
+                    sc.destroy()
+                end
+            end
+        end
+    end
+end
 
 local migrations_table = {
 
@@ -1621,6 +1666,7 @@ local migrations_table = {
     ["1.1.11"] = migration_1_1_11,
     ["2.0.0"] = migration_2_0_0,
     ["2.0.4"] = migration_2_0_4,
+    ["2.0.12"] = migration_2_0_12
 
 }
 
@@ -1825,7 +1871,7 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
                 end
                 if not entity.surface.platform then
                     save_undo_tags(e.player_index, entity.position, tags)
-                else 
+                else
                     destroy_processor(entity, e.player_index)
                     player.insert { name = name }
                 end

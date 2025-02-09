@@ -230,7 +230,8 @@ local allow_controller_types = {
 
     [defines.controllers.god] = true,
     [defines.controllers.character] = true,
-    [defines.controllers.remote] = true
+    [defines.controllers.remote] = true,
+    [defines.controllers.editor] = true
 }
 
 ---@param player LuaPlayer

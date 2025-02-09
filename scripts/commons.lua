@@ -30,6 +30,7 @@ commons.packed_entities = {
 	prefix .. "-ac",
 	prefix .. "-cc2",
 	prefix .. "-pole",
+	prefix .. "-sc",
 	commons.packed_display_name,
 	commons.packed_input_name
 }
