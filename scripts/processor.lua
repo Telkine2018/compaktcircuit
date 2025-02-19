@@ -704,16 +704,18 @@ local function register_mapping(bp, mapping, surface)
     end
 end
 
+---@param e EventData.on_gui_closed
 local function on_register_bp(e)
     local player = game.get_player(e.player_index)
     ---@cast player -nil
     local vars = tools.get_vars(player)
     if e.gui_type == defines.gui_type.item and e.item and e.item.is_blueprint and
-        e.item.is_blueprint_setup() and player.cursor_stack and
-        player.cursor_stack.valid_for_read and player.cursor_stack.is_blueprint and
-        not player.cursor_stack.is_blueprint_setup() then
+        e.item.is_blueprint_setup() and not player.cursor_stack.valid_for_read then
         vars.previous_bp = { blueprint = e.item, tick = e.tick }
     else
+        if vars.previous_bp and e.tick ==  vars.previous_bp.tick then
+            return
+        end
         vars.previous_bp = nil
     end
 end
@@ -736,8 +738,7 @@ local function get_bp_to_setup(player)
 
     -- update of existing blueprint
     local previous_bp = get_vars(player).previous_bp
-    if previous_bp and previous_bp.tick == game.tick and previous_bp.blueprint and
-        previous_bp.blueprint.valid_for_read and
+    if previous_bp and previous_bp.blueprint and previous_bp.blueprint.valid_for_read and
         previous_bp.blueprint.is_blueprint_setup() then
         return previous_bp.blueprint
     end
