@@ -38,7 +38,7 @@ local function add_input_sprite(name)
     table.insert(declarations, sprite)
 end
 
-for _, name in pairs({"integer","slider","toggle", "drop_down", "choose_signals", "choose_signals_with_count"}) do
+for _, name in pairs({"integer","slider","toggle", "drop_down", "choose_signals", "choose_signals_with_count", "comm" }) do
     add_input_sprite(name)    
 end
 

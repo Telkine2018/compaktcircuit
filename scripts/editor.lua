@@ -256,6 +256,7 @@ function editor.edit_selected(player, processor)
     if procinfo.is_packed then
         build.restore_packed_circuits(procinfo)
         input.apply_parameters(procinfo)
+        input.disconnect_comms(surface)
     end
 
     procinfo.origin_surface_name = player.surface.name
@@ -389,11 +390,14 @@ function editor.set_packed(procinfo, is_packed, player)
             player.print({ "compaktcircuit-message.external_present" })
         end
         input.apply_parameters(procinfo)
+        input.disconnect_comms(procinfo.surface)
     else
         build.destroy_packed_circuit(procinfo)
         build.connect_all_iopoints(procinfo)
         input.apply_parameters(procinfo)
         display.restore(procinfo)
+        input.disconnect_comms(procinfo.surface)
+        input.connect_comms(procinfo.surface)
     end
 end
 

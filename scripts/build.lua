@@ -5,6 +5,7 @@ local tools = require("scripts.tools")
 local ccutils = require("scripts.ccutils")
 local input = require("scripts.input")
 local display = require("scripts.display")
+local comm = require("scripts.comm")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -639,6 +640,10 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             value_id = (tags and tags.value_id) or tools.get_id() --[[@as string]],
                             label = tags.label --[[@as string]]
                         }
+                        if input_prop.input.type == input.types.comm then
+                            local comm_input = input_prop.input
+                            comm.connect(entity, comm_input.channel_name, comm_input.channel_red, comm_input.channel_green)
+                        end
                         table.insert(input_list, input_prop)
                     end
                 elseif name == commons.processor_name or name ==

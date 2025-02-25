@@ -2,6 +2,7 @@ local commons = require("scripts.commons")
 local tools = require("scripts.tools")
 local Runtime = require("scripts.runtime")
 local ccutils = require("scripts.ccutils")
+local comm = require("scripts.comm")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -31,7 +32,8 @@ input.types = {
     toggle = 3,
     drop_down = 4,
     choose_signals = 5,
-    choose_signals_with_count = 6
+    choose_signals_with_count = 6,
+    comm = 7
 }
 
 input.sprites = {
@@ -40,7 +42,8 @@ input.sprites = {
     prefix .. "_input_toggle",
     prefix .. "_input_drop_down",
     prefix .. "_input_choose_signals",
-    prefix .. "_input_choose_signals_with_count"
+    prefix .. "_input_choose_signals_with_count",
+    prefix .. "_input_comm"
 }
 
 ---@param value number?
@@ -60,7 +63,7 @@ end
 function input.get_frame(player) return player.gui.screen[frame_name] end
 
 ---@param type integer
----@return IntegerInput | SliderInput | ToggleInput | DropDownInput | ChooseSignalsInput | ChooseSignalsWithCountInput
+---@return IntegerInput | SliderInput | ToggleInput | DropDownInput | ChooseSignalsInput | ChooseSignalsWithCountInput | CommInput
 function input.create(type)
     if type == input.types.integer then
         return {
@@ -95,12 +98,19 @@ function input.create(type)
         return { type = input.types.sprite, label = "", count = 1 }
     elseif type == input.types.choose_signals_with_count then
         return { type = input.types.sprite, label = "", count = 1 }
+    elseif type == input.types.comm then
+        return {
+            type = input.types.comm,
+            channel_red = true,
+            channel_green = true
+        }
     end
     return {}
 end
 
 local right_margin = 10
 local field_width = 80
+local text_field_width = 300
 
 ---@param type integer
 ---@param ptable LuaGuiElement
@@ -110,15 +120,17 @@ function input.add_properties(type, ptable, props)
     local field
     local flow
 
-    label = ptable.add { type = "label", caption = { np("label") } }
-    label.style.right_margin = right_margin
-    field = ptable.add {
-        type = "textfield",
-        name = "input-label",
-        tooltip = { np("input-label-tooltip") },
-        text = props.label
-    }
-    field.style.width = 300
+    if type ~= input.types.comm then
+        label = ptable.add { type = "label", caption = { np("label") } }
+        label.style.right_margin = right_margin
+        field = ptable.add {
+            type = "textfield",
+            name = "input-label",
+            tooltip = { np("input-label-tooltip") },
+            text = props.label
+        }
+        field.style.width = 300
+    end
 
     if type == input.types.integer or type == input.types.slider then
         label = ptable.add { type = "label", caption = { np("min") } }
@@ -242,6 +254,63 @@ function input.add_properties(type, ptable, props)
         }
         field.style.width = field_width
     end
+
+    if type == input.types.comm then
+        label = ptable.add { type = "label", caption = { np("channel_name") } }
+
+        local channel_flow = ptable.add { type = "flow", direction = "horizontal", name = "channel_name_flow" }
+
+        comm.purge()
+        local channel_names = comm.get_chanel_names(game.players[ptable.player_index].force_index)
+
+        channel_flow.style.right_margin = right_margin
+        field = channel_flow.add {
+            type = "textfield",
+            name = "channel_name",
+            text = props.channel_name,
+            visible = #channel_names == 0
+        }
+        field.style.top_margin = 5
+        field.style.width = text_field_width
+
+        local channel_list = channel_flow.add {
+            type = "drop-down",
+            visible = #channel_names > 0,
+            items = channel_names,
+            name = "channel_name_list" }
+        channel_list.style.width = text_field_width
+        channel_list.style.top_margin = 5
+        for i = 1, #channel_names do
+            if channel_names[i] == props.channel_name then
+                channel_list.selected_index = i
+                break
+            end
+        end
+        local channel_switch = channel_flow.add {
+            type = "sprite-button",
+            sprite = "virtual-signal/signal-L",
+            toggled = false,
+            name = np("channel_switch")
+        }
+        channel_switch.style.size = 32
+        channel_switch.style.margin = 0
+        channel_switch.style.padding = 0
+
+        label = ptable.add { type = "label", caption = { np("channel_red") } }
+        label.style.right_margin = right_margin
+        field = ptable.add {
+            type = "checkbox",
+            name = "channel_red",
+            state = props.channel_red or false
+        }
+        label = ptable.add { type = "label", caption = { np("channel_green") } }
+        label.style.right_margin = right_margin
+        field = ptable.add {
+            type = "checkbox",
+            name = "channel_green",
+            state = props.channel_green or false
+        }
+    end
 end
 
 ---@param player LuaPlayer
@@ -289,7 +358,8 @@ function input.open(player, entity)
         items = {
             { np("type-integer") }, { np("type-slider") }, { np("type-toggle") },
             { np("type-dropdown") }, { np("type-choose_signals") },
-            { np("type-choose_signals_with_count") }
+            { np("type-choose_signals_with_count") },
+            { np("type-comm") }
         },
         selected_index = props.type
     }
@@ -325,6 +395,19 @@ end
 
 tools.on_gui_click(np("close"), function(e)
     input.close(game.players[e.player_index], true)
+end)
+
+tools.on_gui_click(np("channel_switch"), function(e)
+    if not e.element or not e.element.valid then return end
+
+    local flow = e.element.parent
+    ---@cast flow -nil
+    local channel_name = flow.channel_name
+    local channel_list = flow.channel_name_list
+
+    local visible = channel_name.visible
+    channel_name.visible = not visible
+    channel_list.visible = visible
 end)
 
 tools.on_named_event(np("input_type"),
@@ -405,7 +488,9 @@ function input.get_edition(player)
         props.value_id = tools.get_id()
     end
 
-    props.label = ptable["input-label"].text
+    if ptable["input-label"] then
+        props.label = ptable["input-label"].text
+    end
 
     if type == input.types.integer or type == input.types.slider then
         ---@cast props SliderInput
@@ -431,12 +516,28 @@ function input.get_edition(player)
         props.labels = ptable["input-dropdown-labels"].text
     end
 
-    if type == input.types.choose_signals or type ==
-        input.types.choose_signals_with_count then
+    if type == input.types.choose_signals or type == input.types.choose_signals_with_count then
+        ---@cast props ChooseSignalsInput
         props.count = text_to_number(ptable["input-count"].text)
     end
 
+    if type == input.types.comm then
+        ---@cast props CommInput
+        local channel_name_flow = ptable["channel_name_flow"]
+        local channel_name = channel_name_flow.channel_name
+        local channel_name_list = channel_name_flow.channel_name_list
+
+        if channel_name.visible then
+            props.channel_name = channel_name.text
+        else
+            props.channel_name = channel_name_list.items[channel_name_list.selected_index]
+        end
+        props.channel_red = ptable["channel_red"].state
+        props.channel_green = ptable["channel_green"].state
+    end
+
     input.register(entity, props)
+    comm.purge()
 end
 
 ---@param entity LuaEntity
@@ -475,11 +576,16 @@ function input.register(entity, props)
     end
     input_infos[entity.unit_number] = props
     input.set_icon(props, entity)
+
+    comm.disconnect(entity)
+    if props.type == input.types.comm then
+        ---@cast props CommInput
+        comm.connect(entity, props.channel_name, props.channel_red, props.channel_green)
+    end
 end
 
-
 ---@param entity LuaEntity
----@return Tags?
+---@returns?
 function input.get_tags(entity)
     local unit_number = entity.unit_number
     local info = input.get(unit_number)
@@ -1470,6 +1576,34 @@ function input.set_icon(input_info, entity)
                     }
                 end
             end
+        end
+    end
+end
+
+---@param surface LuaSurface
+function input.connect_comms(surface)
+    if not surface.valid then return end
+
+    local comms = surface.find_entities_filtered { name = input_name }
+    for _, comm_entity in pairs(comms) do
+        local unit = input.get(comm_entity.unit_number)
+        if unit and unit.type == input.types.comm then
+            ---@cast unit CommInput
+            comm.connect(comm_entity, unit.channel_name, unit.channel_red, unit.channel_green)
+        end
+    end
+end
+
+---@param surface LuaSurface
+function input.disconnect_comms(surface)
+    if not surface.valid then return end
+
+    local comms = surface.find_entities_filtered { name = input_name }
+    for _, comm_entity in pairs(comms) do
+        local unit = input.get(comm_entity.unit_number)
+        if unit and unit.type == input.types.comm then
+            ---@cast unit CommInput
+            comm.disconnect(comm_entity)
         end
     end
 end
