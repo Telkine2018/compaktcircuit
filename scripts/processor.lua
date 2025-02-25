@@ -13,6 +13,8 @@ local build = require("scripts.build")
 local editor = require("scripts.editor")
 local inspectlib = require("scripts.inspect")
 local models_lib = require("scripts.models_lib")
+local comm = require("scripts.comm")
+
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -1779,6 +1781,9 @@ commands.add_command("compaktcircuit_repair_iopoints",
 commands.add_command("compaktcircuit_destroy",
     { "compaktcircuit_destroy" },
     function(e) destroy_all() end)
+commands.add_command("compaktcircuit_signals", {"compaktcircuit_signals"},
+    function(e) comm.open(game.players[e.player_index]) end)
+
 
 ---@param e EventData.on_player_rotated_entity
 local function on_player_rotated_entity(e) local entity = e.entity end

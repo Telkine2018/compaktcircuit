@@ -414,43 +414,26 @@ local processor_1x1 = {
 
 ---------------------------
 
-local arrow_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrow",
-    filename = png("arrow"),
-    width = 32,
-    height = 32
-}
+local function add_sprite32(name)
+    return {
+        type = "sprite",
+        name = prefix .. "-" .. name,
+        filename = png(name),
+        width = 32,
+        height = 32
+    }
+end
 
-local arrowr_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrowr",
-    filename = png("arrowr"),
-    width = 32,
-    height = 32
-}
-
-local arrowd_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrowd",
-    filename = png("arrowd"),
-    width = 32,
-    height = 32
-}
-
-local circle_sprite = {
-
-    type = "sprite",
-    name = prefix .. "-circle",
-    filename = png("circle"),
-    width = 32,
-    height = 32
-}
+local arrow_sprite = add_sprite32("arrow")
+local arrowr_sprite = add_sprite32("arrowr")
+local arrowd_sprite = add_sprite32("arrowd")
+local circle_sprite = add_sprite32("circle")
+local add_sprite = add_sprite32("add")
 
 data:extend {
     iopoint, energy_source, energy_pole, internal_iopoint,
     internal_iopoint_item, ground_tile, processor, processor_1x1, device,
-    arrow_sprite, arrowr_sprite, arrowd_sprite, circle_sprite
+    arrow_sprite, arrowr_sprite, arrowd_sprite, circle_sprite, add_sprite
 }
 
 ---------------------------
@@ -566,3 +549,16 @@ data:extend {{
     type = "custom-event",
     name = "on_script_setup_blueprint"
 }}
+
+
+local styles = data.raw["gui-style"].default
+
+styles[commons.prefix .. "_count_label_bottom"] = {
+    type = "label_style",
+    parent = "count_label",
+    height = 28,
+    width = 28,
+    vertical_align = "bottom",
+    horizontal_align = "right",
+    right_padding = 2
+}
