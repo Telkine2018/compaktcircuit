@@ -188,6 +188,7 @@ tools.on_event(defines.events.on_gui_elem_changed,
     function(e)
         local player = game.players[e.player_index]
         local name
+        if not e.element.valid then return end
         if e.element.name == prefix .. "-sprite1" then
             name = "sprite1"
         elseif e.element.name == prefix .. "-sprite2" then
@@ -263,7 +264,7 @@ function editor.edit_selected(player, processor)
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
     if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
-            not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
+        not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
         vars.physical_surface_index = player.physical_surface_index
         vars.physical_controller_type = player.physical_controller_type
         vars.physical_position = player.physical_position
@@ -301,7 +302,7 @@ local function exit_player(procinfo, player, to_origin)
         ret_controller_type = vars.physical_controller_type
         ret_surface_name = ret_surface.name
     end
-    
+
     if not ret_surface or not ret_surface.valid then
         ret_surface_name = "nauvis"
         ret_surface_position = { x = 0, y = 0 }
@@ -1149,8 +1150,8 @@ local function on_build(entity, e)
     end
     if tags then
         if tags.__ then tags = tags.__ end
-        if tags.__delete then 
-            entity.destroy() 
+        if tags.__delete then
+            entity.destroy()
             return
         end
     end
@@ -1176,7 +1177,7 @@ local function on_build(entity, e)
         else
             if e.player_index then
                 local player = game.players[e.player_index]
-                if commons.remote_controllers[player.controller_type]  then
+                if commons.remote_controllers[player.controller_type] then
                     entity.revive { raise_revive = true }
                 end
             end

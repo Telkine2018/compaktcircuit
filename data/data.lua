@@ -556,9 +556,24 @@ local styles = data.raw["gui-style"].default
 styles[commons.prefix .. "_count_label_bottom"] = {
     type = "label_style",
     parent = "count_label",
-    height = 28,
-    width = 28,
+    height = 40,
+    width = 44,
     vertical_align = "bottom",
     horizontal_align = "right",
-    right_padding = 2
+    right_padding = 4
 }
+
+data:extend
+{
+  {
+    type = "shortcut",
+    name = prefix .. "-comm",
+    order = "c[ompackcircuit]",
+    action = "lua",
+    icon = png("icons/comm-x32"),
+    icon_size = 32,
+    small_icon = png("icons/comm-x24"),
+    small_icon_size = 24
+  },
+}
+

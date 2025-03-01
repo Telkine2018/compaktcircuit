@@ -9,6 +9,8 @@ local comm = {}
 local max_x = 1000
 local min_width = 600
 local min_height = 600
+local max_height = 800
+local saved_slot_max = 13
 
 local prefix = commons.prefix
 
@@ -20,6 +22,12 @@ local red_button = prefix .. "_slot_button_red"
 local green_button = prefix .. "_slot_button_green"
 local label_style_name = prefix .. "_count_label_bottom"
 
+---@enum CommSortMode
+comm.sort_mode = {
+    count_descending = 1,
+    count_ascending = 2,
+    category = 3
+}
 
 ---@param force_index integer
 ---@param create boolean
@@ -73,8 +81,9 @@ end
 
 ---@param force_index integer
 ---@param channel_name string
+---@param channel_index integer?
 ---@return LuaEntity
-function comm.get_router(force_index, channel_name)
+function comm.get_router(force_index, channel_name, channel_index)
     local cctx = comm.get_context(force_index, true)
     ---@cast cctx -nil
 
@@ -165,6 +174,39 @@ function comm.connect(entity, channel_name, red, green)
     end
 end
 
+---@return CommConfig?
+function comm.new_config()
+
+    local config = {
+        channels = {},
+        sort_mode = comm.sort_mode.count_descending,
+    }
+    return config
+end
+
+---@param player LuaPlayer
+---@param create boolean
+---@return CommConfig?
+function comm.get_config(player, create)
+    local vars = tools.get_vars(player)
+    local config = vars["comm_config"] --[[@as CommConfig ]]
+    if config then
+        return config
+    end
+    if not create then return nil end
+
+    config = comm.new_config()
+    vars["comm_config"] = config
+    return config
+end
+
+---@param player LuaPlayer
+---@param config CommConfig
+function comm.set_config(player, config)
+    local vars = tools.get_vars(player)
+    vars["comm_config"] = config
+end
+
 ---@param entity LuaEntity
 function comm.disconnect(entity)
     local cctx = comm.get_context(entity.force_index, false)
@@ -186,6 +228,87 @@ function comm.disconnect(entity)
 end
 
 ---@param player LuaPlayer
+---@return LuaGuiElement
+local function get_frame(player)
+    return player.gui.screen[np("panel")]
+end
+
+---@param parent LuaGuiElement
+---@return LuaGuiElement
+local function add_filter_signal_button(parent)
+    local b = parent.add { type = "choose-elem-button", elem_type = "signal" }
+    b.style.size = 40
+    tools.set_name_handler(b, np("filter_signal"))
+    return b
+end
+
+---@param config_panel LuaGuiElement
+local function build_config_panel(config_panel)
+
+    local player = game.players[config_panel.player_index]
+
+    comm.purge()
+    local channel_names = comm.get_chanel_names(player.force_index)
+    local config = comm.get_config(player, true)
+    ---@cast config -nil
+
+    -- flow 1
+    local search_flow = config_panel.add { type = "flow", direction = "horizontal" }
+    search_flow.add { type = "label", caption = { np("search_name") } }
+
+    local channel_list = search_flow.add {
+        type = "drop-down",
+        visible = #channel_names > 0,
+        items = channel_names,
+        name = "channel_name_list" }
+    channel_list.style.width = 200
+    if #channel_names > 0 then
+        channel_list.selected_index = 1
+    end
+    local add_button = search_flow.add { type = "sprite-button",
+        sprite = commons.prefix .. "-add", name = np("add"), tooltip = { np("add-tooltip") } }
+    add_button.style.size = 28
+
+    -- flow 2
+    local config_flow1 = config_panel.add { type = "flow" }
+    config_flow1.style.top_margin = 5
+    config_flow1.add { type = "label", caption = { np("sort_mode") } }
+    local items = { { np("sort_mode.1") }, { np("sort_mode.2") }, { np("sort_mode.3") } }
+    config_flow1.add { type = "drop-down", items = items, selected_index = config.sort_mode, name = np("sort_mode") }
+
+    local label = config_flow1.add { type = "label", caption = { np("filter_group") } }
+    label.style.left_margin = 10
+    local selection_index = 1
+    items = { { np("filter_group_all") } }
+    local index = 2
+    for _, group in pairs(prototypes.item_group) do
+        table.insert(items, group.localised_name)
+        if group.name == config.group then
+            selection_index = index
+        end
+        index = index + 1
+    end
+    local dropdown = config_flow1.add { type = "drop-down", items = items, selected_index = selection_index, name = np("filter_group") }
+    dropdown.style.width = 200
+
+    -- flow 3
+    local line = config_panel.add { type = "line" }
+    line.style.bottom_margin = 5
+    local config_flow3 = config_panel.add { type = "flow" }
+    config_flow3.add { type = "checkbox", caption = { np("apply_filters") }, state = not not config.apply_filters, name = np("apply_filters") }
+
+    local filter_table = config_flow3.add { type = "table", column_count = 10, name="filter_table" }
+    if config.filters then
+        for _, filter in pairs(config.filters) do
+            local signal = tools.id_to_signal(filter)
+            local b = add_filter_signal_button(filter_table)
+            b.elem_value = signal
+        end
+    end
+    add_filter_signal_button(filter_table)
+end
+
+---@param player LuaPlayer
 function comm.open(player)
     ---@type Params.create_standard_panel
     local params = {
@@ -196,15 +319,16 @@ function comm.open(player)
         close_button_tooltip = { np("close_button_tooltip") },
         create_inner_frame   = true,
         title_menu_func      = function(flow)
-            --[[
-                local b
-                b = flow.add {
-                    type = "button",
-                    tooltip = { np("tag_used_tooltip") },
-                    caption = { np("tag_used") },
-                }
-                tools.set_name_handler(b, np("tag_used"))
+            local b
+            b = flow.add {
+                type = "button",
+                tooltip = { np("show_config_tooltip") },
+                caption = { np("show_config") },
+                name = np("show_config")
+            }
+            tools.set_name_handler(b, np("show_config"))
 
+            --[[
                 b = flow.add {
                     type = "button",
                     tooltip = { np("unselect_tooltip") },
@@ -217,29 +341,30 @@ function comm.open(player)
     local frame, inner = tools.create_standard_panel(player, params)
     frame.auto_center = true
 
-    local search_panel = inner.add { type = "frame", direction = "vertical" }
-    search_panel.style.minimal_width = min_width
 
-    local search_flow = search_panel.add { type = "flow", direction = "horizontal" }
-    search_flow.add { type = "label", caption = { np("search_name") } }
-
-    comm.purge()
-    local channel_names = comm.get_chanel_names(player.force_index)
-
-    local channel_list = search_flow.add {
-        type = "drop-down",
-        visible = #channel_names > 0,
-        items = channel_names,
-        name = "channel_name_list" }
-    channel_list.style.width = 200
-    if #channel_names > 0 then
-        channel_list.selected_index = 1
+    ----- save panel
+    local data_panel = inner.add { type = "frame", direction = "vertical" }
+    local save_flow = data_panel.add{type="flow"}
+    save_flow.style.horizontally_stretchable = true
+    local default_style = prefix .. "_slot_button_default"
+    for i = 0, saved_slot_max do
+        local b = save_flow.add { type = "choose-elem-button", elem_type = "signal"}
+        b.style = default_style
+        b.locked = true
+        tools.set_name_handler(b, np("saved_slot"))
+        b.elem_value = {
+            type="virtual",
+            name = "signal-" .. string.char(i + string.byte("A") )
+        }
+        b.raise_hover_events = true
     end
 
-    local add_button = search_flow.add { type = "sprite-button", sprite = commons.prefix .. "-add", name = np("add"), tooltip = { np("add-tooltip") } }
-    add_button.style.size = 28
-
-    -- search_flow.add {type=}
+    ------- config panel
+    local config_panel = inner.add { type = "frame", direction = "vertical", name = "config_panel" }
+    config_panel.style.horizontally_stretchable = true
+    build_config_panel(config_panel)
+    
+    ------- data panel
     local data_panel = inner.add { type = "frame", direction = "vertical" }
     local scroll = data_panel.add {
         type = "scroll-pane",
@@ -249,58 +374,217 @@ function comm.open(player)
     }
     scroll.style.minimal_width = min_width
     scroll.style.minimal_height = min_height
+    scroll.style.maximal_height = max_height
 
     comm.update(player)
 end
 
 tools.on_gui_click(np("close"), function(e)
     local player = game.players[e.player_index]
-    local frame = player.gui.screen[np("panel")]
+    local frame = get_frame(player)
     if frame then
         frame.destroy()
     end
 end)
 
-tools.on_gui_click(np("add"), function(e)
+tools.on_gui_click(np("show_config"), function(e)
     local player = game.players[e.player_index]
-    local frame = player.gui.screen[np("panel")]
+    local frame = get_frame(player)
     if not frame then return end
 
-    local channel_name_list = tools.get_child(frame, "channel_name_list")
-    if not channel_name_list then return end
+    local config_panel = tools.get_child(frame, "config_panel")
+    if not config_panel then return end
 
-    local index = channel_name_list.selected_index
-    if not index then return end
+    config_panel.visible = not config_panel.visible
+end)
 
-    local channel_name = channel_name_list.items[channel_name_list.selected_index]
-    local cctx = comm.get_context(player.force_index, false)
-    if not cctx then return end
 
-    if not cctx.name_channels[channel_name] then return end
+tools.on_gui_click(np("add"),
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        local frame = get_frame(player)
+        if not frame then return end
 
-    local vars = tools.get_vars(player)
-    local channel_names = vars["comm_selection"] --[[@as string[] ]]
+        local config = comm.get_config(player, true)
 
-    if not channel_names or e.control then
-        channel_names = {}
-    else
-        for _, n in pairs(channel_names) do
-            if n == channel_name then
-                return
+        local channel_name_list = tools.get_child(frame, "channel_name_list")
+        if not channel_name_list then return end
+
+        local index = channel_name_list.selected_index
+        if not index then return end
+
+        local channel_name = channel_name_list.items[channel_name_list.selected_index]
+        local cctx = comm.get_context(player.force_index, false)
+        if not cctx then return end
+
+        if not cctx.name_channels[channel_name] then return end
+
+        local config = comm.get_config(player, true)
+        ---@cast config -nil
+
+        if e.control then
+            config.channels = {}
+        else
+            for _, n in pairs(config.channels) do
+                if n == channel_name then
+                    return
+                end
             end
         end
+        table.insert(config.channels, channel_name)
+        comm.update(player)
+    end)
+
+
+tools.on_named_event(np("filter_signal"), defines.events.on_gui_elem_changed,
+    ---@param e EventData.on_gui_elem_changed
+    function(e)
+        local player = game.players[e.player_index]
+
+        local index = e.element.get_index_in_parent()
+        local parent = e.element.parent
+        ---@cast parent -nil
+        if e.element.elem_value == nil then
+            if index ~= #parent.children then
+                e.element.destroy()
+            end
+        elseif index == #parent.children then
+            add_filter_signal_button(parent)
+        end
+
+        local config = comm.get_config(player, true)
+        local signals = {}
+        for _, child in pairs(parent.children) do
+            if child.elem_value then
+                local id = tools.signal_to_id(child.elem_value)
+                if id then
+                    table.insert(signals, id)
+                end
+            end
+        end
+        config.filters = signals
+        comm.update(player)
+    end)
+
+tools.on_named_event(np("apply_filters"), defines.events.on_gui_checked_state_changed,
+    ---@param e EventData.on_gui_checked_state_changed
+    function(e)
+        local player = game.players[e.player_index]
+        local config = comm.get_config(player, true)
+        config.apply_filters = e.element.state
+        comm.update(player)
     end
-    table.insert(channel_names, channel_name)
-    vars["comm_selection"] = channel_names
-    comm.update(player)
-end)
+)
+
+tools.on_named_event(np("saved_slot"), defines.events.on_gui_hover,
+    ---@param e EventData.on_gui_hover
+    function(e)
+        e.element.tooltip={np("saved_slot_tooltip")}
+    end)
+
+---@param player LuaPlayer
+---@return {[string]:CommConfig}
+local function get_saved_configs(player)
+    local vars = tools.get_vars(player)
+        
+    local saved_configs = vars.com_saved_configs
+    if saved_configs then return saved_configs end
+
+    saved_configs = {}
+    vars.com_saved_configs = saved_configs
+    return saved_configs
+
+end
+
+tools.on_named_event(np("saved_slot"),
+    defines.events.on_gui_click,
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        local saved_configs = get_saved_configs(player)
+        if e.control then
+            local config = comm.get_config(player, true)
+            config = table.deepcopy(config)
+            local name = e.element.elem_value.name
+            ---@cast name -nil
+            saved_configs[name] = config
+        else
+            local name = e.element.elem_value.name
+            ---@cast name -nil
+            local config = saved_configs[name] 
+            if not config then 
+                config = comm.new_config()
+            end
+            comm.set_config(player, config)
+            
+            local frame = get_frame(player)
+            local config_panel = tools.get_child(frame, "config_panel")
+            ---@cast config_panel -nil
+            config_panel.clear()
+            build_config_panel(config_panel)
+            comm.update(player)
+        end
+    end)
+
+---@class CommSortedSignal : Signal
+---@field order string
+
+local type_to_proto = {
+
+    item = function(name, quality)
+        local q = prototypes.quality[quality]
+        return prototypes.item[name], "_a ", "_" .. ((q and q.level) or 0)
+    end,
+    fluid = function(name) return prototypes.fluid[name], "_b ", "" end,
+    virtual = function(name) return prototypes.virtual_signal[name], "_c ", "" end,
+    recipe = function(name) return prototypes.recipe[name], "_d ", "" end,
+    quality = function(name) return prototypes.quality[name], "_e ", "" end,
+    ["space-location"] = function(name) return prototypes.space_location[name], "_f ", "" end,
+    ["asteroid-chunk"] = function(name) return prototypes.asteroid_chunk[name], "_g ", "" end,
+    ["entity"] = function(name) return prototypes.entity[name], "_h ", "" end,
+}
+
+---@type {[string]:string}
+local type_to_proto_cache = {}
+
+---@param signals Signal[]
+function comm.sort_by_category(signals)
+    ---@cast signals CommSortedSignal[]
+
+    for _, signal in pairs(signals) do
+        local type = signal.signal.type or "item"
+        local name = signal.signal.name
+        local quality = signal.signal.quality or "normal"
+        local order
+        local key = type .. "/" .. name .. "/" .. quality
+        order = type_to_proto_cache[key]
+        if not order then
+            local f = type_to_proto[type]
+            if f then
+                local proto, prefix, suffix = f(name, quality)
+                order = prefix .. proto.group.order .. " " .. proto.subgroup.order .. " " .. proto.order .. suffix
+            else
+                order = "_z " .. type .. " " .. name
+            end
+            type_to_proto_cache[key] = order
+        end
+        signal.order = order
+    end
+
+    table.sort(signals, function(s1, s2)
+        return s1.order < s2.order
+    end)
+end
+
+local signal_to_id = tools.signal_to_id
 
 ---@param player LuaPlayer
 function comm.update(player)
-    local frame = player.gui.screen[np("panel")]
+    local frame = get_frame(player)
     if not frame then return end
 
-    cctx = comm.get_context(player.force_index, false)
+    local cctx = comm.get_context(player.force_index, false)
     if not cctx then return end
 
     local scroll = tools.get_child(frame, "channel_scroll")
@@ -308,16 +592,64 @@ function comm.update(player)
 
     scroll.clear()
 
-    local vars = tools.get_vars(player)
-    local channel_names = vars["comm_selection"] --[[@as string[] ]]
-    if not channel_names then return end
+    local config = comm.get_config(player, false)
+    if not config then return end
 
     ---@type LuaGuiElement
     local signal_panel
+
+    ---@param signals Signal[]?
+    ---@param button_style string
     local function display(signals, button_style)
         if not signals or #signals == 0 then return end
 
-        table.sort(signals, function(s1, s2) return s1.count > s2.count end)
+        local filter_map
+        if config.apply_filters and config.filters and #config.filters > 0 then
+            filter_map = {}
+            for _, id in pairs(config.filters) do
+                filter_map[id] = true
+            end
+        end
+
+        if config.group then
+            local new_signals = {}
+            for _, signal in pairs(signals) do
+                local type = signal.signal.type or "item"
+                local name = signal.signal.name
+
+                local f = type_to_proto[type]
+                if f then
+                    local proto = f(name)
+                    if proto then
+                        if proto.group.name == config.group then
+                            if filter_map and not filter_map[signal_to_id(signal.signal)] then
+                                goto skip
+                            end
+                            table.insert(new_signals, signal)
+                            ::skip::
+                        end
+                    end
+                end
+            end
+            signals = new_signals
+        elseif filter_map then
+            local new_signals = {}
+            for _, signal in pairs(signals) do
+                if filter_map[signal_to_id(signal.signal)] then
+                    table.insert(new_signals, signal)
+                end
+            end
+            signals = new_signals
+        end
+
+        -- table.sort(signals, function(s1, s2) return s1.count > s2.count end)
+        if config.sort_mode == comm.sort_mode.category then
+            comm.sort_by_category(signals)
+        elseif config.sort_mode == comm.sort_mode.count_descending then
+            table.sort(signals, function(s1, s2) return s2.count < s1.count end)
+        else
+            table.sort(signals, function(s1, s2) return s1.count < s2.count end)
+        end
         local signal_table = signal_panel.add { type = "table", column_count = 12 }
 
         for i = 1, #signals do
@@ -325,14 +657,16 @@ function comm.update(player)
             local b = signal_table.add { type = "choose-elem-button", elem_type = "signal" }
             b.elem_value = signal.signal
             b.style = button_style
+            b.style.size = 40
             b.locked = true
+            tools.set_name_handler(b, np("signal"))
 
             local qtlabel = b.add { type = "label", style = label_style_name, name = "label", ignored_by_interaction = true }
             qtlabel.caption = luautil.format_number(signal.count, true)
         end
     end
 
-    for _, name in pairs(channel_names) do
+    for _, name in pairs(config.channels) do
         local channel = cctx.name_channels[name]
         if channel then
             local router = channel.router
@@ -377,18 +711,20 @@ end
 tools.on_gui_click(np("channel_close"), function(e)
     local player = game.players[e.player_index]
     local vars = tools.get_vars(player)
-    local channel_names = vars["comm_selection"] --[[@as string[] ]]
-    if not channel_names then return end
+    local config = vars["comm_config"] --[[@as CommConfig ]]
+    if not config then return end
 
     local remove_chanel = e.element.tags["channel_name"]
-    for i = 1, #channel_names do
-        if channel_names[i] == remove_chanel then
-            table.remove(channel_names, i)
+    local channels = config.channels
+    for i = 1, #channels do
+        if channels[i] == remove_chanel then
+            table.remove(channels, i)
             comm.update(player)
             return
         end
     end
 end)
+
 
 local delay = settings.startup[commons.prefix .. "-comm_interval"].value
 tools.on_nth_tick(delay, function()
@@ -396,5 +732,88 @@ tools.on_nth_tick(delay, function()
         comm.update(player)
     end
 end)
+
+tools.on_event(defines.events.on_lua_shortcut,
+    ---@param e EventData.on_lua_shortcut
+    function(e)
+        if (e.prototype_name ~= prefix .. "-comm") then return end
+        local player = game.players[e.player_index]
+
+        local frame = get_frame(player)
+        if not frame then
+            comm.open(player)
+        else
+            frame.destroy()
+        end
+    end)
+
+tools.on_named_event(np("sort_mode"), defines.events.on_gui_selection_state_changed,
+
+    ---@param e EventData.on_gui_selection_state_changed
+    function(e)
+        local player = game.players[e.player_index]
+        local config = comm.get_config(player, true)
+        config.sort_mode = e.element.selected_index
+        comm.update(player)
+    end
+)
+
+tools.on_named_event(np("filter_group"), defines.events.on_gui_selection_state_changed,
+
+    ---@param e EventData.on_gui_selection_state_changed
+    function(e)
+        local player = game.players[e.player_index]
+        local config = comm.get_config(player, true)
+        local index = e.element.selected_index
+        config.group = nil
+        if index > 1 then
+            local i = 2
+            for _, group in pairs(prototypes.item_group) do
+                if index == i then
+                    config.group = group.name
+                    break
+                end
+                i = i + 1
+            end
+        end
+        comm.update(player)
+    end
+)
+
+tools.on_named_event(np("signal"), defines.events.on_gui_click,
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+        local config = comm.get_config(player, true)
+        ---@cast config -nil
+
+        local id = tools.signal_to_id(e.element.elem_value)
+        
+        local frame = get_frame(player)
+        if not frame then return end
+
+        local filter_table = tools.get_child(frame, "filter_table")
+        ---@cast filter_table -nil
+
+        if not config.filters then
+            config.filters = {}
+        end
+        local index = 1
+        for _, filter in pairs(config.filters) do
+            if filter == id then
+                table.remove(config.filters, index)
+                filter_table.children[index].destroy()
+                return
+            end    
+            index = index + 1
+        end
+        table.insert(config.filters, id)
+        local last = filter_table.children[#filter_table.children]
+        last.elem_value = e.element.elem_value
+        add_filter_signal_button(filter_table)
+        comm.update(player)
+    end
+)
+
 
 return comm

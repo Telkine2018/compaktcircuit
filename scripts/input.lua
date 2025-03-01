@@ -290,11 +290,20 @@ function input.add_properties(type, ptable, props)
             type = "sprite-button",
             sprite = "virtual-signal/signal-L",
             toggled = false,
-            name = np("channel_switch")
+            name = np("channel_switch"),
+            tooltip = {np("channel_switch-tooltip")}
         }
         channel_switch.style.size = 32
         channel_switch.style.margin = 0
         channel_switch.style.padding = 0
+
+        local channel_add_signal = channel_flow.add {
+            type = "choose-elem-button",
+            elem_type = "signal",
+            name = np("channel_add_signal"),
+            tooltip = { np("channel_add_signal-tooltip")}
+        }
+        channel_add_signal.style.size = 32
 
         label = ptable.add { type = "label", caption = { np("channel_red") } }
         label.style.right_margin = right_margin
@@ -409,6 +418,32 @@ tools.on_gui_click(np("channel_switch"), function(e)
     channel_name.visible = not visible
     channel_list.visible = visible
 end)
+
+tools.on_named_event(np("channel_add_signal"), defines.events.on_gui_elem_changed ,  
+---@param e EventData.on_gui_elem_changed
+function(e)
+    if not e.element or not e.element.valid then return end
+
+    local signal = e.element.elem_value
+    if signal then
+        local parent = e.element.parent
+        ---@cast parent -nil
+        local channel_name = parent.channel_name
+        local type = signal.type
+        if not type then
+            type = "item"
+        elseif type == "fluid" then
+        elseif type == "virtual" then
+            type = "virtual-signal"
+        end
+        local signal_str = "[" .. type .. "="  .. signal.name .. "]"
+        channel_name.text = channel_name.text .. signal_str
+
+        parent.channel_name_list.visible = false
+        parent.channel_name.visible = true
+    end
+end)
+
 
 tools.on_named_event(np("input_type"),
     defines.events.on_gui_selection_state_changed,

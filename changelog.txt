@@ -1,8 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.15
+Date: 28. 02. 2025.
+  Changes:
+    - Add long range wireless combinator. Each combinator has a channel. The combinator with the same channel shares their signals.
+    - Add a GUI panel to display the signals in channels. Add a button to display GUI panel.
+    - 
+---------------------------------------------------------------------------------------------------
 Version: 2.0.14
 Date: 19. 02. 2025.
   Bugfixes:
-    - Fix blueprint redefinition
+    - Fix blueprint redefinition.
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.13
 Date: 25. 12. 2024.

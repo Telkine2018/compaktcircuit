@@ -254,3 +254,13 @@
 ---@field name string
 ---@field index integer
 ---@field router LuaEntity
+
+---@class CommConfig
+---@field channels string[]
+---@field sort_mode CommSortMode
+---@field apply_filters boolean?
+---@field filters string[]
+---@field group string
+---@field subgroup string
+---@field min number?
+

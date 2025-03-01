@@ -119,7 +119,7 @@ function models_lib.create_panel(player)
         tooltip = { tooltip_prefix .. ".rename_model" }
     }
     f.style.width = button_width
-    b = modelButtonFlow.add {
+    local b = modelButtonFlow.add {
         type = "button",
         caption = { button_prefix .. ".apply_model" },
         tooltip = { tooltip_prefix .. ".apply_model" },
