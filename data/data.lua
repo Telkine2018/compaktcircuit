@@ -106,7 +106,9 @@ data:extend {
         subgroup = 'circuit-network',
         order = 'p[rocessor]',
         place_result = commons.processor_name,
-        stack_size = 50
+        stack_size = 50,
+        weight = 200000
+        
     }, {
     type = 'item',
     name = commons.processor_name_1x1,
@@ -116,7 +118,8 @@ data:extend {
     subgroup = 'circuit-network',
     order = 'p[rocessor]-a',
     place_result = commons.processor_name_1x1,
-    stack_size = 50
+    stack_size = 50,
+    weight = 200000
 }, {
     type = "item-with-tags",
     name = commons.processor_with_tags,

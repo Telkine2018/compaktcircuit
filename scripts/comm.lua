@@ -20,6 +20,8 @@ end
 
 local red_button = prefix .. "_slot_button_red"
 local green_button = prefix .. "_slot_button_green"
+local yellow_button = prefix .. "_slot_button_yellow"
+local default_button = prefix .. "_slot_button_default"
 local label_style_name = prefix .. "_count_label_bottom"
 
 ---@enum CommSortMode
@@ -343,6 +345,7 @@ function comm.open(player)
 
 
     ----- save panel
+    local saved_configs = comm.get_saved_configs(player)
     local data_panel = inner.add { type = "frame", direction = "vertical" }
     local save_flow = data_panel.add{type="flow"}
     save_flow.style.horizontally_stretchable = true
@@ -352,11 +355,17 @@ function comm.open(player)
         b.style = default_style
         b.locked = true
         tools.set_name_handler(b, np("saved_slot"))
+        local signal_name = "signal-" .. string.char(i + string.byte("A"))
         b.elem_value = {
             type="virtual",
-            name = "signal-" .. string.char(i + string.byte("A") )
+            name = signal_name
         }
         b.raise_hover_events = true
+        if saved_configs[signal_name] then
+            b.style = green_button
+        else
+            b.style = default_button
+        end
     end
 
     ------- config panel
@@ -480,12 +489,25 @@ tools.on_named_event(np("apply_filters"), defines.events.on_gui_checked_state_ch
 tools.on_named_event(np("saved_slot"), defines.events.on_gui_hover,
     ---@param e EventData.on_gui_hover
     function(e)
-        e.element.tooltip={np("saved_slot_tooltip")}
+        local player = game.players[e.player_index]
+        local name = e.element.elem_value.name
+        local configs = comm.get_saved_configs(player)
+        local config = configs[name]
+        if not config then
+            e.element.tooltip={np("saved_slot_tooltip")}
+        else
+            local channels = {""}
+            for _, channel in pairs(config.channels) do
+                table.insert(channels, "[color=green]" .. channel .. "[/color]")
+                table.insert(channels, "\n")
+            end
+            e.element.tooltip={np("saved_slot_tooltip_arg"), channels}
+        end
     end)
 
 ---@param player LuaPlayer
 ---@return {[string]:CommConfig}
-local function get_saved_configs(player)
+function comm.get_saved_configs(player)
     local vars = tools.get_vars(player)
         
     local saved_configs = vars.com_saved_configs
@@ -502,22 +524,27 @@ tools.on_named_event(np("saved_slot"),
     ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        local saved_configs = get_saved_configs(player)
-        if e.control then
+        local saved_configs = comm.get_saved_configs(player)
+        if e.button == defines.mouse_button_type.right then
             local config = comm.get_config(player, true)
             config = table.deepcopy(config)
             local name = e.element.elem_value.name
             ---@cast name -nil
             saved_configs[name] = config
+            e.element.style = green_button
         else
             local name = e.element.elem_value.name
             ---@cast name -nil
             local config = saved_configs[name] 
             if not config then 
                 config = comm.new_config()
+                saved_configs[name] = nil
+                e.element.style = default_button
+            else
+                e.element.style = green_button
             end
-            comm.set_config(player, config)
             
+            comm.set_config(player, config)
             local frame = get_frame(player)
             local config_panel = tools.get_child(frame, "config_panel")
             ---@cast config_panel -nil
