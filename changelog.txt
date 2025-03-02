@@ -2,9 +2,11 @@
 Version: 2.0.15
 Date: 28. 02. 2025.
   Changes:
-    - Add long range wireless combinator. Each combinator has a channel. The combinator with the same channel shares their signals.
-    - Add a GUI panel to display the signals in channels. Add a button to display GUI panel.
-    - 
+    - Add the long range wireless combinator. This combinator has a channel name. \
+      All combinators with the same channel are connected together with red and green wires (selectable).
+    - Add a GUI panel to display the signals in channels. Add a button in toolbar to display GUI panel.
+    - Fix meta-combinator
+    - Manage channel in parameter GUI
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.14
 Date: 19. 02. 2025.

@@ -120,17 +120,15 @@ function input.add_properties(type, ptable, props)
     local field
     local flow
 
-    if type ~= input.types.comm then
-        label = ptable.add { type = "label", caption = { np("label") } }
-        label.style.right_margin = right_margin
-        field = ptable.add {
-            type = "textfield",
-            name = "input-label",
-            tooltip = { np("input-label-tooltip") },
-            text = props.label
-        }
-        field.style.width = 300
-    end
+    label = ptable.add { type = "label", caption = { np("label") } }
+    label.style.right_margin = right_margin
+    field = ptable.add {
+        type = "textfield",
+        name = "input-label",
+        tooltip = { np("input-label-tooltip") },
+        text = props.label
+    }
+    field.style.width = 300
 
     if type == input.types.integer or type == input.types.slider then
         label = ptable.add { type = "label", caption = { np("min") } }
@@ -291,7 +289,7 @@ function input.add_properties(type, ptable, props)
             sprite = "virtual-signal/signal-L",
             toggled = false,
             name = np("channel_switch"),
-            tooltip = {np("channel_switch-tooltip")}
+            tooltip = { np("channel_switch-tooltip") }
         }
         channel_switch.style.size = 32
         channel_switch.style.margin = 0
@@ -301,7 +299,7 @@ function input.add_properties(type, ptable, props)
             type = "choose-elem-button",
             elem_type = "signal",
             name = np("channel_add_signal"),
-            tooltip = { np("channel_add_signal-tooltip")}
+            tooltip = { np("channel_add_signal-tooltip") }
         }
         channel_add_signal.style.size = 32
 
@@ -419,30 +417,30 @@ tools.on_gui_click(np("channel_switch"), function(e)
     channel_list.visible = visible
 end)
 
-tools.on_named_event(np("channel_add_signal"), defines.events.on_gui_elem_changed ,  
----@param e EventData.on_gui_elem_changed
-function(e)
-    if not e.element or not e.element.valid then return end
+tools.on_named_event(np("channel_add_signal"), defines.events.on_gui_elem_changed,
+    ---@param e EventData.on_gui_elem_changed
+    function(e)
+        if not e.element or not e.element.valid then return end
 
-    local signal = e.element.elem_value
-    if signal then
-        local parent = e.element.parent
-        ---@cast parent -nil
-        local channel_name = parent.channel_name
-        local type = signal.type
-        if not type then
-            type = "item"
-        elseif type == "fluid" then
-        elseif type == "virtual" then
-            type = "virtual-signal"
+        local signal = e.element.elem_value
+        if signal then
+            local parent = e.element.parent
+            ---@cast parent -nil
+            local channel_name = parent.channel_name
+            local type = signal.type
+            if not type then
+                type = "item"
+            elseif type == "fluid" then
+            elseif type == "virtual" then
+                type = "virtual-signal"
+            end
+            local signal_str = "[" .. type .. "=" .. signal.name .. "]"
+            channel_name.text = channel_name.text .. signal_str
+
+            parent.channel_name_list.visible = false
+            parent.channel_name.visible = true
         end
-        local signal_str = "[" .. type .. "="  .. signal.name .. "]"
-        channel_name.text = channel_name.text .. signal_str
-
-        parent.channel_name_list.visible = false
-        parent.channel_name.visible = true
-    end
-end)
+    end)
 
 
 tools.on_named_event(np("input_type"),
@@ -624,14 +622,14 @@ function input.register(entity, props)
         if props.dataid then
             props.dataid.text = props.channel_name
         else
-            props.dataid = rendering.draw_text{
+            props.dataid = rendering.draw_text {
                 surface = entity.surface,
-                text = props.channel_name,
-                target= {
+                text = props.channel_name or "",
+                target = {
                     entity = entity,
-                    offset = {0,0},
+                    offset = { 0, 0 },
                 },
-                alignment="center",
+                alignment = "center",
                 only_in_alt_mode = true,
                 use_rich_text = true,
                 color = { 1, 1, 0 }
@@ -898,24 +896,26 @@ function input.create_property_table(player, procinfo)
         for _, property in pairs(input_list) do
             if property.entity then
                 if property.entity.valid then
-                    local id = property.gid
-                    input_map[id] = property
-                    table.insert(prefix_labels, property.label or "")
-                    ---@type LocalisedString
-                    local plabel = prefix_labels
-                    if property.label and string.sub(property.label, 1, 1) == "*" then
-                        plabel = string.sub(property.label, 2)
-                    end
-                    property_table.add { type = "label", caption = plabel }
-                    table.remove(prefix_labels)
-
-                    context.property = property
-                    context.property_table = property_table
-                    context.cb = property.entity.get_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
-                    context.value = values[property.gid]
-
                     local create = create_field_table[property.input.type]
-                    if create then create(context) end
+                    if create then
+                        local id = property.gid
+                        input_map[id] = property
+                        table.insert(prefix_labels, property.label or "")
+                        ---@type LocalisedString
+                        local plabel = prefix_labels
+                        if property.label and string.sub(property.label, 1, 1) == "*" then
+                            plabel = string.sub(property.label, 2)
+                        end
+                        property_table.add { type = "label", caption = plabel }
+                        table.remove(prefix_labels)
+
+                        context.property = property
+                        context.property_table = property_table
+                        context.cb = property.entity.get_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
+                        context.value = values[property.gid]
+
+                        create(context)
+                    end
                 end
             elseif property.inner_inputs then
                 if property.label then
@@ -1245,6 +1245,26 @@ create_field_table = {
                 end
                 index = index + 1
             end
+        end,
+    [input.types.comm] = ---@param context CreateInputContext
+        function(context)
+            local input = context.property.input --[[@as CommInput]]
+            local channel_names = comm.get_chanel_names(game.players[context.property_table.player_index].force_index)
+
+            local channel_list = context.property_table.add {
+                type = "drop-down",
+                visible = #channel_names > 0,
+                items = channel_names,
+                name = context.property.gid
+            }
+            channel_list.style.width = 200
+            local selected_channel = context.value or input.channel_name
+            for i = 1, #channel_names do
+                if channel_names[i] == selected_channel then
+                    channel_list.selected_index = i
+                    break
+                end
+            end
         end
 }
 
@@ -1383,6 +1403,10 @@ load_property_table = {
                 end
             end
             return signals
+        end,
+    [input.types.comm] = ---@param context LoadPropertyContext
+        function(context)
+            return context.field.items[context.field.selected_index]
         end
 }
 
@@ -1515,6 +1539,17 @@ setter_table = {
             local section = context.cb.get_section(1)
             if not section then section = context.cb.add_section("") end
             section.filters = filters
+        end,
+    [input.types.comm] = ---@param context SetterPropertyContext
+        function(context)
+            if not context.value then return end
+            comm.disconnect(context.cb.entity)
+            comm.connect(context.cb.entity, context.value, context.property.input.channel_green, context.property.input.channel_red)
+            local pinput = context.property.input
+            pinput.channel_name = context.value
+            if pinput.dataid and pinput.dataid.valid then
+                pinput.dataid.text = context.value
+            end
         end
 }
 

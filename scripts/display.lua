@@ -1359,7 +1359,7 @@ local function process_meta(rt)
 
     if not max_signal then return end
 
-    local connector = source.get_wire_connector(defines.wire_connector_id.combinator_output_green, false)
+    local connector = source.get_wire_connector(defines.wire_connector_id.circuit_green, false)
     if not connector then return end
 
     local connections = connector.connections
