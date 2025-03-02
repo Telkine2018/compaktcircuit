@@ -12,7 +12,7 @@ local min_width = 700
 local min_height = 600
 local max_height = 800
 local saved_slot_max = 12
-local data_col_count = 16
+local data_col_count = 15
 local prefix = commons.prefix
 
 local function np(name)
@@ -311,7 +311,7 @@ local function build_config_panel(config_panel)
         visible = #channel_names > 0,
         items = channel_names,
         name = "channel_name_list" }
-    channel_list.style.width = 200
+    channel_list.style.width = 400
     if #channel_names > 0 then
         channel_list.selected_index = 1
     end

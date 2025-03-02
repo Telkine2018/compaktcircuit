@@ -239,11 +239,12 @@
 ---@field label string
 ---@field inner_inputs InputProperty[]
 
---------------------------------
 ---@class CommInput : Input
 ---@field channel_name string
 ---@field channel_red boolean
 ---@field channel_green boolean
+
+--------------------------------
 
 ---@class CommContext
 ---@field name_channels {[string]:CommChannel}

@@ -522,6 +522,10 @@ function input.get_edition(player)
     else
         props.value_id = tools.get_id()
     end
+    if previous then
+        props.dataid = previous.dataid
+        props.typeid = previous.typeid
+    end
 
     if ptable["input-label"] then
         props.label = ptable["input-label"].text
@@ -616,6 +620,23 @@ function input.register(entity, props)
     if props.type == input.types.comm then
         ---@cast props CommInput
         comm.connect(entity, props.channel_name, props.channel_red, props.channel_green)
+
+        if props.dataid then
+            props.dataid.text = props.channel_name
+        else
+            props.dataid = rendering.draw_text{
+                surface = entity.surface,
+                text = props.channel_name,
+                target= {
+                    entity = entity,
+                    offset = {0,0},
+                },
+                alignment="center",
+                only_in_alt_mode = true,
+                use_rich_text = true,
+                color = { 1, 1, 0 }
+            }
+        end
     end
 end
 
