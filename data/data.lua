@@ -102,7 +102,6 @@ data:extend {
         name = commons.processor_name,
         icon_size = 64,
         icon = png('item/processor2'),
-        icon_mipmaps = 4,
         subgroup = 'circuit-network',
         order = 'p[rocessor]',
         place_result = commons.processor_name,
@@ -114,7 +113,6 @@ data:extend {
     name = commons.processor_name_1x1,
     icon_size = 64,
     icon = png('item/processor_1x1'),
-    icon_mipmaps = 4,
     subgroup = 'circuit-network',
     order = 'p[rocessor]-a',
     place_result = commons.processor_name_1x1,
@@ -125,7 +123,6 @@ data:extend {
     name = commons.processor_with_tags,
     icon_size = 64,
     icon = png('item/processor2'),
-    icon_mipmaps = 4,
     subgroup = 'circuit-network',
     order = 'p[rocessor]',
     place_result = commons.processor_name,
@@ -579,4 +576,3 @@ data:extend
     small_icon_size = 24
   },
 }
-

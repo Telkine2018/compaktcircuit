@@ -37,4 +37,6 @@ declare_signal("x")
 declare_signal("y")
 declare_signal("scale")
 
+SignalOrder = order
+
 data:extend(declarations)

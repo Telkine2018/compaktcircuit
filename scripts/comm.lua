@@ -84,9 +84,8 @@ end
 
 ---@param force_index integer
 ---@param channel_name string
----@param channel_index integer?
 ---@return LuaEntity
-function comm.get_router(force_index, channel_name, channel_index)
+function comm.get_router(force_index, channel_name)
     local cctx = comm.get_context(force_index, true)
     ---@cast cctx -nil
 
@@ -249,8 +248,8 @@ end
 function comm.get_saved_configs(player)
     local index = comm.get_config_index(player)
     local config_map = comm.get_config_map(player)
-     
-    local configs =  config_map[index]
+
+    local configs = config_map[index]
     if not configs then
         configs = {}
         config_map[index] = configs
@@ -405,7 +404,7 @@ function comm.open(player)
     config_index_field.style.width = 60
     config_index_field.style.height = 40
     config_index_field.selected_index = comm.get_config_index(player) + 1
-    config_index_field.tooltip = { np("config_index_field_tooltip")}
+    config_index_field.tooltip = { np("config_index_field_tooltip") }
     for i = 0, saved_slot_max do
         local b = save_flow.add { type = "choose-elem-button", elem_type = "signal" }
         b.style = default_style
@@ -575,10 +574,14 @@ tools.on_named_event(np("saved_slot"), defines.events.on_gui_hover,
         if not config then
             e.element.tooltip = { np("saved_slot_tooltip") }
         else
+            local cctx = comm.get_context(player.force_index, true)
+            ---@cast cctx -nil
             local channels = { "" }
             for _, channel in pairs(config.channels) do
-                table.insert(channels, "[color=green]" .. channel .. "[/color]")
-                table.insert(channels, "\n")
+                if cctx.name_channels[channel] then
+                    table.insert(channels, "[color=green]" .. channel .. "[/color]")
+                    table.insert(channels, "\n")
+                end
             end
             e.element.tooltip = { np("saved_slot_tooltip_arg"), channels }
         end
@@ -601,6 +604,16 @@ tools.on_named_event(np("saved_slot"),
             comm.update(player)
         elseif e.button == defines.mouse_button_type.right then
             local config = comm.get_config(player, true)
+            ---@cast config -nil
+            local cctx = comm.get_context(player.force_index, true)
+            ---@cast cctx -nil
+            local new_channels = {}
+            for _, channel_name in pairs(config.channels) do
+                if cctx.name_channels[channel_name] then
+                    table.insert(new_channels, channel_name)
+                end
+            end
+            config.channels = new_channels
             config = table.deepcopy(config)
             saved_configs[name] = config
             e.element.style = green_button
