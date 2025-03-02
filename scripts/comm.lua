@@ -186,47 +186,56 @@ function comm.new_config()
 end
 
 ---@param player LuaPlayer
+function comm.get_config_current_signal(player)
+    local vars = tools.get_vars(player)
+    local current_signal = vars["comm_signal_index"]
+    if current_signal then
+        return current_signal
+    end
+    current_signal = "signal-A";
+    vars["comm_signal_index"] = current_signal
+    return current_signal
+end
+
+---@param player LuaPlayer
+---@param current_signal string
+function comm.set_config_current_signal(player, current_signal)
+    local vars = tools.get_vars(player)
+    vars["comm_signal_index"] = current_signal
+end
+
+
+---@param player LuaPlayer
 ---@param create boolean
 ---@return CommConfig?
-function comm.get_config(player, create)
-    local vars = tools.get_vars(player)
-    local config = vars["comm_config"] --[[@as CommConfig ]]
-    if config then
-        return config
+function comm.get_current_config(player, create)
+
+    local saved_configs = comm.get_configs_by_index(player)
+    local current_signal = comm.get_config_current_signal(player)
+    local config = saved_configs[current_signal]
+    if config or not create then 
+        return config 
     end
-    if not create then return nil end
     config = comm.new_config()
-    vars["comm_config"] = config
+    saved_configs[current_signal] = config
     return config
 end
 
 ---@param player LuaPlayer
----@param config CommConfig
-function comm.set_config(player, config)
-    local vars = tools.get_vars(player)
-    vars["comm_config"] = config
-end
-
----@param player LuaPlayer
 ---@return integer
-function comm.get_config_index(player)
+function comm.get_config_current_index(player)
     local vars = tools.get_vars(player)
     local config_index = vars["comm_config_index"] --[[@as integer? ]]
     if config_index == nil then
         config_index              = 0
         vars["comm_config_index"] = config_index
-        local config_map          = comm.get_config_map(player)
-
-        local saved_config        = vars.com_saved_configs --[[@as {[string]:CommConfig} ]]
-        config_map[config_index]  = saved_config
-        vars.com_saved_configs    = nil
     end
     return config_index
 end
 
 ---@param player LuaPlayer
 ---@param index integer
-function comm.set_config_index(player, index)
+function comm.set_config_current_index(player, index)
     local vars = tools.get_vars(player)
     vars["comm_config_index"] = index
 end
@@ -245,10 +254,9 @@ end
 
 ---@param player LuaPlayer
 ---@return {[string]:CommConfig}
-function comm.get_saved_configs(player)
-    local index = comm.get_config_index(player)
+function comm.get_configs_by_index(player)
+    local index = comm.get_config_current_index(player)
     local config_map = comm.get_config_map(player)
-
     local configs = config_map[index]
     if not configs then
         configs = {}
@@ -298,7 +306,7 @@ local function build_config_panel(config_panel)
 
     comm.purge()
     local channel_names = comm.get_chanel_names(player.force_index)
-    local config = comm.get_config(player, true)
+    local config = comm.get_current_config(player, true)
     ---@cast config -nil
 
     -- flow 1
@@ -391,7 +399,7 @@ function comm.open(player)
     frame.auto_center = true
 
     ----- save panel
-    local saved_configs = comm.get_saved_configs(player)
+    local saved_configs = comm.get_configs_by_index(player)
     local save_config_panel = inner.add { type = "frame", direction = "vertical" }
     local save_flow = save_config_panel.add { type = "flow" }
     save_flow.style.horizontally_stretchable = true
@@ -403,11 +411,10 @@ function comm.open(player)
     local config_index_field = save_flow.add { type = "drop-down", items = items, name = np("config_index_field") }
     config_index_field.style.width = 60
     config_index_field.style.height = 40
-    config_index_field.selected_index = comm.get_config_index(player) + 1
+    config_index_field.selected_index = comm.get_config_current_index(player) + 1
     config_index_field.tooltip = { np("config_index_field_tooltip") }
     for i = 0, saved_slot_max do
         local b = save_flow.add { type = "choose-elem-button", elem_type = "signal" }
-        b.style = default_style
         b.locked = true
         tools.set_name_handler(b, np("saved_slot"))
         local signal_name = "signal-" .. string.char(i + string.byte("A"))
@@ -416,12 +423,8 @@ function comm.open(player)
             name = signal_name
         }
         b.raise_hover_events = true
-        if saved_configs[signal_name] then
-            b.style = green_button
-        else
-            b.style = default_button
-        end
     end
+    comm.update_slot_table(save_flow)
 
     ------- config panel
     local config_panel = inner.add { type = "frame", direction = "vertical", name = "config_panel" }
@@ -442,6 +445,28 @@ function comm.open(player)
 
     inner.style.height = max_height
     comm.update(player)
+end
+
+---@param parent LuaGuiElement
+function comm.update_slot_table(parent)
+    local player = game.players[parent.player_index]
+
+    ---@cast parent -nil
+    local children = parent.children
+    local saved_configs = comm.get_configs_by_index(player)
+    local current_signal = comm.get_config_current_signal(player)
+    for i = 2, #children do
+        local b = children[i]
+        local signal_name = b.elem_value.name
+        if signal_name == current_signal then
+            b.style = yellow_button
+        elseif saved_configs[signal_name] and table_size(saved_configs[signal_name].channels) ~= 0 then
+            b.style = green_button
+        else
+            b.style = default_button
+        end
+    end
+
 end
 
 tools.on_gui_click(np("close"), function(e)
@@ -469,20 +494,11 @@ tools.on_named_event(np("config_index_field"), defines.events.on_gui_selection_s
         local player = game.players[e.player_index]
         local index = e.element.selected_index
 
-        comm.set_config_index(player, index - 1)
+        comm.set_config_current_index(player, index - 1)
         local parent = e.element.parent
-        ---@cast parent -nil
-        local children = parent.children
-        local saved_configs = comm.get_saved_configs(player)
-        for i = 2, #children do
-            local b = children[i]
-            local signal_name = b.elem_value.name
-            if saved_configs[signal_name] then
-                b.style = green_button
-            else
-                b.style = default_button
-            end
-        end
+        comm.update_slot_table(parent)
+        comm.update_config_panel(player)
+        comm.update(player)
     end
 )
 
@@ -493,7 +509,7 @@ tools.on_gui_click(np("add"),
         local frame = get_frame(player)
         if not frame then return end
 
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
 
         local channel_name_list = tools.get_child(frame, "channel_name_list")
         if not channel_name_list then return end
@@ -507,7 +523,7 @@ tools.on_gui_click(np("add"),
 
         if not cctx.name_channels[channel_name] then return end
 
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         ---@cast config -nil
 
         if e.control then
@@ -540,7 +556,7 @@ tools.on_named_event(np("filter_signal"), defines.events.on_gui_elem_changed,
             add_filter_signal_button(parent)
         end
 
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         local signals = {}
         for _, child in pairs(parent.children) do
             if child.elem_value then
@@ -558,7 +574,7 @@ tools.on_named_event(np("apply_filters"), defines.events.on_gui_checked_state_ch
     ---@param e EventData.on_gui_checked_state_changed
     function(e)
         local player = game.players[e.player_index]
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         config.apply_filters = e.element.state
         comm.update(player)
     end
@@ -569,7 +585,7 @@ tools.on_named_event(np("saved_slot"), defines.events.on_gui_hover,
     function(e)
         local player = game.players[e.player_index]
         local name = e.element.elem_value.name
-        local configs = comm.get_saved_configs(player)
+        local configs = comm.get_configs_by_index(player)
         local config = configs[name]
         if not config then
             e.element.tooltip = { np("saved_slot_tooltip") }
@@ -592,46 +608,18 @@ tools.on_named_event(np("saved_slot"),
     ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        local saved_configs = comm.get_saved_configs(player)
+        local saved_configs = comm.get_configs_by_index(player)
         if not e.element.valid then return end
         local name = e.element.elem_value.name
+        comm.set_config_current_signal(player, name)
         ---@cast name -nil
         if e.control then
             saved_configs[name] = nil
-            comm.set_config(player, comm.new_config())
-            comm.update_config_panel(player)
-            e.element.style = default_button
-            comm.update(player)
-        elseif e.button == defines.mouse_button_type.right then
-            local config = comm.get_config(player, true)
-            ---@cast config -nil
-            local cctx = comm.get_context(player.force_index, true)
-            ---@cast cctx -nil
-            local new_channels = {}
-            for _, channel_name in pairs(config.channels) do
-                if cctx.name_channels[channel_name] then
-                    table.insert(new_channels, channel_name)
-                end
-            end
-            config.channels = new_channels
-            config = table.deepcopy(config)
-            saved_configs[name] = config
-            e.element.style = green_button
-        else
-            local config = saved_configs[name]
-            if not config then
-                config = comm.new_config()
-                saved_configs[name] = nil
-                e.element.style = default_button
-            else
-                e.element.style = green_button
-            end
-
-            comm.set_config(player, config)
-            comm.update_config_panel(player)
-            comm.update(player)
         end
-    end)
+        comm.update_config_panel(player)
+        comm.update_slot_table(e.element.parent)
+        comm.update(player)
+end)
 
 ---@param player LuaPlayer
 function comm.update_config_panel(player)
@@ -707,7 +695,7 @@ function comm.update(player)
 
     scroll.clear()
 
-    local config = comm.get_config(player, false)
+    local config = comm.get_current_config(player, false)
     if not config then return end
 
     ---@type LuaGuiElement
@@ -825,8 +813,7 @@ end
 
 tools.on_gui_click(np("channel_close"), function(e)
     local player = game.players[e.player_index]
-    local vars = tools.get_vars(player)
-    local config = vars["comm_config"] --[[@as CommConfig ]]
+    local config = comm.get_current_config(player)
     if not config then return end
 
     local remove_chanel = e.element.tags["channel_name"]
@@ -867,7 +854,7 @@ tools.on_named_event(np("sort_mode"), defines.events.on_gui_selection_state_chan
     ---@param e EventData.on_gui_selection_state_changed
     function(e)
         local player = game.players[e.player_index]
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         config.sort_mode = e.element.selected_index
         comm.update(player)
     end
@@ -878,7 +865,7 @@ tools.on_named_event(np("filter_group"), defines.events.on_gui_selection_state_c
     ---@param e EventData.on_gui_selection_state_changed
     function(e)
         local player = game.players[e.player_index]
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         local index = e.element.selected_index
         config.group = nil
         if index > 1 then
@@ -899,7 +886,7 @@ tools.on_named_event(np("signal"), defines.events.on_gui_click,
     ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        local config = comm.get_config(player, true)
+        local config = comm.get_current_config(player, true)
         ---@cast config -nil
 
         local id = tools.signal_to_id(e.element.elem_value)
