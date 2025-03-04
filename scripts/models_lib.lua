@@ -405,8 +405,8 @@ function models_lib.update_model(procinfo, model, current)
         current.processor.name then
         procinfo.blueprint = model.blueprint
         procinfo.references = model.references
-        procinfo.sprite1 = model.sprite1
-        procinfo.sprite2 = model.sprite2
+        procinfo.sprite1 = model.sprite1 or procinfo.sprite1
+        procinfo.sprite2 = model.sprite2 or procinfo.sprite2
         if procinfo.surface then
             editor.clean_surface(procinfo)
             build.restore_packed_circuits(procinfo)
@@ -484,8 +484,8 @@ local function apply_model(player)
     for _, procinfo in pairs(outer_list) do
         ---@cast procinfo ProcInfo
         models_lib.copy_from(procinfo, model_procinfo, procinfo.is_packed)
-        procinfo.sprite1 = model_procinfo.sprite1
-        procinfo.sprite2 = model_procinfo.sprite2
+        procinfo.sprite1 = model_procinfo.sprite1 or procinfo.sprite1
+        procinfo.sprite2 = model_procinfo.sprite2 or procinfo.sprite2
         editor.draw_sprite(procinfo)
         count = count + 1
     end
