@@ -513,24 +513,27 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                         else
                                             section.group = bp_section.group or ""
                                         end
-                                        if bp_section.filters then
-                                            ---@type LogisticFilter[]
-                                            local filters = {}
-                                            for _, entry in pairs(bp_section.filters) do
-                                                ---@cast entry any
-                                                ---@type LogisticFilter
-                                                local filter = {
-                                                    value = {
-                                                        name = entry.name,
-                                                        type = entry.type,
-                                                        quality = entry.quality,
-                                                        comparator = entry.comparator
-                                                    },
-                                                    min = entry.count
-                                                }
-                                                table.insert(filters, filter)
+                                        ---@cast section -nil
+                                        if section.group == "" or #section.filters == 0 then
+                                            if bp_section.filters then
+                                                ---@type LogisticFilter[]
+                                                local filters = {}
+                                                for _, entry in pairs(bp_section.filters) do
+                                                    ---@cast entry any
+                                                    ---@type LogisticFilter
+                                                    local filter = {
+                                                        value = {
+                                                            name = entry.name,
+                                                            type = entry.type,
+                                                            quality = entry.quality,
+                                                            comparator = entry.comparator
+                                                        },
+                                                        min = entry.count
+                                                    }
+                                                    table.insert(filters, filter)
+                                                end
+                                                section.filters = filters
                                             end
-                                            section.filters = filters
                                         end
                                     end
                                 end
