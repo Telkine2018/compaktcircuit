@@ -358,16 +358,23 @@ function input.open(player, entity)
 
     local label = ttable.add { type = "label", caption = { np("type") } }
     label.style.right_margin = right_margin
+    local items = {
+        { np("type-integer") }, { np("type-slider") }, { np("type-toggle") },
+        { np("type-dropdown") }, { np("type-choose_signals") },
+        { np("type-choose_signals_with_count") }
+    }
+    if settings.startup["compaktcircuit-comm_enabled"].value then
+        table.insert(items, { np("type-comm") })
+    end
+    if props.type > #items then
+        props.type = input.types.integer
+    end
+
     field = ttable.add {
         type = "drop-down",
         name = np("input_type"),
         tooltip = { np("type-tooltip") },
-        items = {
-            { np("type-integer") }, { np("type-slider") }, { np("type-toggle") },
-            { np("type-dropdown") }, { np("type-choose_signals") },
-            { np("type-choose_signals_with_count") },
-            { np("type-comm") }
-        },
+        items = items,
         selected_index = props.type
     }
     local ftype = field

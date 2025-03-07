@@ -813,7 +813,7 @@ end
 
 tools.on_gui_click(np("channel_close"), function(e)
     local player = game.players[e.player_index]
-    local config = comm.get_current_config(player)
+    local config = comm.get_current_config(player, false)
     if not config then return end
 
     local remove_chanel = e.element.tags["channel_name"]
