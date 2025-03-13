@@ -311,9 +311,19 @@ local function exit_player(procinfo, player, to_origin)
         or ret_controller_type == defines.controllers.god
     then
         player.teleport(ret_surface_position, ret_surface_name)
+        local surface = game.surfaces[ret_surface_name]
+        local platform = surface.platform
+        if platform then
+            player.enter_space_platform(platform)
+        end
     else
         if procinfo.physical_controller_type then
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
+            local surface = game.surfaces[procinfo.physical_surface_index]
+            local platform = surface.platform
+            if platform then
+                player.enter_space_platform(platform)
+            end
         end
         player.set_controller {
             type = ret_controller_type,
