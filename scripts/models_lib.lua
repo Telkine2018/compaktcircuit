@@ -94,7 +94,7 @@ function models_lib.create_panel(player)
     modelFlow.style.top_margin = 5
 
     local f
-    f = modelFlow.add { type = "textfield", name = prefix .. "-model_name" }
+    f = modelFlow.add { type = "textfield", name = prefix .. "-model_name",  icon_selector = true }
     f.visible = false
     f.style.width = 380
     local button_width = 110

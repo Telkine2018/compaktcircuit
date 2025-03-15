@@ -337,7 +337,7 @@ function display.add_properties(type, ptable, props)
 
         label = ptable.add { type = "label", caption = { np("text") } }
         label.style.right_margin = right_margin
-        field = ptable.add { type = "text-box", name = "display_text" }
+        field = ptable.add { type = "text-box", name = "display_text", icon_selector = true }
         field.style.width = 400
         field.style.height = 60
         if props.text then field.text = props.text end

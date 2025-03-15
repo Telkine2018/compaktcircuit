@@ -126,7 +126,8 @@ function input.add_properties(type, ptable, props)
         type = "textfield",
         name = "input-label",
         tooltip = { np("input-label-tooltip") },
-        text = props.label
+        text = props.label,
+        icon_selector = true
     }
     field.style.width = 300
 
@@ -221,7 +222,8 @@ function input.add_properties(type, ptable, props)
             type = "text-box",
             name = "toggle-tooltips",
             tooltip = { np("toggle-tooltips-tooltip") },
-            text = props.tooltips
+            text = props.tooltips,
+            icon_selector = true
         }
         field.style.height = 100
     end
@@ -233,7 +235,8 @@ function input.add_properties(type, ptable, props)
             type = "text-box",
             name = "input-dropdown-labels",
             tooltip = { np("dropdown-labels-tooltip") },
-            text = props.labels
+            text = props.labels,
+            icon_selector = true
         }
         field.style.height = 100
     end
@@ -266,7 +269,8 @@ function input.add_properties(type, ptable, props)
             type = "textfield",
             name = "channel_name",
             text = props.channel_name,
-            visible = #channel_names == 0
+            visible = #channel_names == 0,
+            icon_selector = true
         }
         field.style.top_margin = 5
         field.style.width = text_field_width
@@ -294,14 +298,6 @@ function input.add_properties(type, ptable, props)
         channel_switch.style.size = 32
         channel_switch.style.margin = 0
         channel_switch.style.padding = 0
-
-        local channel_add_signal = channel_flow.add {
-            type = "choose-elem-button",
-            elem_type = "signal",
-            name = np("channel_add_signal"),
-            tooltip = { np("channel_add_signal-tooltip") }
-        }
-        channel_add_signal.style.size = 32
 
         label = ptable.add { type = "label", caption = { np("channel_red") } }
         label.style.right_margin = right_margin
@@ -423,31 +419,6 @@ tools.on_gui_click(np("channel_switch"), function(e)
     channel_name.visible = not visible
     channel_list.visible = visible
 end)
-
-tools.on_named_event(np("channel_add_signal"), defines.events.on_gui_elem_changed,
-    ---@param e EventData.on_gui_elem_changed
-    function(e)
-        if not e.element or not e.element.valid then return end
-
-        local signal = e.element.elem_value
-        if signal then
-            local parent = e.element.parent
-            ---@cast parent -nil
-            local channel_name = parent.channel_name
-            local type = signal.type
-            if not type then
-                type = "item"
-            elseif type == "fluid" then
-            elseif type == "virtual" then
-                type = "virtual-signal"
-            end
-            local signal_str = "[" .. type .. "=" .. signal.name .. "]"
-            channel_name.text = channel_name.text .. signal_str
-
-            parent.channel_name_list.visible = false
-            parent.channel_name.visible = true
-        end
-    end)
 
 
 tools.on_named_event(np("input_type"),

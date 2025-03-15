@@ -176,7 +176,8 @@ function editor.create_editor_panel(player, procinfo)
         type = "textfield",
         name = prefix .. "-title",
         text = procinfo.label or "",
-        tooltip = { prefix .. "-tooltip.title" }
+        tooltip = { prefix .. "-tooltip.title" },
+        icon_selector = true
     }
     ftitle.style.width = 300
 end
@@ -703,7 +704,8 @@ function editor.open_iopole(player, entity)
     local name = flow.add {
         type = "textfield",
         name = prefix .. ".iopole_name",
-        text = iopoint_info.label
+        text = iopoint_info.label,
+        icon_selector = true
     }
     flow.style.bottom_margin = 10
 
