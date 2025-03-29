@@ -414,8 +414,8 @@ local function on_player_built(e)
     on_build(entity, e)
 end
 
----@param e EventData.on_space_platform_built_entity 
-local function on_space_platform_built_entity (e)
+---@param e EventData.on_space_platform_built_entity
+local function on_space_platform_built_entity(e)
     local entity = e.entity
 
     on_build(entity, e)
@@ -546,7 +546,7 @@ local function on_mined(e)
 end
 
 ---@param e EventData.on_space_platform_mined_entity
-local function on_space_platform_mined_entity(e) 
+local function on_space_platform_mined_entity(e)
     on_mined(e)
 end
 
@@ -715,7 +715,7 @@ local function on_register_bp(e)
         e.item.is_blueprint_setup() and not player.cursor_stack.valid_for_read then
         vars.previous_bp = { blueprint = e.item, tick = e.tick }
     else
-        if vars.previous_bp and e.tick ==  vars.previous_bp.tick then
+        if vars.previous_bp and e.tick == vars.previous_bp.tick then
             return
         end
         vars.previous_bp = nil
@@ -1418,30 +1418,30 @@ end
 tools.on_event(defines.events.on_selected_entity_changed,
     on_selected_entity_changed)
 
-script.on_event(prefix .. "-click", 
+script.on_event(prefix .. "-click",
     ---@param event EventData.on_lua_shortcut
     function(event)
-    local player = game.players[event.player_index]
-    local selected = player.selected
-    if selected and string.find(selected.name, processor_pattern) and
-        player.is_cursor_empty() then
-        editor.edit_selected(player, selected)
-    end
-end)
-
-script.on_event(prefix .. "-control-click", 
-    ---@param event EventData.on_lua_shortcut
-    function(event)
-    local player = game.players[event.player_index]
-    local selected = player.selected
-    if selected and string.find(selected.name, processor_pattern) and
-        player.is_cursor_empty() then
-        local procinfo = build.get_procinfo(selected, false)
-        if procinfo and build.is_toplevel(procinfo) then
-            input.create_property_table(player, procinfo)
+        local player = game.players[event.player_index]
+        local selected = player.selected
+        if selected and string.find(selected.name, processor_pattern) and
+            player.is_cursor_empty() then
+            editor.edit_selected(player, selected)
         end
-    end
-end)
+    end)
+
+script.on_event(prefix .. "-control-click",
+    ---@param event EventData.on_lua_shortcut
+    function(event)
+        local player = game.players[event.player_index]
+        local selected = player.selected
+        if selected and string.find(selected.name, processor_pattern) and
+            player.is_cursor_empty() then
+            local procinfo = build.get_procinfo(selected, false)
+            if procinfo and build.is_toplevel(procinfo) then
+                input.create_property_table(player, procinfo)
+            end
+        end
+    end)
 
 ---@param player_index integer?
 local function purge(player_index)
@@ -1768,6 +1768,29 @@ local function destroy_all()
 end
 
 
+local function stats(player_index)
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    local player = game.players[player_index]
+    local force_index = player.force_index
+
+    local proc_count = 0
+    local packed_count = 0
+    for _, procinfo in pairs(procinfos) do
+        local processor = procinfo.processor
+        if processor and processor.valid then
+            proc_count = proc_count + 1
+            if procinfo.is_packed then
+                packed_count =  packed_count + 1
+            end
+        end
+    end
+    local display_count = display.get_count()
+    player.print("#processor=" .. proc_count)
+    player.print("#packed=" .. packed_count)
+    player.print("#display=" .. display_count)
+end
+
+
 commands.add_command("compaktcircuit_purge", { "compaktcircuit_purge_cmd" },
     function(e) purge(e.player_index) end)
 commands.add_command("compaktcircuit_pack", { "compaktcircuit_pack" },
@@ -1781,9 +1804,10 @@ commands.add_command("compaktcircuit_repair_iopoints",
 commands.add_command("compaktcircuit_destroy",
     { "compaktcircuit_destroy" },
     function(e) destroy_all() end)
-commands.add_command("compaktcircuit_signals", {"compaktcircuit_signals"},
+commands.add_command("compaktcircuit_signals", { "compaktcircuit_signals" },
     function(e) comm.open(game.players[e.player_index]) end)
-
+commands.add_command("compaktcircuit_stats", { "compaktcircuit_stats" },
+    function(e) stats(e.player_index) end)
 
 ---@param e EventData.on_player_rotated_entity
 local function on_player_rotated_entity(e) local entity = e.entity end
