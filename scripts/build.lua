@@ -5,6 +5,7 @@ local tools = require("scripts.tools")
 local ccutils = require("scripts.ccutils")
 local input = require("scripts.input")
 local display = require("scripts.display")
+local comm = require("scripts.comm")
 
 local debug = tools.debug
 local cdebug = tools.cdebug
@@ -512,24 +513,27 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                         else
                                             section.group = bp_section.group or ""
                                         end
-                                        if bp_section.filters then
-                                            ---@type LogisticFilter[]
-                                            local filters = {}
-                                            for _, entry in pairs(bp_section.filters) do
-                                                ---@cast entry any
-                                                ---@type LogisticFilter
-                                                local filter = {
-                                                    value = {
-                                                        name = entry.name,
-                                                        type = entry.type,
-                                                        quality = entry.quality,
-                                                        comparator = entry.comparator
-                                                    },
-                                                    min = entry.count
-                                                }
-                                                table.insert(filters, filter)
+                                        ---@cast section -nil
+                                        if section.group == "" or #section.filters == 0 then
+                                            if bp_section.filters then
+                                                ---@type LogisticFilter[]
+                                                local filters = {}
+                                                for _, entry in pairs(bp_section.filters) do
+                                                    ---@cast entry any
+                                                    ---@type LogisticFilter
+                                                    local filter = {
+                                                        value = {
+                                                            name = entry.name,
+                                                            type = entry.type,
+                                                            quality = entry.quality,
+                                                            comparator = entry.comparator
+                                                        },
+                                                        min = entry.count
+                                                    }
+                                                    table.insert(filters, filter)
+                                                end
+                                                section.filters = filters
                                             end
-                                            section.filters = filters
                                         end
                                     end
                                 end
@@ -639,6 +643,10 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             value_id = (tags and tags.value_id) or tools.get_id() --[[@as string]],
                             label = tags.label --[[@as string]]
                         }
+                        if input_prop.input.type == input.types.comm then
+                            local comm_input = input_prop.input
+                            comm.connect(entity, comm_input.channel_name, comm_input.channel_red, comm_input.channel_green)
+                        end
                         table.insert(input_list, input_prop)
                     end
                 elseif name == commons.processor_name or name ==

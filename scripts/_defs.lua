@@ -232,11 +232,36 @@
 ---@class InputProperty
 ---@field gid string
 ---@field value_id string?
----@field input Input
+---@field input Input | CommInput
 ---@field entity LuaEntity
 ---@field x integer
 ---@field y integer
 ---@field label string
 ---@field inner_inputs InputProperty[]
 
+---@class CommInput : Input
+---@field channel_name string
+---@field channel_red boolean
+---@field channel_green boolean
+
 --------------------------------
+
+---@class CommContext
+---@field name_channels {[string]:CommChannel}
+---@field max_index integer
+---@field surface LuaSurface
+
+---@class CommChannel
+---@field name string
+---@field index integer
+---@field router LuaEntity
+
+---@class CommConfig
+---@field channels string[]
+---@field sort_mode CommSortMode
+---@field apply_filters boolean?
+---@field filters string[]
+---@field group string
+---@field subgroup string
+---@field min number?
+

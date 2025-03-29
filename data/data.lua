@@ -102,27 +102,27 @@ data:extend {
         name = commons.processor_name,
         icon_size = 64,
         icon = png('item/processor2'),
-        icon_mipmaps = 4,
         subgroup = 'circuit-network',
         order = 'p[rocessor]',
         place_result = commons.processor_name,
-        stack_size = 50
+        stack_size = 50,
+        weight = 200000
+        
     }, {
     type = 'item',
     name = commons.processor_name_1x1,
     icon_size = 64,
     icon = png('item/processor_1x1'),
-    icon_mipmaps = 4,
     subgroup = 'circuit-network',
     order = 'p[rocessor]-a',
     place_result = commons.processor_name_1x1,
-    stack_size = 50
+    stack_size = 50,
+    weight = 200000
 }, {
     type = "item-with-tags",
     name = commons.processor_with_tags,
     icon_size = 64,
     icon = png('item/processor2'),
-    icon_mipmaps = 4,
     subgroup = 'circuit-network',
     order = 'p[rocessor]',
     place_result = commons.processor_name,
@@ -414,43 +414,26 @@ local processor_1x1 = {
 
 ---------------------------
 
-local arrow_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrow",
-    filename = png("arrow"),
-    width = 32,
-    height = 32
-}
+local function add_sprite32(name)
+    return {
+        type = "sprite",
+        name = prefix .. "-" .. name,
+        filename = png(name),
+        width = 32,
+        height = 32
+    }
+end
 
-local arrowr_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrowr",
-    filename = png("arrowr"),
-    width = 32,
-    height = 32
-}
-
-local arrowd_sprite = {
-    type = "sprite",
-    name = prefix .. "-arrowd",
-    filename = png("arrowd"),
-    width = 32,
-    height = 32
-}
-
-local circle_sprite = {
-
-    type = "sprite",
-    name = prefix .. "-circle",
-    filename = png("circle"),
-    width = 32,
-    height = 32
-}
+local arrow_sprite = add_sprite32("arrow")
+local arrowr_sprite = add_sprite32("arrowr")
+local arrowd_sprite = add_sprite32("arrowd")
+local circle_sprite = add_sprite32("circle")
+local add_sprite = add_sprite32("add")
 
 data:extend {
     iopoint, energy_source, energy_pole, internal_iopoint,
     internal_iopoint_item, ground_tile, processor, processor_1x1, device,
-    arrow_sprite, arrowr_sprite, arrowd_sprite, circle_sprite
+    arrow_sprite, arrowr_sprite, arrowd_sprite, circle_sprite, add_sprite
 }
 
 ---------------------------
@@ -566,3 +549,30 @@ data:extend {{
     type = "custom-event",
     name = "on_script_setup_blueprint"
 }}
+
+
+local styles = data.raw["gui-style"].default
+
+styles[commons.prefix .. "_count_label_bottom"] = {
+    type = "label_style",
+    parent = "count_label",
+    height = 40,
+    width = 44,
+    vertical_align = "bottom",
+    horizontal_align = "right",
+    right_padding = 4
+}
+
+data:extend
+{
+  {
+    type = "shortcut",
+    name = prefix .. "-comm",
+    order = "c[ompackcircuit]",
+    action = "lua",
+    icon = png("icons/comm-x32"),
+    icon_size = 32,
+    small_icon = png("icons/comm-x24"),
+    small_icon_size = 24
+  },
+}

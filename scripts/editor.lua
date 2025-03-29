@@ -176,7 +176,8 @@ function editor.create_editor_panel(player, procinfo)
         type = "textfield",
         name = prefix .. "-title",
         text = procinfo.label or "",
-        tooltip = { prefix .. "-tooltip.title" }
+        tooltip = { prefix .. "-tooltip.title" },
+        icon_selector = true
     }
     ftitle.style.width = 300
 end
@@ -188,6 +189,7 @@ tools.on_event(defines.events.on_gui_elem_changed,
     function(e)
         local player = game.players[e.player_index]
         local name
+        if not e.element.valid then return end
         if e.element.name == prefix .. "-sprite1" then
             name = "sprite1"
         elseif e.element.name == prefix .. "-sprite2" then
@@ -256,13 +258,14 @@ function editor.edit_selected(player, processor)
     if procinfo.is_packed then
         build.restore_packed_circuits(procinfo)
         input.apply_parameters(procinfo)
+        input.disconnect_comms(surface)
     end
 
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
     if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
-            not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
+        not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
         vars.physical_surface_index = player.physical_surface_index
         vars.physical_controller_type = player.physical_controller_type
         vars.physical_position = player.physical_position
@@ -300,7 +303,7 @@ local function exit_player(procinfo, player, to_origin)
         ret_controller_type = vars.physical_controller_type
         ret_surface_name = ret_surface.name
     end
-    
+
     if not ret_surface or not ret_surface.valid then
         ret_surface_name = "nauvis"
         ret_surface_position = { x = 0, y = 0 }
@@ -309,9 +312,19 @@ local function exit_player(procinfo, player, to_origin)
         or ret_controller_type == defines.controllers.god
     then
         player.teleport(ret_surface_position, ret_surface_name)
+        local surface = game.surfaces[ret_surface_name]
+        local platform = surface.platform
+        if platform then
+            player.enter_space_platform(platform)
+        end
     else
         if procinfo.physical_controller_type then
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
+            local surface = game.surfaces[procinfo.physical_surface_index]
+            local platform = surface.platform
+            if platform then
+                player.enter_space_platform(platform)
+            end
         end
         player.set_controller {
             type = ret_controller_type,
@@ -389,11 +402,14 @@ function editor.set_packed(procinfo, is_packed, player)
             player.print({ "compaktcircuit-message.external_present" })
         end
         input.apply_parameters(procinfo)
+        input.disconnect_comms(procinfo.surface)
     else
         build.destroy_packed_circuit(procinfo)
         build.connect_all_iopoints(procinfo)
         input.apply_parameters(procinfo)
         display.restore(procinfo)
+        input.disconnect_comms(procinfo.surface)
+        input.connect_comms(procinfo.surface)
     end
 end
 
@@ -688,7 +704,8 @@ function editor.open_iopole(player, entity)
     local name = flow.add {
         type = "textfield",
         name = prefix .. ".iopole_name",
-        text = iopoint_info.label
+        text = iopoint_info.label,
+        icon_selector = true
     }
     flow.style.bottom_margin = 10
 
@@ -1145,8 +1162,8 @@ local function on_build(entity, e)
     end
     if tags then
         if tags.__ then tags = tags.__ end
-        if tags.__delete then 
-            entity.destroy() 
+        if tags.__delete then
+            entity.destroy()
             return
         end
     end
@@ -1172,7 +1189,7 @@ local function on_build(entity, e)
         else
             if e.player_index then
                 local player = game.players[e.player_index]
-                if commons.remote_controllers[player.controller_type]  then
+                if commons.remote_controllers[player.controller_type] then
                     entity.revive { raise_revive = true }
                 end
             end

@@ -337,7 +337,7 @@ function display.add_properties(type, ptable, props)
 
         label = ptable.add { type = "label", caption = { np("text") } }
         label.style.right_margin = right_margin
-        field = ptable.add { type = "text-box", name = "display_text" }
+        field = ptable.add { type = "text-box", name = "display_text", icon_selector = true }
         field.style.width = 400
         field.style.height = 60
         if props.text then field.text = props.text end
@@ -1348,18 +1348,20 @@ local function process_meta(rt)
     if not cn then return end
 
     local signals = cn.signals
-    if not signals then return end
+    local max_signal = nil
 
-    local max_signal
-    for _, signal in pairs(signals) do
-        if not max_signal or max_signal.count < signal.count then
-            max_signal = signal
+    if signals then
+        for _, signal in pairs(signals) do
+            if not max_signal or max_signal.count < signal.count then
+                max_signal = signal
+            end
+        end
+        if max_signal then
+            max_signal = max_signal.signal
         end
     end
 
-    if not max_signal then return end
-
-    local connector = source.get_wire_connector(defines.wire_connector_id.combinator_output_green, false)
+    local connector = source.get_wire_connector(defines.wire_connector_id.circuit_green, false)
     if not connector then return end
 
     local connections = connector.connections
@@ -1380,23 +1382,27 @@ local function process_meta(rt)
 
     local location = props.location
     if location == meta_input1 then
-        parameters.first_signal = max_signal.signal
+        parameters.first_signal = max_signal
         if parameters.output_signal and
             special_signals[parameters.output_signal.name] then
             parameters.output_signal.name = "signal-A"
         end
     elseif location == meta_input2 then
-        parameters.second_signal = max_signal.signal
+        parameters.second_signal = max_signal
     elseif location == meta_output then
-        parameters.output_signal = max_signal.signal
-        if parameters.first_signal and parameters.first_signal.name and
-            special_signals[parameters.first_signal.name] then
+        parameters.output_signal = max_signal
+        if parameters.first_signal and 
+            parameters.first_signal.name and
+            special_signals[parameters.first_signal.name] and
+            parameters.second_signal and 
+            parameters.second_signal.name and
+            special_signals[parameters.second_signal.name] then
             parameters.first_signal.name = "signal-A"
         end
     end
     cb.parameters = parameters
 
-    rt.signal = tools.signal_to_sprite(max_signal.signal)
+    rt.signal = tools.signal_to_sprite(max_signal)
 end
 
 local multi_signals_delta = {
@@ -1861,6 +1867,10 @@ function display.update_rendering()
             tools.render_translate_table(rt.renderids)
         end
     end
+end
+
+function display.get_count()
+    return table_size(display_runtime.map)
 end
 
 -- #endregion

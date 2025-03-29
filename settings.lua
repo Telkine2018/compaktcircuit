@@ -59,7 +59,7 @@ data:extend(
 			type = "bool-setting",
 			name = prefix .. "-no_energy",
 			setting_type = "startup",
-			default_value = false,
+			default_value = true,
 			order = "da"
 		},
 		{
@@ -113,5 +113,21 @@ data:extend(
 			default_value = false,
 			order="la"
 		},
+		{
+			type = "bool-setting",
+			name = prefix .. "-comm_enabled",
+			setting_type = "startup",
+			default_value = true,
+			order = "ma"
+		},
+		{
+			type = "int-setting",
+			name = prefix .. "-comm_interval",
+			setting_type = "startup",
+			default_value = 30,
+			minimum_value = 5,
+			maximum_value = 6000,
+			order = "mb"
+		}
 
 })

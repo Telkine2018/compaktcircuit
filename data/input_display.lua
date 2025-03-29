@@ -37,7 +37,7 @@ for _, color in pairs {
     styles[prefix .. "_slot_button_" .. color] = {
         type = "button_style",
         parent = "flib_slot_button_" .. color,
-        size = 32
+        size = 40
     }
 end
 
