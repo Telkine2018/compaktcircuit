@@ -172,11 +172,12 @@ local lamp_definition = {
 	energy_usage_per_tick = "5kJ",
 	flags = {
 		"placeable-neutral",
-		"player-creation"
+		"player-creation",
 	},
 	glow_color_intensity = 1,
 	glow_render_mode = "multiplicative",
 	glow_size = 3,
+	hidden_in_factoriopedia = true,
 	icon = "__base__/graphics/icons/small-lamp.png",
 	icon_mipmaps = 4,
 	icon_size = 64,
@@ -330,6 +331,7 @@ function combinators.create_internals()
 		collision_box = { { -boxsize, -boxsize }, { boxsize, boxsize } },
 		created_smoke = nil,
 		selection_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
+		hidden_in_factoriopedia = true,
 		maximum_wire_distance = 2
 
 	}
@@ -374,7 +376,8 @@ function combinators.create_internals()
 
 	local constant_combinator = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
 	constant_combinator = merge_table(constant_combinator, { commons_attr, {
-		name = commons.prefix .. '-cc'
+		name = commons.prefix .. '-cc',
+		hidden_in_factoriopedia = true,
 	} })
 	insert_flags(constant_combinator.flags)
 
@@ -395,6 +398,7 @@ function combinators.create_internals()
 
 		commons_attr, {
 		name = commons.prefix .. '-ac',
+		hidden_in_factoriopedia = true,
 		and_symbol_sprites = invisible_sprite,
 		divide_symbol_sprites = invisible_sprite,
 		left_shift_symbol_sprites = invisible_sprite,
@@ -415,6 +419,7 @@ function combinators.create_internals()
 	local decider_combinator = table.deepcopy(data.raw["decider-combinator"]["decider-combinator"])
 	decider_combinator       = merge_table(decider_combinator, { commons_attr, {
 		name = commons.prefix .. '-dc',
+		hidden_in_factoriopedia = true,
 		equal_symbol_sprites = invisible_sprite,
 		greater_or_equal_symbol_sprites = invisible_sprite,
 		greater_symbol_sprites = invisible_sprite,
@@ -429,6 +434,7 @@ function combinators.create_internals()
 	local selector_combinator = table.deepcopy(data.raw["selector-combinator"]["selector-combinator"])
 	selector_combinator       = merge_table(selector_combinator, { commons_attr, {
 		name = commons.prefix .. '-sc',
+		hidden_in_factoriopedia = true,
 		max_symbol_sprites = invisible_sprite,
 		min_symbol_sprites = invisible_sprite,
 		count_symbol_sprites = invisible_sprite,
@@ -445,6 +451,7 @@ function combinators.create_internals()
 
 		type = "electric-pole",
 		name = commons.prefix .. "-pole",
+		hidden_in_factoriopedia = true,
 		minable = nil,
 		collision_box = { { -boxsize, -boxsize }, { boxsize, boxsize } },
 		collision_mask = { layers = {} },
@@ -486,6 +493,7 @@ function combinators.create_internals()
 
 		type = "accumulator",
 		name = commons.prefix .. "-accu",
+		hidden_in_factoriopedia = true,
 		charge_cooldown = 30,
 		discharge_cooldown = 60,
 		selectable_in_game = debug_mode,

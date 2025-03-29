@@ -121,6 +121,7 @@ data:extend {
 }, {
     type = "item-with-tags",
     name = commons.processor_with_tags,
+    hidden_in_factoriopedia = true,
     icon_size = 64,
     icon = png('item/processor2'),
     subgroup = 'circuit-network',
@@ -131,6 +132,7 @@ data:extend {
 }, {
     type = 'item',
     name = commons.iopoint_name,
+    hidden_in_factoriopedia = true,
     icon_size = 32,
     icon = png('invisible'),
     subgroup = 'circuit-network',
@@ -217,7 +219,7 @@ local device = {
 
     type = "lamp",
     name = commons.device_name,
-
+    hidden_in_factoriopedia = true,
     icons = { { icon_size = 64, icon = png('item/processor2'), icon_mipmaps = 4 } },
     minable = { mining_time = 0.5, result = commons.processor_name },
     collision_box = { { -0.01, -0.01 }, { 0.01, 0.01 } },
@@ -251,6 +253,7 @@ local iopoint = {
 
     type = "lamp",
     name = prefix .. "-iopoint",
+    hidden_in_factoriopedia = true,
     collision_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
     collision_mask = { layers={} },
     selection_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
@@ -275,6 +278,7 @@ if false then
     iopoint2 = {
         type = "constant-combinator",
         name = prefix .. "-iopoint-2",
+        hidden_in_factoriopedia = true,
         collision_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
         collision_mask = {layers={}},
         selection_box = { { -0.1, -0.1 }, { 0.1, 0.1 } },
@@ -299,6 +303,7 @@ local energy_source = {
 
     type = "electric-energy-interface",
     name = prefix .. "-energy_source",
+    hidden_in_factoriopedia = true,
     energy_source = {
         type = "electric",
         render_no_power_icon = true,
@@ -320,6 +325,7 @@ combinators.merge_table(energy_pole, {
     {
         type = "electric-pole",
         name = prefix .. "-energy_pole",
+        hidden_in_factoriopedia = true,
         draw_copper_wires = false,
         draw_circuit_wires = false,
         supply_area_distance = 64,
@@ -331,6 +337,7 @@ local radar = data.raw["radar"]["radar"]
 if radar then
     radar = table.deepcopy(radar)
     radar.name = prefix .. "-radar"
+    radar.hidden_in_factoriopedia = true
     radar.pictures = invisible_sprite
     data:extend { radar }
 end
@@ -348,6 +355,7 @@ local internal_iopoint = table.deepcopy(
     data.raw["electric-pole"]["medium-electric-pole"])
 
 internal_iopoint.name = prefix .. "-internal_iopoint"
+internal_iopoint.hidden_in_factoriopedia = true
 internal_iopoint.pictures.layers[1].tint = { 0, 0, 1, 1 }
 internal_iopoint.minable = { mining_time = 0.1 }
 internal_iopoint.maximum_wire_distance = 64
@@ -444,6 +452,7 @@ local internal_connector_item = {
 
     type = 'item',
     name = commons.internal_connector_name,
+    hidden_in_factoriopedia = true,
     icons = { { icon = png("item/iconnector"), icon_size = 64, tint = tint } },
     subgroup = 'circuit-network',
     order = 'a[miniaturization]-b[internal-iopoint]',
