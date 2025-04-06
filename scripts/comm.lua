@@ -704,7 +704,8 @@ function comm.update(player)
     ---@param signals Signal[]?
     ---@param button_style string
     local function display(signals, button_style)
-        if not signals or #signals == 0 then return end
+        signals = signals or {}
+        if #signals == 0 then return end
 
         local filter_map
         if config.apply_filters and config.filters and #config.filters > 0 then
@@ -802,6 +803,7 @@ function comm.update(player)
                     local green_signals = cb.get_circuit_network(defines.wire_connector_id.circuit_green)
                     ---@cast green_signals -nil
                     display(green_signals.signals, green_button)
+
 
                     signal_panel.add { type = "line", direction = "horizontal" }
                     signal_panel.style.horizontally_stretchable = true
