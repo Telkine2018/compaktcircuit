@@ -804,7 +804,6 @@ function comm.update(player)
                     ---@cast green_signals -nil
                     display(green_signals.signals, green_button)
 
-
                     signal_panel.add { type = "line", direction = "horizontal" }
                     signal_panel.style.horizontally_stretchable = true
                 end
