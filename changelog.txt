@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.19
+Date: 05. 04. 2025.
+  Bugfixes:
+    - Prevent crash when opening interface without connected red or green circuit wires
+    - Made `display` function handle `nil` or empty signal tables safely
+---------------------------------------------------------------------------------------------------
 Version: 2.0.18
 Date: 28. 03. 2025.
   Changes:

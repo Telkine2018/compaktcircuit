@@ -704,7 +704,8 @@ function comm.update(player)
     ---@param signals Signal[]?
     ---@param button_style string
     local function display(signals, button_style)
-        if not signals or #signals == 0 then return end
+        signals = signals or {}
+        if #signals == 0 then return end
 
         local filter_map
         if config.apply_filters and config.filters and #config.filters > 0 then
