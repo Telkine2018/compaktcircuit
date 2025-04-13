@@ -204,17 +204,15 @@ function comm.set_config_current_signal(player, current_signal)
     vars["comm_signal_index"] = current_signal
 end
 
-
 ---@param player LuaPlayer
 ---@param create boolean
 ---@return CommConfig?
 function comm.get_current_config(player, create)
-
     local saved_configs = comm.get_configs_by_index(player)
     local current_signal = comm.get_config_current_signal(player)
     local config = saved_configs[current_signal]
-    if config or not create then 
-        return config 
+    if config or not create then
+        return config
     end
     config = comm.new_config()
     saved_configs[current_signal] = config
@@ -354,6 +352,10 @@ local function build_config_panel(config_panel)
     local config_flow3 = config_panel.add { type = "flow" }
     config_flow3.add { type = "checkbox", caption = { np("apply_filters") }, state = not not config.apply_filters, name = np("apply_filters") }
 
+    local b = config_flow3.add { type = "sprite-button", sprite = prefix .. "-import_filters", 
+        tooltip = { np("import_filters-tooltip") }, name = np("import_filters") }
+    b.style.size = 24
+
     local filter_table = config_flow3.add { type = "table", column_count = 10, name = "filter_table" }
     if config.filters then
         for _, filter in pairs(config.filters) do
@@ -466,7 +468,6 @@ function comm.update_slot_table(parent)
             b.style = default_button
         end
     end
-
 end
 
 tools.on_gui_click(np("close"), function(e)
@@ -580,6 +581,37 @@ tools.on_named_event(np("apply_filters"), defines.events.on_gui_checked_state_ch
     end
 )
 
+tools.on_named_event(np("import_filters"), defines.events.on_gui_click,
+    ---@param e EventData.on_gui_click
+    function(e)
+        local player = game.players[e.player_index]
+
+        if not script.active_mods["factory_graph"] then
+            player.print("Factory graph not active")
+            return
+        end
+        local config = comm.get_current_config(player, true)
+        if not config then return end
+
+        local products = remote.call("factory_graph", "get_ingredients", e.player_index)
+
+        local filters = config.filters or {}
+        local filter_map = {}
+        for _, id in pairs(filters) do
+            filter_map[id] = true
+        end
+        for name, count in pairs(products) do
+            filter_map[name] = true
+        end
+        config.filters = {}
+        for name in pairs(filter_map) do
+            table.insert(config.filters, name)
+        end
+        comm.update_config_panel(player)
+        comm.update(player)
+    end
+)
+
 tools.on_named_event(np("saved_slot"), defines.events.on_gui_hover,
     ---@param e EventData.on_gui_hover
     function(e)
@@ -619,7 +651,7 @@ tools.on_named_event(np("saved_slot"),
         comm.update_config_panel(player)
         comm.update_slot_table(e.element.parent)
         comm.update(player)
-end)
+    end)
 
 ---@param player LuaPlayer
 function comm.update_config_panel(player)
@@ -682,6 +714,19 @@ end
 
 local signal_to_id = tools.signal_to_id
 
+---@param config CommConfig
+---@return {[string]:boolean}?
+function comm.filter_to_map(config)
+    local filter_map
+    if config.apply_filters and config.filters and #config.filters > 0 then
+        filter_map = {}
+        for _, id in pairs(config.filters) do
+            filter_map[id] = true
+        end
+    end
+    return filter_map
+end
+
 ---@param player LuaPlayer
 function comm.update(player)
     local frame = get_frame(player)
@@ -706,14 +751,7 @@ function comm.update(player)
     local function display(signals, button_style)
         if not signals or #signals == 0 then return end
 
-        local filter_map
-        if config.apply_filters and config.filters and #config.filters > 0 then
-            filter_map = {}
-            for _, id in pairs(config.filters) do
-                filter_map[id] = true
-            end
-        end
-
+        local filter_map = comm.filter_to_map(config)
         if config.group then
             local new_signals = {}
             for _, signal in pairs(signals) do

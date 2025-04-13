@@ -42,6 +42,20 @@ for _, name in pairs({"integer","slider","toggle", "drop_down", "choose_signals"
     add_input_sprite(name)    
 end
 
+local function add_sprite(name)
+    local sprite = {
+        type = "sprite",
+        name = prefix .. "-" .. name,
+        filename = png(name),
+        position = { 0, 0 },
+        size = 32,
+        flags = { "icon" }
+    }
+    table.insert(declarations, sprite)
+end
+add_sprite("import_filters")
+
 data:extend(declarations)
+
 
 -- log(serpent.block(data.raw["electric-pole"]["substation"]))
