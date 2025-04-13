@@ -62,6 +62,7 @@ local display_entity = table.deepcopy(data.raw["lamp"]["small-lamp"])
 display_entity = tools.table_merge {
     display_entity, {
         name = commons.display_name,
+        hidden_in_factoriopedia = true,
         icon = png("item/display"),
         active_energy_usage = '1kW',
         energy_source = {type = "void"},
@@ -110,6 +111,7 @@ local packed_display_entity = {
     glow_color_intensity = 0,
     glow_render_mode = "multiplicative",
     glow_size = 0.01,
+    hidden_in_factoriopedia = true,
     icon = "__base__/graphics/icons/small-lamp.png",
     icon_mipmaps = 4,
     icon_size = 64,
@@ -158,6 +160,7 @@ local input_entity = table.deepcopy(
 input_entity = tools.table_merge {
     input_entity, {
         name = commons.input_name,
+        hidden_in_factoriopedia = true,
         icon = png("item/input"),
         item_slot_count = 32,
         active_energy_usage = '1kW',
