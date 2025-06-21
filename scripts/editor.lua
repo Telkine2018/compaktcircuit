@@ -514,11 +514,20 @@ function editor.get_or_create_surface(procinfo)
     end
 
     if not surface or not surface.valid then
-        surface = game.create_surface(surface_name, {
+        local mgs = {
             width = EDITOR_SIZE,
             height = EDITOR_SIZE,
-            no_enemies_mode = true
-        })
+            no_enemies_mode = true,
+            property_expression_names = {},
+            default_enable_all_autoplace_controls = false,
+                autoplace_settings = {
+                entity = { treat_missing_as_default = false, frequency = "none" },
+                tile = { treat_missing_as_default = false },
+                decorative = { treat_missing_as_default = false, frequency = "none" }
+            },
+        }
+        surface = game.create_surface(surface_name, mgs)
+
 
         surface.always_day = true
         surface.show_clouds = false
