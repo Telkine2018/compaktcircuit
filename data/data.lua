@@ -121,6 +121,7 @@ data:extend {
 }, {
     type = "item-with-tags",
     name = commons.processor_with_tags,
+    localised_name = { commons.processor_with_tags },
     hidden_in_factoriopedia = true,
     icon_size = 64,
     icon = png('item/processor2'),
