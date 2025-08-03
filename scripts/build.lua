@@ -226,7 +226,7 @@ function build.save_packed_circuits2(procinfo)
                 if sprite_type then
                     bp.set_blueprint_entity_tags(index, {
                         ["display-plate-sprite-type"] = sprite_type,
-                        ["display-plate-sprite-name"] = sprite_name
+                        ["display-plate-sprite-name"] = sprite_name,
                     })
                 end
             end
@@ -909,13 +909,15 @@ function build.get_reverse_sprite_map(map)
     if map then return map end
 
     map = {}
-    local ids = rendering.get_all_objects()
-    for _, id in pairs(ids) do
-        local target = id.target
-        if target then
-            local entity = target.entity
-            if entity and entity.valid and entity.unit_number then
-                map[entity.unit_number] = id
+    local objects = rendering.get_all_objects("DisplayPlatesForked")
+    for _, o in pairs(objects) do
+        if o.type ~= "rectangle" then
+            local target = o.target
+            if target then
+                local entity = target.entity
+                if entity and entity.valid and entity.unit_number then
+                    map[entity.unit_number] = o
+                end
             end
         end
     end
