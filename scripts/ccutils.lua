@@ -43,7 +43,7 @@ end
 function ccutils.check_signal(type, name)
     if type == "virtual" then
         return prototypes.virtual_signal[name]
-    elseif type == "item" then
+    elseif type == "item" or not type then
         return prototypes.item[name]
     elseif type == "fluid" then
         return prototypes.fluid[name]
@@ -66,9 +66,10 @@ end
 
 local check_signal = ccutils.check_signal
 
----@param signal SignalID?
+---@param signal (SignalID|string)? 
 ---@return any
 function ccutils.check_signal_o(signal)
+    if type(signal) == "string" then signal={name=signal} end
     if not signal then return true end
     return check_signal(signal.type, signal.name)
 end

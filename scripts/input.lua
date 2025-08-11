@@ -1484,8 +1484,10 @@ setter_table = {
             local index = 1
             for _, s in pairs(signals) do
                 local signal = tools.id_to_filter(s) --[[@as SignalID]]
-                if not ccutils.special_signals[signal.name] and
-                    check_signal_o(signal) then
+                if not ccutils.special_signals[signal.name] and check_signal_o(signal) then
+                    if type(signal) == "string" then
+                        signal = { name = signal }
+                    end
                     local filter = signal --[[@as SignalFilter]]
                     if not filter.quality then
                         filter.quality = "normal"
@@ -1509,6 +1511,9 @@ setter_table = {
                 local signal = tools.id_to_filter(s.signal) --[[@as SignalID]]
                 if not ccutils.special_signals[signal.name] and
                     check_signal_o(signal) then
+                    if type(signal) == "string" then
+                        signal = { name = signal }
+                    end
                     local filter = signal --[[@as SignalFilter]]
                     if not filter.quality then
                         filter.quality = "normal"
