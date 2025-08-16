@@ -1391,10 +1391,10 @@ local function process_meta(rt)
         parameters.second_signal = max_signal
     elseif location == meta_output then
         parameters.output_signal = max_signal
-        if parameters.first_signal and 
+        if parameters.first_signal and
             parameters.first_signal.name and
             special_signals[parameters.first_signal.name] and
-            parameters.second_signal and 
+            parameters.second_signal and
             parameters.second_signal.name and
             special_signals[parameters.second_signal.name] then
             parameters.first_signal.name = "signal-A"
@@ -1603,8 +1603,7 @@ local function process_multisignal(rt)
             left_top = { entity = source, offset = { x = x1, y = y1 } },
             right_bottom = { entity = source, offset = { x = x2, y = y2 } },
             color = all_colors_rgb[background_color],
-            filled = true,
-            draw_on_ground = true
+            filled = true
         }
         table.insert(renderids, renderid)
         renderid.move_to_back()
@@ -1617,7 +1616,6 @@ local function process_multisignal(rt)
             left_top = { entity = source, offset = { x = x1, y = y1 } },
             right_bottom = { entity = source, offset = { x = x2, y = y2 } },
             color = color,
-            draw_on_ground = true
         }
         table.insert(renderids, renderid)
         renderid.move_to_back()
@@ -1635,8 +1633,7 @@ local function process_multisignal(rt)
     end
 
     local scale1 = scale * 0.65
-    local xoff = scale * 0.4
-    local yoff = scale * 0.4
+    local xoff = scale * 0.1
 
     for _, signal in pairs(signals) do
         local s = signal.signal
@@ -1656,26 +1653,17 @@ local function process_multisignal(rt)
         end
         local text = tostring(signal.count - offset)
 
-        local renderid = rendering.draw_sprite {
-            sprite = type .. "." .. sname,
-            surface = source.surface,
-            target = {
-                offset = { x = x + xoff, y = y + yoff },
-                entity = source,
-            },
-            color = color,
-            x_scale = scale1,
-            y_scale = scale1,
-            forces = { source.force },
-            draw_on_ground = true
-        }
-        table.insert(renderids, renderid)
-
+        local quality = (signal.signal --[[@as any]]).quality
+        if type == "item" and quality then
+            text = "[item=" .. sname .. ",quality=" .. quality .. "] " .. text
+        else
+            text = "[" .. type .. "=" .. sname .. "] " .. text
+        end
         local renderid = rendering.draw_text {
             text = text,
             surface = source.surface,
             target = {
-                offset = { x = x + scale, y = y },
+                offset = { x = x, y = y },
                 entity = source,
             },
             color = color,
@@ -1684,26 +1672,9 @@ local function process_multisignal(rt)
             orientation = 0,
             alignment = "left",
             vertical_alignment = "top",
-            draw_on_ground = true
+            use_rich_text = true
         }
         table.insert(renderids, renderid)
-
-        local quality = (signal.signal --[[@as any]]).quality
-        if quality then
-            local renderid = rendering.draw_sprite {
-                sprite = "quality." .. quality,
-                surface = source.surface,
-                target = {
-                    offset = { x = x + scale * 0.2, y = y + scale * 0.5 },
-                    entity = source,
-                },
-                color = color,
-                x_scale = scale * 0.3,
-                y_scale = scale * 0.3,
-                forces = { source.force }
-            }
-            table.insert(renderids, renderid)
-        end
 
         index = index + 1
         if col >= colcount then
