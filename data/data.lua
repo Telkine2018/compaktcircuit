@@ -227,14 +227,14 @@ local device = {
     selection_priority = 50,
     picture_on = { layers = { invisible_sprite } },
     picture_off = { layers = { invisible_sprite } },
-    always_on = false,
+    always_on = true,
     max_health = 1000,
     collision_mask = { layers={} },
     flags = {
         "hide-alt-info", "not-upgradable", "not-blueprintable",
         "placeable-off-grid"
     },
-    energy_usage_per_tick = "1kJ",
+    energy_usage_per_tick = "10J",
     energy_source = { type = "electric", usage_priority = "secondary-input" },
     circuit_wire_connection_point = nil,
     selectable_in_game = false
