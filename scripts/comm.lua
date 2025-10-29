@@ -162,14 +162,14 @@ function comm.connect(entity, channel_name, red, green)
     local result
     if red then
         result = entity.get_wire_connector(defines.wire_connector_id.circuit_red, true).
-        connect_to(router.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+        connect_to(router.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, defines.wire_origin.script)
         if not result then
             log("Failed to connect comm")
         end
     end
     if green then
         result = entity.get_wire_connector(defines.wire_connector_id.circuit_green, true).
-        connect_to(router.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+        connect_to(router.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)
         if not result then
             log("Failed to connect comm")
         end

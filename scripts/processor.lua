@@ -267,7 +267,7 @@ local function init_procinfo(procinfo)
                     local target_owner = entities[1]
                     if target_owner then
                         local connector2 = target_owner.get_wire_connector(def.dst_connector, true)
-                        connector1.connect_to(connector2, false)
+                        connector1.connect_to(connector2, false, defines.wire_origin.script)
                     end
                 end
             end
@@ -1085,7 +1085,7 @@ local function on_entity_settings_pasted(e)
                 if not connections then return end
                 for _, connection in pairs(connections) do
                     local connector = pole.get_wire_connector(connection.connector_id, true)
-                    connector.connect_to(connection.dst_connector, false)
+                    connector.connect_to(connection.dst_connector, false, defines.wire_origin.script)
                 end
             end
 
