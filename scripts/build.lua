@@ -710,7 +710,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
                                 local connector1 = src_entity.get_wire_connector(wire[2], true)
                                 local connector2 = dst_entity.get_wire_connector(wire[4], true)
-                                local success = connector1.connect_to(connector2, false, defines.wire_origin.script)
+                                local success = connector1.connect_to(connector2, false)
                                 if not success then
                                     debug(
                                         "Failed to connect: " .. wire[1] ..
