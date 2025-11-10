@@ -28,6 +28,8 @@ local iopoint_name = commons.iopoint_name
 
 IsProcessorRebuilding = false
 
+local w_origin = defines.wire_origin.script
+
 --- @type table<string, string>
 local allowed_name_map = {
     ["constant-combinator"] = prefix .. "-cc",
@@ -710,7 +712,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
                                 local connector1 = src_entity.get_wire_connector(wire[2], true)
                                 local connector2 = dst_entity.get_wire_connector(wire[4], true)
-                                local success = connector1.connect_to(connector2, false)
+                                local success = connector1.connect_to(connector2, false, defines.wire_origin.script)
                                 if not success then
                                     debug(
                                         "Failed to connect: " .. wire[1] ..
@@ -1022,7 +1024,7 @@ function build.disconnect_iopole(procinfo, iopoint_info)
             if connector.wire_type == defines.wire_type.green or connector.wire_type == defines.wire_type.red then
                 for _, connection in pairs(connector.connections) do
                     if connection.target.owner == target_entity then
-                        connector.disconnect_from(connection.target)
+                        connector.disconnect_from(connection.target, connection.origin)
                     end
                 end
             end

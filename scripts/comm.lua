@@ -275,7 +275,7 @@ function comm.disconnect(entity)
             local connections = connector.connections
             for _, connection in pairs(connections) do
                 if connection.target.owner.surface_index == surface_index then
-                    connector.disconnect_from(connection.target)
+                    connector.disconnect_from(connection.target, connection.origin)
                     break
                 end
             end

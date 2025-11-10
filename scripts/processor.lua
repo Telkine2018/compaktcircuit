@@ -813,7 +813,8 @@ local function on_entity_cloned(ev)
                 if src_procinfo.in_pole then
                     local connectors = src_procinfo.in_pole.get_wire_connectors(false)
                     for _, connector in pairs(connectors) do
-                        connector.disconnect_all()
+                        connector.disconnect_all(defines.wire_origin.player)
+                        connector.disconnect_all(defines.wire_origin.script)
                     end
                 end
 
@@ -1068,7 +1069,7 @@ local function on_entity_settings_pasted(e)
                         if t.surface == surface and t.name ~= cc_name and
                             (connector.wire_type == defines.wire_type.red or
                                 connector.wire_type == defines.wire_type.green) then
-                            connector.disconnect_from(connection.target)
+                            connector.disconnect_from(connection.target, connection.origin)
                             table.insert(result, {
                                 connector_id = connector_id,
                                 dst_connector = connection.target
