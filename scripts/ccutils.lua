@@ -48,7 +48,7 @@ function ccutils.check_signal(type, name)
     elseif type == "fluid" then
         return prototypes.fluid[name]
     end
-    return true
+    return false
 end
 
 ---@param sprite string?

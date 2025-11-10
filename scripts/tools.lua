@@ -56,8 +56,8 @@ end
 function tools.is_tracing() return tracing end
 
 ---@param o any
-function tools.strip(o) 
-    local s = string.gsub(serpent.block(o), "%s", "") 
+function tools.strip(o)
+    local s = string.gsub(serpent.block(o), "%s", "")
     return s
 end
 
@@ -1163,7 +1163,7 @@ function tools.id_to_signal(signalid)
     if type(signalid) ~= "string" then return signalid end
     local split = gmatch(signalid, "([^/]+)[/]([^/]+)")
     local type, name = split()
-    local comparator, quality = split() 
+    local comparator, quality = split()
     if name ~= nil then
         return { type = type, name = name, comparator = comparator, quality = quality }
     else
@@ -1178,20 +1178,23 @@ function tools.id_to_filter(signalid)
     if type(signalid) ~= "string" then return signalid end
     local split = gmatch(signalid, "([^/]+)[/]([^/]+)")
     local type, name = split()
-    local comparator, quality = split() 
+    local comparator, quality = split()
+    if type == "virtual" or type == "virtual-signal" then
+        return { type = "virtual", name = name }
+    end
     if not type or type == "item" then
         if not quality or quality == "normal" then
             return name
         end
         return { type = "item", name = name, comparator = comparator or "=", quality = quality }
     end
-    return { type = type, name = name, comparator="=", quality="normal" }
+    return { type = type, name = name, comparator = "=", quality = "normal" }
 end
 
 ---@param name string
 ---@return SignalFilter
 function tools.build_virtual_signal(name)
-    return { type = "virtual", name = name, comparator="=", quality="normal" }
+    return { type = "virtual", name = name, comparator = "=", quality = "normal" }
 end
 
 return tools

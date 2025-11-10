@@ -28,6 +28,8 @@ local iopoint_name = commons.iopoint_name
 
 IsProcessorRebuilding = false
 
+local w_origin = defines.wire_origin.script
+
 --- @type table<string, string>
 local allowed_name_map = {
     ["constant-combinator"] = prefix .. "-cc",
@@ -568,9 +570,9 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                 iopoint.active = false
 
                                 local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, w_origin)
                                 local success2 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, w_origin)
                                 if not success1 or not success2 then
                                     debug("Failed to connect iopoint: " ..
                                         tags.index .. "," ..
@@ -710,7 +712,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
                                 local connector1 = src_entity.get_wire_connector(wire[2], true)
                                 local connector2 = dst_entity.get_wire_connector(wire[4], true)
-                                local success = connector1.connect_to(connector2, false)
+                                local success = connector1.connect_to(connector2, false, defines.wire_origin.script)
                                 if not success then
                                     debug(
                                         "Failed to connect: " .. wire[1] ..
@@ -993,9 +995,9 @@ function build.connect_iopole(procinfo, iopole_info)
     local success1, success2
     if point and target_entity then
         success1 = point.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)
         success2 = point.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, defines.wire_origin.script)
     end
     if not success1 or not success2 then debug("Failed connect to iopole") end
 end
@@ -1022,7 +1024,7 @@ function build.disconnect_iopole(procinfo, iopoint_info)
             if connector.wire_type == defines.wire_type.green or connector.wire_type == defines.wire_type.red then
                 for _, connection in pairs(connector.connections) do
                     if connection.target.owner == target_entity then
-                        connector.disconnect_from(connection.target)
+                        connector.disconnect_from(connection.target, connection.origin)
                     end
                 end
             end
