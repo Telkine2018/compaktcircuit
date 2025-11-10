@@ -570,9 +570,9 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                 iopoint.active = false
 
                                 local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, w_origin)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)
                                 local success2 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, w_origin)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, defines.wire_origin.script)
                                 if not success1 or not success2 then
                                     debug("Failed to connect iopoint: " ..
                                         tags.index .. "," ..
