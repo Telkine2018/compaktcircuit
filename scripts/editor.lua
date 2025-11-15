@@ -1404,7 +1404,7 @@ local forbidden_prototypes = {
 
     ["container"] = true,
     ["logistic-container"] = true,
-    ["assembling-machine"] = true,
+    ["assembling-machine"] = false, -- Recipe Combinator is implemented as an assembling machine - https://mods.factorio.com/mod/lo-recipe-combinator - but it tested to work fine if allow it!
     ["boiler"] = true,
     ["transport-belt"] = true,
     ["underground-belt"] = true,
