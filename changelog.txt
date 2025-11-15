@@ -1,4 +1,41 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.25
+Date: 10. 11. 2025.
+  Changes:
+    - Change wire origin to script (for new or modified processor)(thanks to hgschmie)
+---------------------------------------------------------------------------------------------------
+Version: 2.0.24
+Date: 27. 08. 2025.
+  Bugfixes:
+    - Improve energy consumption of processors
+---------------------------------------------------------------------------------------------------
+Version: 2.0.23
+Date: 16. 08. 2025.
+  Bugfixes:
+    - Fix display of multi-signals over objects
+---------------------------------------------------------------------------------------------------
+Version: 2.0.22
+Date: 11. 08. 2025.
+  Bugfixes:
+    - Fix crash when using signal input component
+---------------------------------------------------------------------------------------------------
+Version: 2.0.21
+Date: 03. 08. 2025.
+  Changes:
+    - Fix quality management in Input component
+    - Add compatibility with DisplayPlatesForked
+    - Fix dependencies
+---------------------------------------------------------------------------------------------------
+Version: 2.0.20
+Date: 21. 06. 2025.
+  Changes:
+    - Fix compatibility with  https://mods.factorio.com/mod/EverythingOnNauvis
+---------------------------------------------------------------------------------------------------
+Version: 2.0.19
+Date: 13. 04. 2025.
+  Changes:
+    - Add import filter from factory graph in wireless combinator
+---------------------------------------------------------------------------------------------------
 Version: 2.0.18
 Date: 28. 03. 2025.
   Changes:

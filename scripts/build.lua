@@ -28,6 +28,8 @@ local iopoint_name = commons.iopoint_name
 
 IsProcessorRebuilding = false
 
+local w_origin = defines.wire_origin.script
+
 --- @type table<string, string>
 local allowed_name_map = {
     ["constant-combinator"] = prefix .. "-cc",
@@ -226,7 +228,7 @@ function build.save_packed_circuits2(procinfo)
                 if sprite_type then
                     bp.set_blueprint_entity_tags(index, {
                         ["display-plate-sprite-type"] = sprite_type,
-                        ["display-plate-sprite-name"] = sprite_name
+                        ["display-plate-sprite-name"] = sprite_name,
                     })
                 end
             end
@@ -568,9 +570,9 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                 iopoint.active = false
 
                                 local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)
                                 local success2 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+                                    .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, defines.wire_origin.script)
                                 if not success1 or not success2 then
                                     debug("Failed to connect iopoint: " ..
                                         tags.index .. "," ..
@@ -710,7 +712,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
                                 local connector1 = src_entity.get_wire_connector(wire[2], true)
                                 local connector2 = dst_entity.get_wire_connector(wire[4], true)
-                                local success = connector1.connect_to(connector2, false)
+                                local success = connector1.connect_to(connector2, false, defines.wire_origin.script)
                                 if not success then
                                     debug(
                                         "Failed to connect: " .. wire[1] ..
@@ -909,13 +911,15 @@ function build.get_reverse_sprite_map(map)
     if map then return map end
 
     map = {}
-    local ids = rendering.get_all_objects()
-    for _, id in pairs(ids) do
-        local target = id.target
-        if target then
-            local entity = target.entity
-            if entity and entity.valid and entity.unit_number then
-                map[entity.unit_number] = id
+    local objects = rendering.get_all_objects("DisplayPlatesForked")
+    for _, o in pairs(objects) do
+        if o.type ~= "rectangle" then
+            local target = o.target
+            if target then
+                local entity = target.entity
+                if entity and entity.valid and entity.unit_number then
+                    map[entity.unit_number] = o
+                end
             end
         end
     end
@@ -991,9 +995,9 @@ function build.connect_iopole(procinfo, iopole_info)
     local success1, success2
     if point and target_entity then
         success1 = point.get_wire_connector(defines.wire_connector_id.circuit_green, true)
-            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)
         success2 = point.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false)
+            .connect_to(target_entity.get_wire_connector(defines.wire_connector_id.circuit_red, true), false, defines.wire_origin.script)
     end
     if not success1 or not success2 then debug("Failed connect to iopole") end
 end
@@ -1020,7 +1024,7 @@ function build.disconnect_iopole(procinfo, iopoint_info)
             if connector.wire_type == defines.wire_type.green or connector.wire_type == defines.wire_type.red then
                 for _, connection in pairs(connector.connections) do
                     if connection.target.owner == target_entity then
-                        connector.disconnect_from(connection.target)
+                        connector.disconnect_from(connection.target, connection.origin)
                     end
                 end
             end

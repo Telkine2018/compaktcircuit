@@ -1173,7 +1173,7 @@ create_field_table = {
                     elem_type = "signal"
                 }
                 if index <= #values then
-                    local signal_value = tools.sprite_to_signal(values[index])
+                    local signal_value = tools.id_to_signal(values[index]) --[[@as SignalID]]
                     if signal_value and check_signal_o(signal_value) then
                         fsignal.elem_value = signal_value
                     end
@@ -1215,7 +1215,7 @@ create_field_table = {
                 fcount.style.width = field_width
                 if index <= #values then
                     local signal_value =
-                        tools.sprite_to_signal(values[index].signal) --[[@as SignalID]]
+                        tools.id_to_signal(values[index].signal) --[[@as SignalID]]
                     if signal_value and check_signal_o(signal_value) then
                         fsignal.elem_value = signal_value
                         fcount.text = number_to_text(values[index].count)
@@ -1355,7 +1355,7 @@ load_property_table = {
             for _, child in pairs(context.field.children) do
                 local signal = child.elem_value --[[@as SignalID?]]
                 if signal then
-                    table.insert(signals, tools.signal_to_sprite(signal))
+                    table.insert(signals, tools.signal_to_id(signal))
                 end
             end
             return signals
@@ -1375,7 +1375,7 @@ load_property_table = {
                 local count = tonumber(fcount.text)
                 if signal and signal.name and count then
                     table.insert(signals, {
-                        signal = tools.signal_to_sprite(signal),
+                        signal = tools.signal_to_id(signal),
                         count = count
                     })
                 end
@@ -1483,12 +1483,16 @@ setter_table = {
             local filters = {}
             local index = 1
             for _, s in pairs(signals) do
-                local signal = tools.sprite_to_signal(s) --[[@as SignalID]]
-                if not ccutils.special_signals[signal.name] and
-                    check_signal_o(signal) then
+                local signal = tools.id_to_filter(s) --[[@as SignalID]]
+                if not ccutils.special_signals[signal.name] and check_signal_o(signal) then
+                    if type(signal) == "string" then
+                        signal = { name = signal }
+                    end
                     local filter = signal --[[@as SignalFilter]]
-                    filter.quality = "normal"
-                    filter.comparator = "="
+                    if not filter.quality then
+                        filter.quality = "normal"
+                        filter.comparator = "="
+                    end
                     table.insert(filters, { value = filter, min = 1 })
                     index = index + 1
                 end
@@ -1504,12 +1508,17 @@ setter_table = {
             local filters = {}
             local index = 1
             for _, s in pairs(signals) do
-                local signal = tools.sprite_to_signal(s.signal) --[[@as SignalID]]
+                local signal = tools.id_to_filter(s.signal) --[[@as SignalID]]
                 if not ccutils.special_signals[signal.name] and
                     check_signal_o(signal) then
+                    if type(signal) == "string" then
+                        signal = { name = signal }
+                    end
                     local filter = signal --[[@as SignalFilter]]
-                    filter.quality = "normal"
-                    filter.comparator = "="
+                    if not filter.quality then
+                        filter.quality = "normal"
+                        filter.comparator = "="
+                    end
                     table.insert(filters, { value = filter, min = s.count })
                     index = index + 1
                 end

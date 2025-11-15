@@ -1,6 +1,6 @@
 {
   "name": "compaktcircuit",
-  "version": "2.0.18",
+  "version": "2.0.25",
   "title": "Compakt circuits",
   "author": "Telkine2018",
   "contact": "",
@@ -9,9 +9,8 @@
   "factorio_version": "2.0",
   "dependencies": [
 		"base >= 2.0.0" ,
-    "? IndustrialDisplayPlates",
-    "? Squeak Through",
+    "? DisplayPlatesForked",
     "flib >= 0.11.2",
-    "? PickerDollies"
+    "? even-pickier-dollies"
 	]
 }
