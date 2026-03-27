@@ -53,7 +53,8 @@ display_item = tools.table_merge {
         enabled = true,
         place_result = prefix .. "-display",
         subgroup = 'circuit-network',
-        order = 'a[miniaturization]-d[display]'
+        order = 'a[miniaturization]-d[display]',
+        flags = { "hide-from-bonus-gui", "only-in-cursor", }
     }
 }
 
@@ -150,7 +151,8 @@ input_item = tools.table_merge {
         enabled = true,
         place_result = prefix .. "-input",
         subgroup = 'circuit-network',
-        order = 'a[miniaturization]-[input]'
+        order = 'a[miniaturization]-[input]',
+        flags = { "hide-from-bonus-gui", "only-in-cursor", }
     }
 }
 

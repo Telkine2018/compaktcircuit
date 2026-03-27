@@ -121,6 +121,7 @@ data:extend {
 }, {
     type = "item-with-tags",
     name = commons.processor_with_tags,
+    localised_name = { commons.processor_with_tags },
     hidden_in_factoriopedia = true,
     icon_size = 64,
     icon = png('item/processor2'),
@@ -139,7 +140,7 @@ data:extend {
     order = '[logistic]-b[elt]',
     place_result = commons.iopoint_name,
     stack_size = 50,
-    flags = { "hide-from-bonus-gui" }
+    flags = { "hide-from-bonus-gui", "only-in-cursor", }
 }, -- Recipes
     recipe1,
     recipe2,
@@ -378,7 +379,7 @@ local internal_iopoint_item = {
     order = 'a[miniaturization]-b[internal-iopoint]',
     place_result = prefix .. '-internal_iopoint',
     stack_size = 1,
-    flags = { "hide-from-bonus-gui" }
+    flags = { "hide-from-bonus-gui", "only-in-cursor", }
 }
 
 ---------------------------
@@ -458,8 +459,7 @@ local internal_connector_item = {
     order = 'a[miniaturization]-b[internal-iopoint]',
     place_result = commons.internal_connector_name,
     stack_size = 1,
-    flags = { "hide-from-bonus-gui" }
-
+    flags = { "hide-from-bonus-gui", "only-in-cursor", }
 }
 
 local internal_connector = {
