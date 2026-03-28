@@ -18,6 +18,7 @@ commons.internal_connector_name = prefix .. "-internal_connector"
 commons.device_name = prefix .. "-device"
 commons.display_name = prefix .. "-display"
 commons.packed_display_name = prefix .. "-packed-display"
+commons.packed_vanilla_display_panel_name = prefix .. "-packed-vanilla-display-panel"
 commons.input_name = prefix .. "-input"
 commons.packed_input_name = prefix .. "-packed-input"
 
@@ -31,6 +32,7 @@ commons.packed_entities = {
 	prefix .. "-cc2",
 	prefix .. "-pole",
 	prefix .. "-sc",
+	commons.packed_vanilla_display_panel_name,
 	commons.packed_display_name,
 	commons.packed_input_name
 }

@@ -393,6 +393,37 @@ function combinators.create_internals()
 
 	--------------------------------------------------------
 
+	local packed_vanilla_display_panel
+	local vanilla_display_panel = data.raw["display-panel"] and data.raw["display-panel"]["display-panel"]
+	if vanilla_display_panel then
+		packed_vanilla_display_panel = table.deepcopy(vanilla_display_panel)
+		packed_vanilla_display_panel.name = commons.packed_vanilla_display_panel_name
+		packed_vanilla_display_panel.hidden_in_factoriopedia = true
+		packed_vanilla_display_panel.sprites = {
+			north = invisible_sprite,
+			east = invisible_sprite,
+			south = invisible_sprite,
+			west = invisible_sprite
+		}
+		packed_vanilla_display_panel.collision_box = { { -boxsize, -boxsize }, { boxsize, boxsize } }
+		packed_vanilla_display_panel.collision_mask = { layers = {} }
+		packed_vanilla_display_panel.selection_box = { { -0.01, -0.01 }, { 0.01, 0.01 } }
+		packed_vanilla_display_panel.minable = nil
+		packed_vanilla_display_panel.selectable_in_game = debug_mode
+		packed_vanilla_display_panel.draw_copper_wires = debug_mode
+		packed_vanilla_display_panel.draw_circuit_wires = debug_mode
+		insert_flags(packed_vanilla_display_panel.flags)
+		table_add(packed_vanilla_display_panel.flags, "placeable-off-grid")
+		for i = #packed_vanilla_display_panel.flags, 1, -1 do
+			local flag = packed_vanilla_display_panel.flags[i]
+			if flag == "not-on-map" or flag == "hide-alt-info" then
+				table.remove(packed_vanilla_display_panel.flags, i)
+			end
+		end
+	end
+
+	--------------------------------------------------------
+
 	local arithmetic_combinator = table.deepcopy(data.raw["arithmetic-combinator"]["arithmetic-combinator"])
 	arithmetic_combinator       = merge_table(arithmetic_combinator, {
 
@@ -530,6 +561,10 @@ function combinators.create_internals()
 		epole,
 		accu
 	}
+
+	if packed_vanilla_display_panel then
+		data:extend { packed_vanilla_display_panel }
+	end
 
 	local lamp_table = {}
 	local scale = 1.0

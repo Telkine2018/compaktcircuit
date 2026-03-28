@@ -36,7 +36,7 @@ local allowed_name_map = {
     ["decider-combinator"] = prefix .. "-dc",
     ["selector-combinator"] = prefix .. "-sc",
     ["arithmetic-combinator"] = prefix .. "-ac",
-    ["display-panel"] = prefix .. "-cc",
+    ["display-panel"] = commons.packed_vanilla_display_panel_name,
     ["big-electric-pole"] = prefix .. "-cc",
     ["small-electric-pole"] = prefix .. "-cc",
     ["medium-electric-pole"] = prefix .. "-cc",
@@ -616,6 +616,27 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                     cb.logistic_condition = condition
                                 end
                             end
+                        end
+                    elseif name == "display-panel" then
+                        local bp_cb = bpentity.control_behavior --[[@as DisplayPanelBlueprintControlBehavior?]]
+                        if bp_cb and bp_cb.parameters then
+                            local cb = entity.get_or_create_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
+                            if cb then
+                                cb.messages = bp_cb.parameters
+                            end
+                        end
+                        local bp_display = bpentity --[[@as any]]
+                        if bp_display.text ~= nil then
+                            entity.display_panel_text = bp_display.text
+                        end
+                        if bp_display.icon ~= nil then
+                            entity.display_panel_icon = bp_display.icon
+                        end
+                        if bp_display.always_show ~= nil then
+                            entity.display_panel_always_show = bp_display.always_show
+                        end
+                        if bp_display.show_in_chart ~= nil then
+                            entity.display_panel_show_in_chart = bp_display.show_in_chart
                         end
                     elseif name == iopoint_name then
                         if tags then
