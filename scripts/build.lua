@@ -871,6 +871,13 @@ end
 
 ---@param display_panel LuaEntity
 ---@return boolean
+local function has_display_panel_control_behavior(display_panel)
+    return display_panel.get_circuit_network(defines.wire_connector_id.circuit_red) ~= nil
+        or display_panel.get_circuit_network(defines.wire_connector_id.circuit_green) ~= nil
+end
+
+---@param display_panel LuaEntity
+---@return boolean
 local function display_panel_wants_unpacked_proxy(display_panel)
     if display_panel.to_be_deconstructed() then return false end
 
@@ -898,20 +905,23 @@ local function get_unpacked_proxy_key(displays)
     for _, display_panel in ipairs(displays) do
         if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
             local stripped_text = parse_display_panel_ext_text(display_panel.display_panel_text) or ""
-            local icon = display_panel.display_panel_icon
+            local has_control_behavior = has_display_panel_control_behavior(display_panel)
+            local text = has_control_behavior and get_display_panel_proxy_text(display_panel) or stripped_text
+            local icon = has_control_behavior and unpacked_proxy_icon or display_panel.display_panel_icon
             local icon_repr = ""
             if icon and icon.type and icon.name then
                 local quality = icon.quality or ""
                 icon_repr = string.format("%s:%s:%s", icon.type, icon.name, quality)
             end
             table.insert(entries,
-                string.format("%.3f,%.3f,%d,%s,%s,%s,%s",
+                string.format("%.3f,%.3f,%d,%s,%s,%s,%s,%s",
                     display_panel.position.x,
                     display_panel.position.y,
                     display_panel.direction,
                     display_panel.display_panel_always_show and "1" or "0",
                     display_panel.display_panel_show_in_chart and "1" or "0",
-                    stripped_text,
+                    has_control_behavior and "1" or "0",
+                    text,
                     icon_repr))
         end
     end
@@ -958,6 +968,8 @@ function build.create_unpacked_proxies(procinfo)
     for _, display_panel in ipairs(displays) do
         if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
             visible_count = visible_count + 1
+            local stripped_text = parse_display_panel_ext_text(display_panel.display_panel_text) or ""
+            local has_control_behavior = has_display_panel_control_behavior(display_panel)
             local proxy = processor.surface.create_entity {
                 name = commons.packed_vanilla_display_panel_name,
                 position = {
@@ -971,8 +983,13 @@ function build.create_unpacked_proxies(procinfo)
                 created_count = created_count + 1
                 proxy.operable = false
                 proxy.destructible = false
-                proxy.display_panel_text = get_display_panel_proxy_text(display_panel)
-                proxy.display_panel_icon = unpacked_proxy_icon
+                if has_control_behavior then
+                    proxy.display_panel_text = get_display_panel_proxy_text(display_panel)
+                    proxy.display_panel_icon = unpacked_proxy_icon
+                else
+                    proxy.display_panel_text = stripped_text
+                    proxy.display_panel_icon = display_panel.display_panel_icon
+                end
                 proxy.display_panel_always_show = display_panel.display_panel_always_show
                 proxy.display_panel_show_in_chart = display_panel.display_panel_show_in_chart
             end
