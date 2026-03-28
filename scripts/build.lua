@@ -823,24 +823,24 @@ end
 
 ---@param display_panel LuaEntity
 ---@return boolean
-local function has_unpacked_proxy_icon(display_panel)
+local function has_display_panel_icon(display_panel)
     local icon = display_panel.display_panel_icon
     return icon ~= nil and icon.type ~= nil and icon.name ~= nil
 end
 
 ---@param display_panel LuaEntity
 ---@return boolean
-local function is_visible_unpacked_proxy(display_panel)
+local function display_panel_wants_unpacked_proxy(display_panel)
     if display_panel.to_be_deconstructed() then return false end
 
     return display_panel.display_panel_show_in_chart or
         display_panel.display_panel_always_show or
-        has_unpacked_proxy_icon(display_panel)
+        has_display_panel_icon(display_panel)
 end
 
 ---@param display_panel LuaEntity
 ---@return string
-local function get_unpacked_proxy_text(display_panel)
+local function get_display_panel_proxy_text(display_panel)
     if not display_panel.display_panel_always_show then return "" end
 
     local text = display_panel.display_panel_text
@@ -855,7 +855,7 @@ end
 local function get_unpacked_proxy_key(displays)
     local entries = {}
     for _, display_panel in ipairs(displays) do
-        if display_panel.valid and is_visible_unpacked_proxy(display_panel) then
+        if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
             local text = display_panel.display_panel_always_show and
                 (display_panel.display_panel_text or "") or ""
             local icon = display_panel.display_panel_icon
@@ -916,7 +916,7 @@ function build.create_unpacked_proxies(procinfo)
     local created_count = 0
 
     for _, display_panel in ipairs(displays) do
-        if display_panel.valid and is_visible_unpacked_proxy(display_panel) then
+        if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
             visible_count = visible_count + 1
             local proxy = processor.surface.create_entity {
                 name = commons.packed_vanilla_display_panel_name,
@@ -931,7 +931,7 @@ function build.create_unpacked_proxies(procinfo)
                 created_count = created_count + 1
                 proxy.operable = false
                 proxy.destructible = false
-                proxy.display_panel_text = get_unpacked_proxy_text(display_panel)
+                proxy.display_panel_text = get_display_panel_proxy_text(display_panel)
                 proxy.display_panel_icon = unpacked_proxy_icon
                 proxy.display_panel_always_show = display_panel.display_panel_always_show
                 proxy.display_panel_show_in_chart = display_panel.display_panel_show_in_chart

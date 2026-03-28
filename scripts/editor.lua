@@ -1161,6 +1161,12 @@ local ghost_classes = {
 
 }
 
+local function refresh_unpacked_proxies(procinfo)
+    if procinfo and not procinfo.is_packed then
+        build.create_unpacked_proxies(procinfo)
+    end
+end
+
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
@@ -1189,9 +1195,7 @@ local function on_build(entity, e)
             display.register(entity, tags --[[@as Display]])
         end
     elseif name == "display-panel" then
-        if not procinfo.is_packed then
-            build.create_unpacked_proxies(procinfo)
-        end
+        refresh_unpacked_proxies(procinfo)
     elseif name == input_name then
         if not IsProcessorRebuilding and tags then
             tags.value_id = tools.get_id()
@@ -1307,8 +1311,8 @@ local function on_marked_for_deconstruction(e)
     local name = entity.name
     local need_mining = false
 
-    if name == "display-panel" and procinfo and not procinfo.is_packed then
-        build.create_unpacked_proxies(procinfo)
+    if name == "display-panel" then
+        refresh_unpacked_proxies(procinfo)
     end
 
     if e.player_index then
@@ -1345,9 +1349,7 @@ local function on_cancelled_deconstruction(e)
     if entity.name ~= "display-panel" then return end
 
     local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
-    if procinfo and not procinfo.is_packed then
-        build.create_unpacked_proxies(procinfo)
-    end
+    refresh_unpacked_proxies(procinfo)
 end
 
 tools.on_event(defines.events.on_built_entity, on_player_built)
@@ -1391,9 +1393,7 @@ local function on_mined(ev)
     local entity = ev.entity
     local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
     if entity.name == "display-panel" then
-        if procinfo and not procinfo.is_packed then
-            build.create_unpacked_proxies(procinfo)
-        end
+        refresh_unpacked_proxies(procinfo)
     elseif entity.name == internal_iopoint_name then
         if ev.player_index then
             editor.save_undo_tags(ev.player_index, entity.position, build.get_internal_iopoint_tags(entity))
