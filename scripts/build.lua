@@ -947,8 +947,6 @@ function build.create_unpacked_proxies(procinfo)
             end
         end
     end
-
-    if created_count < visible_count then return end
 end
 
 ---@param procinfo ProcInfo
