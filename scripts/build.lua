@@ -36,6 +36,7 @@ local allowed_name_map = {
     ["decider-combinator"] = prefix .. "-dc",
     ["selector-combinator"] = prefix .. "-sc",
     ["arithmetic-combinator"] = prefix .. "-ac",
+    ["display-panel"] = prefix .. "-cc",
     ["big-electric-pole"] = prefix .. "-cc",
     ["small-electric-pole"] = prefix .. "-cc",
     ["medium-electric-pole"] = prefix .. "-cc",

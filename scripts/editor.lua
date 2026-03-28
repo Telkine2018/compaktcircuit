@@ -1338,6 +1338,7 @@ local filter_names = { {} }
 ---@type string[]
 local surface_name_filter = {
     "constant-combinator", "decider-combinator", "arithmetic-combinator", "selector-combinator",
+    "display-panel",
     "big-electric-pole", "small-electric-pole", "medium-electric-pole",
     "substation", internal_iopoint_name, "small-lamp"
 }
