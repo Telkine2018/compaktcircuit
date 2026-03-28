@@ -27,7 +27,7 @@ local iopoint_text_color = commons.get_color(
 local iopoint_name = commons.iopoint_name
 local display_panel_ext_tag_pattern = "^%s*%[[Ee][Xx][Tt]%]%s*"
 
---- Only want to apply the full display-panel proxy if the player *wants* that panel reproduced; check the first three lines for `[ext]`
+--- Only want to apply the full display-panel proxy if the player *wants* that panel reproduced; check the first three lines for `[ext]`. Intentionally treating as plain text, who tf is gonna insert a LocalizedString into a display-panel, just sayin
 ---@param text LocalisedString
 ---@return string|nil
 local function parse_display_panel_ext_text(text)
@@ -847,15 +847,6 @@ local function mp_safe_sort(entities)
     return sorted
 end
 
----@return table<integer, string>
-local function get_unpacked_proxy_keys()
-    local map = storage.unpacked_proxy_keys
-    if map then return map end
-    map = {}
-    storage.unpacked_proxy_keys = map
-    return map
-end
-
 ---@param display_panel LuaEntity
 ---@return boolean
 local function is_display_panel_opted_in(display_panel)
@@ -898,47 +889,12 @@ local function get_display_panel_proxy_text(display_panel)
     return "<unpacked>"
 end
 
----@param displays LuaEntity[]
----@return string
-local function get_unpacked_proxy_key(displays)
-    local entries = {}
-    for _, display_panel in ipairs(displays) do
-        if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
-            local stripped_text = parse_display_panel_ext_text(display_panel.display_panel_text) or ""
-            local has_control_behavior = has_display_panel_control_behavior(display_panel)
-            local text = has_control_behavior and get_display_panel_proxy_text(display_panel) or stripped_text
-            local icon = has_control_behavior and unpacked_proxy_icon or display_panel.display_panel_icon
-            local icon_repr = ""
-            if icon and icon.type and icon.name then
-                local quality = icon.quality or ""
-                icon_repr = string.format("%s:%s:%s", icon.type, icon.name, quality)
-            end
-            table.insert(entries,
-                string.format("%.3f,%.3f,%d,%s,%s,%s,%s,%s",
-                    display_panel.position.x,
-                    display_panel.position.y,
-                    display_panel.direction,
-                    display_panel.display_panel_always_show and "1" or "0",
-                    display_panel.display_panel_show_in_chart and "1" or "0",
-                    has_control_behavior and "1" or "0",
-                    text,
-                    icon_repr))
-        end
-    end
-    table.sort(entries)
-    return table.concat(entries, "|")
-end
-
 ---@param procinfo ProcInfo
 function build.destroy_unpacked_proxies(procinfo)
     local processor = procinfo and procinfo.processor
     if not processor or not processor.valid then return end
 
     tools.destroy_entities(processor, unpacked_proxy_entity_names)
-    local map = storage.unpacked_proxy_keys
-    if map then
-        map[processor.unit_number] = nil
-    end
 end
 
 ---@param procinfo ProcInfo
@@ -954,9 +910,6 @@ function build.create_unpacked_proxies(procinfo)
     end
 
     local displays = mp_safe_sort(internal_surface.find_entities_filtered { name = "display-panel" })
-    local key = get_unpacked_proxy_key(displays)
-    local proxy_keys = get_unpacked_proxy_keys()
-    if proxy_keys[processor.unit_number] == key then return end
 
     build.destroy_unpacked_proxies(procinfo)
 
@@ -976,7 +929,6 @@ function build.create_unpacked_proxies(procinfo)
                     x = base.x + display_panel.position.x / 32 * scale,
                     y = base.y + display_panel.position.y / 32 * scale
                 },
-                direction = display_panel.direction,
                 force = processor.force
             }
             if proxy then
@@ -997,18 +949,6 @@ function build.create_unpacked_proxies(procinfo)
     end
 
     if created_count < visible_count then return end
-
-    proxy_keys[processor.unit_number] = key
-end
-
----@param procinfo ProcInfo
-function build.destroy_unpacked_display_proxies(procinfo)
-    build.destroy_unpacked_proxies(procinfo)
-end
-
----@param procinfo ProcInfo
-function build.create_unpacked_display_proxies(procinfo)
-    build.create_unpacked_proxies(procinfo)
 end
 
 ---@param procinfo ProcInfo
