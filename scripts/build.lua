@@ -789,6 +789,171 @@ function build.destroy_packed_circuit(procinfo)
     tools.destroy_entities(processor, commons.packed_entities)
 end
 
+local unpacked_proxy_entity_names = { commons.packed_vanilla_display_panel_name }
+
+local unpacked_proxy_icon = { type = "entity", name = "entity-ghost" }
+
+--- Deterministically sort by stable unit-number for multiplayer safety
+---@param entities LuaEntity[]
+---@return LuaEntity[]
+local function mp_safe_sort(entities)
+    local sorted = {}
+    for _, entity in ipairs(entities) do
+        if entity.valid and entity.unit_number then
+            table.insert(sorted, entity)
+        end
+    end
+
+    table.sort(sorted, function(a, b)
+        ---@cast a LuaEntity
+        ---@cast b LuaEntity
+        return a.unit_number < b.unit_number
+    end)
+    return sorted
+end
+
+---@return table<integer, string>
+local function get_unpacked_proxy_keys()
+    local map = storage.unpacked_proxy_keys
+    if map then return map end
+    map = {}
+    storage.unpacked_proxy_keys = map
+    return map
+end
+
+---@param display_panel LuaEntity
+---@return boolean
+local function has_unpacked_proxy_icon(display_panel)
+    local icon = display_panel.display_panel_icon
+    return icon ~= nil and icon.type ~= nil and icon.name ~= nil
+end
+
+---@param display_panel LuaEntity
+---@return boolean
+local function is_visible_unpacked_proxy(display_panel)
+    if display_panel.to_be_deconstructed() then return false end
+
+    return display_panel.display_panel_show_in_chart or
+        display_panel.display_panel_always_show or
+        has_unpacked_proxy_icon(display_panel)
+end
+
+---@param display_panel LuaEntity
+---@return string
+local function get_unpacked_proxy_text(display_panel)
+    if not display_panel.display_panel_always_show then return "" end
+
+    local text = display_panel.display_panel_text
+    if text and text ~= "" then
+        return "unpacked: " .. text
+    end
+    return "unpacked"
+end
+
+---@param displays LuaEntity[]
+---@return string
+local function get_unpacked_proxy_key(displays)
+    local entries = {}
+    for _, display_panel in ipairs(displays) do
+        if display_panel.valid and is_visible_unpacked_proxy(display_panel) then
+            local text = display_panel.display_panel_always_show and
+                (display_panel.display_panel_text or "") or ""
+            local icon = display_panel.display_panel_icon
+            local icon_repr = ""
+            if icon and icon.type and icon.name then
+                local quality = icon.quality or ""
+                icon_repr = string.format("%s:%s:%s", icon.type, icon.name, quality)
+            end
+            table.insert(entries,
+                string.format("%.3f,%.3f,%d,%s,%s,%s,%s",
+                    display_panel.position.x,
+                    display_panel.position.y,
+                    display_panel.direction,
+                    display_panel.display_panel_always_show and "1" or "0",
+                    display_panel.display_panel_show_in_chart and "1" or "0",
+                    text,
+                    icon_repr))
+        end
+    end
+    table.sort(entries)
+    return table.concat(entries, "|")
+end
+
+---@param procinfo ProcInfo
+function build.destroy_unpacked_proxies(procinfo)
+    local processor = procinfo and procinfo.processor
+    if not processor or not processor.valid then return end
+
+    tools.destroy_entities(processor, unpacked_proxy_entity_names)
+    local map = storage.unpacked_proxy_keys
+    if map then
+        map[processor.unit_number] = nil
+    end
+end
+
+---@param procinfo ProcInfo
+function build.create_unpacked_proxies(procinfo)
+    local processor = procinfo and procinfo.processor
+    local internal_surface = procinfo and procinfo.surface
+    if not processor or not processor.valid then return end
+    if not internal_surface or not internal_surface.valid then return end
+
+    if procinfo.is_packed then
+        build.destroy_unpacked_proxies(procinfo)
+        return
+    end
+
+    local displays = mp_safe_sort(internal_surface.find_entities_filtered { name = "display-panel" })
+    local key = get_unpacked_proxy_key(displays)
+    local proxy_keys = get_unpacked_proxy_keys()
+    if proxy_keys[processor.unit_number] == key then return end
+
+    build.destroy_unpacked_proxies(procinfo)
+
+    local scale = processor.prototype.tile_width / 2.4
+    local base = processor.position
+    local visible_count = 0
+    local created_count = 0
+
+    for _, display_panel in ipairs(displays) do
+        if display_panel.valid and is_visible_unpacked_proxy(display_panel) then
+            visible_count = visible_count + 1
+            local proxy = processor.surface.create_entity {
+                name = commons.packed_vanilla_display_panel_name,
+                position = {
+                    x = base.x + display_panel.position.x / 32 * scale,
+                    y = base.y + display_panel.position.y / 32 * scale
+                },
+                direction = display_panel.direction,
+                force = processor.force
+            }
+            if proxy then
+                created_count = created_count + 1
+                proxy.operable = false
+                proxy.destructible = false
+                proxy.display_panel_text = get_unpacked_proxy_text(display_panel)
+                proxy.display_panel_icon = unpacked_proxy_icon
+                proxy.display_panel_always_show = display_panel.display_panel_always_show
+                proxy.display_panel_show_in_chart = display_panel.display_panel_show_in_chart
+            end
+        end
+    end
+
+    if created_count < visible_count then return end
+
+    proxy_keys[processor.unit_number] = key
+end
+
+---@param procinfo ProcInfo
+function build.destroy_unpacked_display_proxies(procinfo)
+    build.destroy_unpacked_proxies(procinfo)
+end
+
+---@param procinfo ProcInfo
+function build.create_unpacked_display_proxies(procinfo)
+    build.create_unpacked_proxies(procinfo)
+end
+
 ---@param procinfo ProcInfo
 ---@return table<Entity.unit_number, IOPointInfo>
 function build.get_iopoint_map(procinfo)
