@@ -25,6 +25,33 @@ local iopoint_text_color = commons.get_color(
     settings.startup["compaktcircuit-iopoint_text_color"]
     .value, { 0, 0, 1, 1 })
 local iopoint_name = commons.iopoint_name
+local display_panel_ext_tag_pattern = "^%s*%[[Ee][Xx][Tt]%]%s*"
+
+--- Only want to apply the full display-panel proxy if the player *wants* that panel reproduced; check the first three lines for `[ext]`
+---@param text LocalisedString
+---@return string|nil
+local function parse_display_panel_ext_text(text)
+    if type(text) ~= "string" or text == "" then return nil end
+
+    local line_start = 1
+    for _ = 1, 3 do
+        local newline = string.find(text, "\n", line_start, true)
+        local line_end = newline and (newline - 1) or #text
+        local line = text:sub(line_start, line_end)
+
+        if line:find(display_panel_ext_tag_pattern) then
+            local stripped_line = line:gsub(display_panel_ext_tag_pattern, "", 1)
+            local before = text:sub(1, line_start - 1)
+            local after = text:sub(line_end + 1)
+            return before .. stripped_line .. after
+        end
+
+        if not newline then break end
+        line_start = newline + 1
+    end
+
+    return nil
+end
 
 IsProcessorRebuilding = false
 
@@ -475,8 +502,16 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
             local packed_name = allowed_name_map[name]
 
             if packed_name then
+                local packed_display_text = nil
+                if name == "display-panel" then
+                    packed_display_text = parse_display_panel_ext_text(bpentity.text)
+                    if not packed_display_text then
+                        packed_name = nil
+                    end
+                end
+
                 local tags = bpentity.tags
-                if packed_name ~= special then
+                if packed_name and packed_name ~= special then
                     local pos = position
                     if not nolamp and tags and tags.ext_name then
                         packed_name = tags.ext_name --[[@as string ]]
@@ -626,8 +661,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             end
                         end
                         local bp_display = bpentity --[[@as any]]
-                        if bp_display.text ~= nil then
-                            entity.display_panel_text = bp_display.text
+                        if packed_display_text ~= nil then
+                            entity.display_panel_text = packed_display_text
                         end
                         if bp_display.icon ~= nil then
                             entity.display_panel_icon = bp_display.icon
@@ -823,6 +858,12 @@ end
 
 ---@param display_panel LuaEntity
 ---@return boolean
+local function is_display_panel_opted_in(display_panel)
+    return parse_display_panel_ext_text(display_panel.display_panel_text) ~= nil
+end
+
+---@param display_panel LuaEntity
+---@return boolean
 local function has_display_panel_icon(display_panel)
     local icon = display_panel.display_panel_icon
     return icon ~= nil and icon.type ~= nil and icon.name ~= nil
@@ -833,6 +874,8 @@ end
 local function display_panel_wants_unpacked_proxy(display_panel)
     if display_panel.to_be_deconstructed() then return false end
 
+    if not is_display_panel_opted_in(display_panel) then return false end
+
     return display_panel.display_panel_show_in_chart or
         display_panel.display_panel_always_show or
         has_display_panel_icon(display_panel)
@@ -841,13 +884,11 @@ end
 ---@param display_panel LuaEntity
 ---@return string
 local function get_display_panel_proxy_text(display_panel)
-    if not display_panel.display_panel_always_show then return "" end
-
-    local text = display_panel.display_panel_text
+    local text = parse_display_panel_ext_text(display_panel.display_panel_text)
     if text and text ~= "" then
-        return "unpacked: " .. text
+        return "<unpacked> " .. text
     end
-    return "unpacked"
+    return "<unpacked>"
 end
 
 ---@param displays LuaEntity[]
@@ -856,8 +897,7 @@ local function get_unpacked_proxy_key(displays)
     local entries = {}
     for _, display_panel in ipairs(displays) do
         if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
-            local text = display_panel.display_panel_always_show and
-                (display_panel.display_panel_text or "") or ""
+            local stripped_text = parse_display_panel_ext_text(display_panel.display_panel_text) or ""
             local icon = display_panel.display_panel_icon
             local icon_repr = ""
             if icon and icon.type and icon.name then
@@ -871,7 +911,7 @@ local function get_unpacked_proxy_key(displays)
                     display_panel.direction,
                     display_panel.display_panel_always_show and "1" or "0",
                     display_panel.display_panel_show_in_chart and "1" or "0",
-                    text,
+                    stripped_text,
                     icon_repr))
         end
     end
