@@ -275,7 +275,11 @@ function editor.edit_selected(player, processor)
     procinfo.physical_position = player.physical_position
 
     local x, y = editor.find_room(surface, 0, 0)
-    player.teleport({ x, y }, surface)
+    player.set_controller {
+        type = defines.controllers.remote,
+        position = { x, y },
+        surface = surface
+    }
 end
 
 ---@param procinfo ProcInfo
