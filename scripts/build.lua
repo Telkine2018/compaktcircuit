@@ -25,6 +25,28 @@ local iopoint_text_color = commons.get_color(
     settings.startup["compaktcircuit-iopoint_text_color"]
     .value, { 0, 0, 1, 1 })
 local iopoint_name = commons.iopoint_name
+local display_panel_ext_tag_pattern = "%[[Ee][Xx][Tt]%]"
+
+---Only want to apply the full display-panel proxy if the player *wants* that panel reproduced; check the user-entered text for `[ext]`. (Intentionally treating as plain text, who tf is gonna insert a LocalizedString into a display-panel, just sayin)
+---@param text LocalisedString
+---@param messages table|nil
+---@return boolean
+local function has_display_panel_opt_in(text, messages)
+    if type(text) == "string" and text:find(display_panel_ext_tag_pattern) ~= nil then
+        return true
+    end
+
+    if type(messages) == "table" then
+        for _, message in pairs(messages) do
+            if type(message) == "table" and type(message.text) == "string" and
+                message.text:find(display_panel_ext_tag_pattern) ~= nil then
+                return true
+            end
+        end
+    end
+
+    return false
+end
 
 IsProcessorRebuilding = false
 
@@ -36,6 +58,7 @@ local allowed_name_map = {
     ["decider-combinator"] = prefix .. "-dc",
     ["selector-combinator"] = prefix .. "-sc",
     ["arithmetic-combinator"] = prefix .. "-ac",
+    ["display-panel"] = commons.packed_vanilla_display_panel_name,
     ["big-electric-pole"] = prefix .. "-cc",
     ["small-electric-pole"] = prefix .. "-cc",
     ["medium-electric-pole"] = prefix .. "-cc",
@@ -474,8 +497,20 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
             local packed_name = allowed_name_map[name]
 
             if packed_name then
+                local sync_display_panel = false
+                local packed_display_messages = nil
+                if name == "display-panel" then
+                    local bp_cb = bpentity.control_behavior --[[@as DisplayPanelBlueprintControlBehavior?]]
+                    packed_display_messages = bp_cb and bp_cb.parameters
+                    sync_display_panel = has_display_panel_opt_in(bpentity.text, packed_display_messages)
+
+                    if not sync_display_panel then
+                        packed_name = prefix .. "-cc"
+                    end
+                end
+
                 local tags = bpentity.tags
-                if packed_name ~= special then
+                if packed_name and packed_name ~= special then
                     local pos = position
                     if not nolamp and tags and tags.ext_name then
                         packed_name = tags.ext_name --[[@as string ]]
@@ -615,6 +650,26 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                     cb.logistic_condition = condition
                                 end
                             end
+                        end
+                    elseif name == "display-panel" and sync_display_panel then
+                        if packed_display_messages then
+                            local cb = entity.get_or_create_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
+                            if cb then
+                                cb.messages = packed_display_messages
+                            end
+                        end
+                        local bp_display = bpentity --[[@as any]]
+                        if bpentity.text ~= nil then
+                            entity.display_panel_text = bpentity.text
+                        end
+                        if bp_display.icon ~= nil then
+                            entity.display_panel_icon = bp_display.icon
+                        end
+                        if bp_display.always_show ~= nil then
+                            entity.display_panel_always_show = bp_display.always_show
+                        end
+                        if bp_display.show_in_chart ~= nil then
+                            entity.display_panel_show_in_chart = bp_display.show_in_chart
                         end
                     elseif name == iopoint_name then
                         if tags then
@@ -765,6 +820,112 @@ function build.destroy_packed_circuit(procinfo)
     local processor = procinfo.processor
 
     tools.destroy_entities(processor, commons.packed_entities)
+end
+
+local unpacked_proxy_entity_names = { commons.packed_vanilla_display_panel_name }
+
+local unpacked_proxy_icon = { type = "entity", name = "entity-ghost" }
+
+--- Deterministically sort by stable unit-number for multiplayer safety
+---@param entities LuaEntity[]
+---@return LuaEntity[]
+local function mp_safe_sort(entities)
+    local sorted = {}
+    for _, entity in ipairs(entities) do
+        if entity.valid and entity.unit_number then
+            table.insert(sorted, entity)
+        end
+    end
+
+    table.sort(sorted, function(a, b)
+        ---@cast a LuaEntity
+        ---@cast b LuaEntity
+        return a.unit_number < b.unit_number
+    end)
+    return sorted
+end
+
+---@param display_panel LuaEntity
+---@return boolean
+local function has_display_panel_icon(display_panel)
+    local icon = display_panel.display_panel_icon
+    return icon ~= nil and icon.type ~= nil and icon.name ~= nil
+end
+
+---@param display_panel LuaEntity
+---@return boolean
+local function display_panel_wants_unpacked_proxy(display_panel)
+    if display_panel.to_be_deconstructed() then return false end
+
+    local cb = display_panel.get_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
+    local is_opted_in = has_display_panel_opt_in(display_panel.display_panel_text, cb and cb.messages)
+
+    if not is_opted_in then return false end
+
+    return display_panel.display_panel_show_in_chart or
+        display_panel.display_panel_always_show or
+        has_display_panel_icon(display_panel)
+end
+
+---@param procinfo ProcInfo
+function build.destroy_unpacked_proxies(procinfo)
+    local processor = procinfo and procinfo.processor
+    if not processor or not processor.valid then return end
+
+    tools.destroy_entities(processor, unpacked_proxy_entity_names)
+end
+
+---@param procinfo ProcInfo
+function build.create_unpacked_proxies(procinfo)
+    local processor = procinfo and procinfo.processor
+    local internal_surface = procinfo and procinfo.surface
+    if not processor or not processor.valid then return end
+    if not internal_surface or not internal_surface.valid then return end
+
+    if procinfo.is_packed then
+        build.destroy_unpacked_proxies(procinfo)
+        return
+    end
+
+    local displays = mp_safe_sort(internal_surface.find_entities_filtered { name = "display-panel" })
+
+    build.destroy_unpacked_proxies(procinfo)
+
+    local scale = processor.prototype.tile_width / 2.4
+    local base = processor.position
+    local visible_count = 0
+    local created_count = 0
+
+    for _, display_panel in ipairs(displays) do
+        if display_panel.valid and display_panel_wants_unpacked_proxy(display_panel) then
+            visible_count = visible_count + 1
+            local has_control_behavior =
+                display_panel.get_circuit_network(defines.wire_connector_id.circuit_red) ~= nil or
+                display_panel.get_circuit_network(defines.wire_connector_id.circuit_green) ~= nil
+            local proxy = processor.surface.create_entity {
+                name = commons.packed_vanilla_display_panel_name,
+                position = {
+                    x = base.x + display_panel.position.x / 32 * scale,
+                    y = base.y + display_panel.position.y / 32 * scale
+                },
+                force = processor.force
+            }
+            if proxy then
+                created_count = created_count + 1
+                proxy.operable = false
+                proxy.destructible = false
+                if has_control_behavior then
+                    proxy.display_panel_text = "<unpacked>"
+                    proxy.display_panel_icon = unpacked_proxy_icon
+                else
+                    proxy.display_panel_text = display_panel.display_panel_text
+                    proxy.display_panel_icon = display_panel.display_panel_icon
+                end
+                proxy.display_panel_always_show = display_panel.display_panel_always_show
+                proxy.display_panel_show_in_chart = display_panel.display_panel_show_in_chart
+            end
+        end
+    end
 end
 
 ---@param procinfo ProcInfo

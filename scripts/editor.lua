@@ -377,6 +377,7 @@ function editor.recursive_pack(parent)
         local procinfo = get_procinfo(processor, false)
         if procinfo and not procinfo.is_packed then
             editor.recursive_pack(procinfo)
+            build.destroy_unpacked_proxies(procinfo)
             build.save_packed_circuits(procinfo)
             build.disconnect_all_iopoints(procinfo)
             build.create_packed_circuit(procinfo)
@@ -394,6 +395,7 @@ function editor.set_packed(procinfo, is_packed, player)
 
     procinfo.is_packed = is_packed
     if is_packed then
+        build.destroy_unpacked_proxies(procinfo)
         editor.recursive_pack(procinfo)
         build.save_packed_circuits(procinfo)
         build.disconnect_all_iopoints(procinfo)
@@ -410,6 +412,7 @@ function editor.set_packed(procinfo, is_packed, player)
         display.restore(procinfo)
         input.disconnect_comms(procinfo.surface)
         input.connect_comms(procinfo.surface)
+        build.create_unpacked_proxies(procinfo)
     end
 end
 
@@ -1042,6 +1045,8 @@ local function on_player_changed_surface(e)
                 build.connect_all_iopoints(procinfo)
                 procinfo.is_packed = false
             end
+        else
+            build.create_unpacked_proxies(procinfo)
         end
     end
 
@@ -1156,6 +1161,12 @@ local ghost_classes = {
 
 }
 
+local function refresh_unpacked_proxies(procinfo)
+    if procinfo and not procinfo.is_packed then
+        build.create_unpacked_proxies(procinfo)
+    end
+end
+
 ---@param entity LuaEntity
 ---@param e EventData.on_robot_built_entity | EventData.script_raised_built | EventData.on_built_entity | EventData.script_raised_revive
 local function on_build(entity, e)
@@ -1183,6 +1194,8 @@ local function on_build(entity, e)
         if tags then
             display.register(entity, tags --[[@as Display]])
         end
+    elseif name == "display-panel" then
+        refresh_unpacked_proxies(procinfo)
     elseif name == input_name then
         if not IsProcessorRebuilding and tags then
             tags.value_id = tools.get_id()
@@ -1297,6 +1310,11 @@ local function on_marked_for_deconstruction(e)
 
     local name = entity.name
     local need_mining = false
+
+    if name == "display-panel" then
+        refresh_unpacked_proxies(procinfo)
+    end
+
     if e.player_index then
         if name == internal_iopoint_name then
             editor.save_undo_tags(e.player_index, entity.position, build.get_internal_iopoint_tags(entity))
@@ -1324,12 +1342,24 @@ local function on_marked_for_deconstruction(e)
     end
 end
 
+---@param e EventData.on_cancelled_deconstruction
+local function on_cancelled_deconstruction(e)
+    local entity = e.entity
+    if not entity or not entity.valid then return end
+    if entity.name ~= "display-panel" then return end
+
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+    refresh_unpacked_proxies(procinfo)
+end
+
 tools.on_event(defines.events.on_built_entity, on_player_built)
 tools.on_event(defines.events.on_robot_built_entity, on_robot_built)
 tools.on_event(defines.events.script_raised_built, on_script_built)
 tools.on_event(defines.events.script_raised_revive, on_script_revive)
 tools.on_event(defines.events.on_marked_for_deconstruction,
     on_marked_for_deconstruction)
+tools.on_event(defines.events.on_cancelled_deconstruction,
+    on_cancelled_deconstruction)
 
 --------------------------------------------------------------------------------------
 
@@ -1338,6 +1368,7 @@ local filter_names = { {} }
 ---@type string[]
 local surface_name_filter = {
     "constant-combinator", "decider-combinator", "arithmetic-combinator", "selector-combinator",
+    "display-panel",
     "big-electric-pole", "small-electric-pole", "medium-electric-pole",
     "substation", internal_iopoint_name, "small-lamp"
 }
@@ -1360,7 +1391,10 @@ end
 
 local function on_mined(ev)
     local entity = ev.entity
-    if entity.name == internal_iopoint_name then
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+    if entity.name == "display-panel" then
+        refresh_unpacked_proxies(procinfo)
+    elseif entity.name == internal_iopoint_name then
         if ev.player_index then
             editor.save_undo_tags(ev.player_index, entity.position, build.get_internal_iopoint_tags(entity))
         end
@@ -1390,7 +1424,32 @@ local function on_player_mined_entity(ev)
     on_mined(ev)
 end
 
+---@param e EventData.on_gui_closed
+local function on_gui_closed(e)
+    local entity = e.entity
+    if not entity or not entity.valid then return end
+    if entity.name ~= "display-panel" then return end
+
+    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+    if procinfo and not procinfo.is_packed then
+        build.create_unpacked_proxies(procinfo)
+    end
+end
+
+---@param e EventData.on_entity_settings_pasted
+local function on_entity_settings_pasted(e)
+    local destination = e.destination
+    if not destination or not destination.valid then return end
+    if destination.name ~= "display-panel" then return end
+
+    local procinfo = storage.surface_map and storage.surface_map[destination.surface.name]
+    if procinfo and not procinfo.is_packed then
+        build.create_unpacked_proxies(procinfo)
+    end
+end
+
 local mine_filter = {
+    { filter = 'name', name = "display-panel" },
     { filter = 'name', name = internal_iopoint_name },
     { filter = 'name', name = internal_connector_name },
     { filter = 'name', name = display_name },
@@ -1400,6 +1459,8 @@ tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity, mi
 tools.on_event(defines.events.on_robot_mined_entity, on_mined, mine_filter)
 tools.on_event(defines.events.on_entity_died, on_mined, mine_filter)
 tools.on_event(defines.events.script_raised_destroy, on_mined, mine_filter)
+tools.on_event(defines.events.on_gui_closed, on_gui_closed)
+tools.on_event(defines.events.on_entity_settings_pasted, on_entity_settings_pasted)
 
 ---@type table<string, boolean>
 local forbidden_prototypes = {
