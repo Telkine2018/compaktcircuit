@@ -1,8 +1,10 @@
 ---------------------------------------------------------------------------------------------------
-Version: TBD
-Date: TBD
-  Changes:
-    - Allow vanilla display panel inside processors
+Version: 2.0.28
+Date: 29.3.206
+  Bugfixes:
+    - Updating a blueprint in a blueprint book. (Great thanks to ELLIOTTCABLE)
+  Features:
+    - Add support to display panel (Great thanks to ELLIOTTCABLE)
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.27
 Date: 20. 03. 2026
