@@ -201,11 +201,14 @@ tools.on_event(defines.events.on_gui_elem_changed,
 
 -----------------------------------------------------------------
 
+-- Controller types supported for processor entry
+-- https://lua-api.factorio.com/latest/defines.html#defines.controllers
 local allow_controller_types = {
     [defines.controllers.character] = true,
     [defines.controllers.remote] = true,
     [defines.controllers.editor] = true,
-    [defines.controllers.god] = true
+    [defines.controllers.god] = true,
+    [defines.controllers.spectator] = true
 }
 
 local controller_names = {}
@@ -226,13 +229,8 @@ local function get_processor_entry_block_reason(player)
         return nil
     end
 
-    if player.physical_controller_type ~= defines.controllers.character then
-        return "remote view is not backed by a character"
-    end
-
-    local physical_surface = player.physical_surface
-    if physical_surface and physical_surface.platform then
-        return "remote view is backed by a platform"
+    if not allow_controller_types[player.physical_controller_type] then
+        return "remote view backing controller is unsupported"
     end
 
     return nil
@@ -250,6 +248,8 @@ function editor.edit_selected(player, processor)
     local blocked_reason = get_processor_entry_block_reason(player)
     if blocked_reason then
         debug("edit_selected: blocked unsafe entry player=" .. player.index ..
+            " controller=" .. tostring(player.controller_type) ..
+            " physical_controller=" .. tostring(player.physical_controller_type) ..
             " physical_surface=" .. tostring(player.physical_surface_index) ..
             " reason=" .. blocked_reason)
         player.print("CompaktCircuits: unsafe processor entry blocked from " ..
