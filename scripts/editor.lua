@@ -202,12 +202,41 @@ tools.on_event(defines.events.on_gui_elem_changed,
 -----------------------------------------------------------------
 
 local allow_controller_types = {
-
-    [defines.controllers.god] = true,
     [defines.controllers.character] = true,
     [defines.controllers.remote] = true,
-    [defines.controllers.editor] = true
+    [defines.controllers.editor] = true,
+    [defines.controllers.god] = true
 }
+
+local controller_names = {}
+for name, value in pairs(defines.controllers) do
+    if type(value) == "number" then
+        controller_names[value] = name
+    end
+end
+
+---@param player LuaPlayer
+---@return string?
+local function get_processor_entry_block_reason(player)
+    if not allow_controller_types[player.controller_type] then
+        return "controller is unsupported"
+    end
+
+    if player.controller_type ~= defines.controllers.remote then
+        return nil
+    end
+
+    if player.physical_controller_type ~= defines.controllers.character then
+        return "remote view is not backed by a character"
+    end
+
+    local physical_surface = player.physical_surface
+    if physical_surface and physical_surface.platform then
+        return "remote view is backed by a platform"
+    end
+
+    return nil
+end
 
 ---@param player LuaPlayer
 ---@param processor LuaEntity
@@ -218,9 +247,16 @@ function editor.edit_selected(player, processor)
     end
     storage.last_click = game.tick
 
-    if not allow_controller_types[player.controller_type] then
-        log("[compaktcircuit debug] edit_selected: unsupported controller player=" .. player.index ..
-            " controller=" .. tostring(player.controller_type))
+    local blocked_reason = get_processor_entry_block_reason(player)
+    if blocked_reason then
+        log("[compaktcircuit debug] edit_selected: blocked unsafe entry player=" .. player.index ..
+            " controller=" .. tostring(player.controller_type) ..
+            " physical_controller=" .. tostring(player.physical_controller_type) ..
+            " physical_surface=" .. tostring(player.physical_surface_index) ..
+            " reason=" .. blocked_reason)
+        player.print("CompaktCircuits: unsafe processor entry blocked from " ..
+            (controller_names[player.controller_type] or tostring(player.controller_type)) ..
+            " (" .. blocked_reason .. ").")
         return
     end
 
@@ -1045,25 +1081,20 @@ local function on_player_changed_surface(e)
         return
     end
 
-    -- Exiting surface
-    if procinfo and procinfo.surface and procinfo.surface.valid and
-        procinfo.surface.index == e.surface_index then
-        log("[compaktcircuit debug] on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
-            " surface=" .. tostring(procinfo.surface.name) ..
-            " packed=" .. tostring(procinfo.is_packed))
+    local function finish_processor_exit(current_procinfo, standard_exit, context)
         editor.close_all(player)
         editor.close_editor_panel(player)
-        editor.restore_surface_list(player, "on_player_changed_surface")
+        editor.restore_surface_list(player, context)
 
         player.opened = nil
         vars.procinfo = nil
         vars.processor = nil
-        procinfo.tick = game.tick
-        build.save_packed_circuits(procinfo)
-        if (procinfo.is_packed) then
-            if is_standard_exit then
-                editor.delete_surface(procinfo)
-                local _, recursionError = build.create_packed_circuit(procinfo)
+        current_procinfo.tick = game.tick
+        build.save_packed_circuits(current_procinfo)
+        if current_procinfo.is_packed then
+            if standard_exit then
+                editor.delete_surface(current_procinfo)
+                local _, recursionError = build.create_packed_circuit(current_procinfo)
                 input.apply_parameters(procinfo)
                 if recursionError then
                     player.print {
@@ -1071,11 +1102,20 @@ local function on_player_changed_surface(e)
                     }
                 end
             else
-                build.destroy_packed_circuit(procinfo)
-                build.connect_all_iopoints(procinfo)
-                procinfo.is_packed = false
+                build.destroy_packed_circuit(current_procinfo)
+                build.connect_all_iopoints(current_procinfo)
+                current_procinfo.is_packed = false
             end
         end
+    end
+
+    -- Exiting surface
+    if procinfo and procinfo.surface and procinfo.surface.valid and
+        procinfo.surface.index == e.surface_index then
+        log("[compaktcircuit debug] on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
+            " surface=" .. tostring(procinfo.surface.name) ..
+            " packed=" .. tostring(procinfo.is_packed))
+        finish_processor_exit(procinfo, is_standard_exit, "on_player_changed_surface")
     end
 
     local surface_name = player.surface.name
@@ -1096,6 +1136,35 @@ local function on_player_changed_surface(e)
     end
 end
 
+---@param e EventData.on_player_controller_changed
+local function on_player_controller_changed(e)
+    if e.old_type ~= defines.controllers.remote then return end
+
+    local player = game.players[e.player_index]
+    if player.controller_type == defines.controllers.remote then return end
+
+    local vars = get_vars(player)
+    local procinfo = vars.procinfo
+    if not procinfo or not procinfo.surface or not procinfo.surface.valid then return end
+    if player.surface ~= procinfo.surface then return end
+
+    log("[compaktcircuit debug] on_player_controller_changed: restoring player=" .. e.player_index ..
+        " old_controller=" .. (controller_names[e.old_type] or tostring(e.old_type)) ..
+        " new_controller=" .. (controller_names[player.controller_type] or tostring(player.controller_type)) ..
+        " surface=" .. tostring(player.surface.name))
+
+    editor.close_all(player)
+    editor.close_editor_panel(player)
+    editor.restore_surface_list(player, "on_player_controller_changed")
+
+    player.opened = nil
+    vars.procinfo = nil
+    vars.processor = nil
+    procinfo.tick = game.tick
+    build.save_packed_circuits(procinfo)
+    restore_player_controller(procinfo, player)
+end
+
 ---------------------------------------------------------------
 
 ---@param e EventData.on_gui_click
@@ -1113,6 +1182,8 @@ tools.on_event(defines.events.on_gui_checked_state_changed,
 tools.on_event(defines.events.on_gui_text_changed, on_gui_text_changed)
 tools.on_event(defines.events.on_player_changed_surface,
     on_player_changed_surface)
+tools.on_event(defines.events.on_player_controller_changed,
+    on_player_controller_changed)
 
 --------------------------------------------------------------------------------------
 
