@@ -30,6 +30,9 @@ local message_prefix = prefix .. "-message"
 local tooltip_prefix = prefix .. "-tooltip"
 local iopanel_name = prefix .. "-iopole_panel"
 
+-- Chosen slightly at random; I tried to pick a value that looked okay w/ a small-ish game-window ...
+local editor_remote_zoom = 1.0
+
 ---@param player LuaPlayer
 ---@return boolean
 function editor.close_editor_panel(player)
@@ -82,16 +85,8 @@ function editor.create_editor_panel(player, procinfo)
         style = "inside_shallow_frame_with_padding",
     }
 
-    local exit_flow = frame.add { type = "flow", direction = "horizontal" }
-    local b = exit_flow.add {
-        type = "button",
-        caption = { button_prefix .. ".exit_editor" },
-        name = prefix .. "-exit_editor",
-        tooltip = { tooltip_prefix .. ".exit" }
-    }
-    b.style.width = 160
-
-    b = exit_flow.add {
+    local top_flow = frame.add { type = "flow", direction = "horizontal" }
+    local b = top_flow.add {
         type = "button",
         caption = { button_prefix .. ".models" },
         name = prefix .. "-models",
@@ -206,47 +201,67 @@ tools.on_event(defines.events.on_gui_elem_changed,
 
 -----------------------------------------------------------------
 
----@param surface LuaSurface
----@param x number
----@param y number
----@return number
----@return number
-function editor.find_room(surface, x, y)
-    local count = 0
-    while true do
-        local entities = surface.find_entities({ { x - 1, y - 1 }, { x + 1, y + 1 } })
-        if #entities == 0 then break end
-        x = x + 1
-        if x > EDITOR_SIZE / 2 - 1 then
-            x = -EDITOR_SIZE / 2 + 1
-            y = y + 1
-            if y > EDITOR_SIZE / 2 - 1 then y = -EDITOR_SIZE / 2 + 1 end
-        end
-        count = count + 1
-        if count > 1000 then break end
-    end
-    return x, y
-end
-
+-- Controller types supported for processor entry
+-- https://lua-api.factorio.com/latest/defines.html#defines.controllers
 local allow_controller_types = {
-
-    [defines.controllers.god] = true,
     [defines.controllers.character] = true,
     [defines.controllers.remote] = true,
-    [defines.controllers.editor] = true
+    [defines.controllers.editor] = true,
+    [defines.controllers.god] = true,
+    [defines.controllers.spectator] = true
 }
+
+local controller_names = {}
+for name, value in pairs(defines.controllers) do
+    if type(value) == "number" then
+        controller_names[value] = name
+    end
+end
+
+---@param player LuaPlayer
+---@return string?
+local function get_processor_entry_block_reason(player)
+    if not allow_controller_types[player.controller_type] then
+        return "controller is unsupported"
+    end
+
+    if player.controller_type ~= defines.controllers.remote then
+        return nil
+    end
+
+    if not allow_controller_types[player.physical_controller_type] then
+        return "remote view backing controller is unsupported"
+    end
+
+    return nil
+end
 
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
-    if storage.last_click and storage.last_click > game.tick - 120 then return end
+    if storage.last_click and storage.last_click > game.tick - 120 then
+        debug("edit_selected: ignored bounce click player=" .. player.index)
+        return
+    end
     storage.last_click = game.tick
 
-    if not allow_controller_types[player.controller_type] then
+    local blocked_reason = get_processor_entry_block_reason(player)
+    if blocked_reason then
+        debug("edit_selected: blocked unsafe entry player=" .. player.index ..
+            " controller=" .. tostring(player.controller_type) ..
+            " physical_controller=" .. tostring(player.physical_controller_type) ..
+            " physical_surface=" .. tostring(player.physical_surface_index) ..
+            " reason=" .. blocked_reason)
+        player.print("CompaktCircuits: unsafe processor entry blocked from " ..
+            (controller_names[player.controller_type] or tostring(player.controller_type)) ..
+            " (" .. blocked_reason .. ").")
         return
     end
 
-    if not processor or not processor.valid then return end
+    if not processor or not processor.valid then
+        debug("edit_selected: invalid processor player=" .. player.index)
+        return
+    end
 
     local procinfo = get_procinfo(processor, true)
     ---@cast procinfo -nil
@@ -254,6 +269,8 @@ function editor.edit_selected(player, processor)
     vars.procinfo = procinfo
     vars.processor = processor
     local surface = editor.get_or_create_surface(procinfo)
+
+    editor.hide_surface_list(player, "edit_selected")
 
     if procinfo.is_packed then
         build.restore_packed_circuits(procinfo)
@@ -264,24 +281,28 @@ function editor.edit_selected(player, processor)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
-    if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
-        not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
-        vars.physical_surface_index = player.physical_surface_index
-        vars.physical_controller_type = player.physical_controller_type
-        vars.physical_position = player.physical_position
-    end
     procinfo.physical_surface_index = player.physical_surface_index
     procinfo.physical_controller_type = player.physical_controller_type
     procinfo.physical_position = player.physical_position
 
-    local x, y = editor.find_room(surface, 0, 0)
-    player.teleport({ x, y }, surface)
+    debug("edit_selected: enter remote player=" .. player.index ..
+        " processor=" .. tostring(processor.unit_number) ..
+        " origin_surface=" .. tostring(procinfo.origin_surface_name) ..
+        " origin_controller=" .. tostring(procinfo.origin_controller_type) ..
+        " target_surface=" .. tostring(surface.name))
+    vars.pending_processor_entry_surface = surface.name
+    vars.pending_processor_entry_tick = game.tick
+    player.set_controller {
+        type = defines.controllers.remote,
+        position = { 0, 0 },
+        surface = surface
+    }
+    player.zoom = editor_remote_zoom
 end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
----@param to_origin boolean?
-local function exit_player(procinfo, player, to_origin)
+local function restore_player_controller(procinfo, player)
     ---@type string
     local ret_surface_name
     ---@type MapPosition
@@ -291,26 +312,42 @@ local function exit_player(procinfo, player, to_origin)
     ---@type LuaSurface
     local ret_surface
 
-    local vars = tools.get_vars(player)
-    if not to_origin then
-        ret_surface_name = procinfo.origin_surface_name
-        ret_surface_position = procinfo.origin_surface_position
-        ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
-        ret_surface = game.surfaces[ret_surface_name]
-    elseif vars.physical_surface_index then
-        ret_surface = game.surfaces[vars.physical_surface_index]
-        ret_surface_position = vars.physical_position
-        ret_controller_type = vars.physical_controller_type
-        ret_surface_name = ret_surface.name
-    end
+    ret_surface_name = procinfo.origin_surface_name
+    ret_surface_position = procinfo.origin_surface_position
+    ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
+    ret_surface = game.surfaces[ret_surface_name]
 
     if not ret_surface or not ret_surface.valid then
         ret_surface_name = "nauvis"
         ret_surface_position = { x = 0, y = 0 }
     end
-    if ret_controller_type == defines.controllers.character
-        or ret_controller_type == defines.controllers.god
-    then
+
+    debug("restore_player_controller: player=" .. player.index ..
+        " return_controller=" .. tostring(ret_controller_type) ..
+        " return_surface=" .. tostring(ret_surface_name) ..
+        " return_pos=" .. tostring(ret_surface_position.x) .. "," .. tostring(ret_surface_position.y))
+
+    if ret_controller_type == defines.controllers.character then
+        local character = player.character
+        if character and character.valid then
+            if player.surface ~= character.surface then
+                player.set_controller {
+                    type = defines.controllers.remote,
+                    position = character.position,
+                    surface = character.surface
+                }
+            end
+            debug("restore_player_controller: restore character controller player=" .. player.index)
+            player.set_controller {
+                type = defines.controllers.character,
+                character = character
+            }
+        end
+    elseif ret_controller_type == defines.controllers.god then
+        debug("restore_player_controller: teleport return player=" .. player.index)
+        player.set_controller {
+            type = defines.controllers.god
+        }
         player.teleport(ret_surface_position, ret_surface_name)
         local surface = game.surfaces[ret_surface_name]
         local platform = surface.platform
@@ -319,6 +356,8 @@ local function exit_player(procinfo, player, to_origin)
         end
     else
         if procinfo.physical_controller_type then
+            debug("restore_player_controller: restore physical player=" .. player.index ..
+                " surface=" .. tostring(procinfo.physical_surface_index))
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
             local surface = game.surfaces[procinfo.physical_surface_index]
             local platform = surface.platform
@@ -326,24 +365,40 @@ local function exit_player(procinfo, player, to_origin)
                 player.enter_space_platform(platform)
             end
         end
+        debug("restore_player_controller: set_controller return player=" .. player.index)
         player.set_controller {
             type = ret_controller_type,
             position = ret_surface_position,
             surface = ret_surface_name
         }
     end
+
+    editor.restore_surface_list(player, "restore_player_controller")
 end
 
----@param e EventData.on_gui_click
-local function on_exit_editor(e)
-    local player = game.players[e.player_index]
-    ccutils.close_all(player)
-    editor.close_editor_panel(player)
+---@param player LuaPlayer
+---@param context string
+function editor.restore_surface_list(player, context)
+    local vars = tools.get_vars(player)
+    if vars.show_surface_list_before_editor ~= nil then
+        player.game_view_settings.show_surface_list = vars.show_surface_list_before_editor
+        debug(context .. ": restore surface list player=" .. player.index ..
+            " value=" .. tostring(vars.show_surface_list_before_editor))
+        vars.show_surface_list_before_editor = nil
+    end
+end
 
-    local vars = get_vars(player)
-    local procinfo = vars.procinfo
-    vars.is_standard_exit = true
-    exit_player(procinfo, player, e.control)
+---@param player LuaPlayer
+---@param context string
+function editor.hide_surface_list(player, context)
+    local vars = tools.get_vars(player)
+    if vars.show_surface_list_before_editor == nil then
+        vars.show_surface_list_before_editor = player.game_view_settings.show_surface_list
+    end
+    if player.game_view_settings.show_surface_list then
+        player.game_view_settings.show_surface_list = false
+        debug(context .. ": hide surface list player=" .. player.index)
+    end
 end
 
 ---@param player LuaPlayer
@@ -363,6 +418,7 @@ local function on_gui_checked_state_changed(e)
 
     local vars = get_vars(player)
     local procinfo = vars.procinfo
+    if not procinfo then return end
     local new_packed = e.element.state
     editor.set_packed(procinfo, new_packed, player)
 end
@@ -489,7 +545,6 @@ local function on_models_open(e)
     tools.fire_user_event("models.open", player)
 end
 
-tools.on_gui_click(prefix .. "-exit_editor", on_exit_editor)
 tools.on_gui_click(prefix .. "-models", on_models_open)
 tools.on_gui_click(prefix .. "-add_iopole", on_add_pole)
 tools.on_gui_click(prefix .. "-add_internal_connector",
@@ -824,6 +879,7 @@ local function on_gui_selection_state_changed(e)
 
     ---@type ProcInfo
     local procinfo = vars.procinfo
+    if not procinfo then return end
     local iopole_info = get_iopoint_info(procinfo, iopole)
 
     if name == prefix .. ".iopole_index" then
@@ -878,13 +934,15 @@ local function on_gui_text_changed(e)
         local iopole = vars.iopole
         if not iopole or not iopole.valid then return end
         local procinfo = vars.procinfo
+        if not procinfo then return end
 
         local iopoint_info = get_iopoint_info(procinfo, iopole)
         if not iopoint_info then return end
         iopoint_info.label = e.element.text
         build.update_io_text(iopoint_info)
     elseif e.element.name == prefix .. "-title" then
-        local procinfo = vars.procinfo --[[@as ProcInfo]]
+        local procinfo = vars.procinfo
+        if not procinfo then return end
         ---@type string | nil
         local text
         text = e.element.text
@@ -923,7 +981,7 @@ function editor.on_pre_surface_deleted(e)
     storage.surface_map[surface.name] = nil
     procinfo.surface = nil
     for _, player in pairs(game.players) do
-        if player.surface == surface then exit_player(procinfo, player) end
+        if player.surface == surface then restore_player_controller(procinfo, player) end
     end
 end
 
@@ -1007,30 +1065,39 @@ local function on_player_changed_surface(e)
     local player = game.players[e.player_index]
     local vars = get_vars(player)
     local procinfo = vars.procinfo
+    local previous_surface = game.surfaces[e.surface_index]
+    local from_proc_surface = previous_surface and previous_surface.valid and
+        storage.surface_map[previous_surface.name] ~= nil
 
     local is_standard_exit = vars.is_standard_exit
     vars.is_standard_exit = false
 
-    if procinfo and not procinfo.processor.valid then
+    debug("on_player_changed_surface: player=" .. e.player_index ..
+        " from_surface_index=" .. tostring(e.surface_index) ..
+        " current_surface=" .. tostring(player.surface.name) ..
+        " has_procinfo=" .. tostring(procinfo ~= nil) ..
+        " is_standard_exit=" .. tostring(is_standard_exit))
+
+    if procinfo and (not procinfo.processor or not procinfo.processor.valid) then
+        editor.restore_surface_list(player, "on_player_changed_surface")
         vars.procinfo = nil
         return
     end
 
-    -- Exiting surface
-    if procinfo and procinfo.surface and procinfo.surface.valid and
-        procinfo.surface.index == e.surface_index then
-        editor.close_iopanel(player)
+    local function finish_processor_exit(current_procinfo, standard_exit, context)
+        editor.close_all(player)
         editor.close_editor_panel(player)
+        editor.restore_surface_list(player, context)
 
         player.opened = nil
         vars.procinfo = nil
         vars.processor = nil
-        procinfo.tick = game.tick
-        build.save_packed_circuits(procinfo)
-        if (procinfo.is_packed) then
-            if is_standard_exit then
-                editor.delete_surface(procinfo)
-                local _, recursionError = build.create_packed_circuit(procinfo)
+        current_procinfo.tick = game.tick
+        build.save_packed_circuits(current_procinfo)
+        if current_procinfo.is_packed then
+            if standard_exit then
+                editor.delete_surface(current_procinfo)
+                local _, recursionError = build.create_packed_circuit(current_procinfo)
                 input.apply_parameters(procinfo)
                 if recursionError then
                     player.print {
@@ -1038,20 +1105,94 @@ local function on_player_changed_surface(e)
                     }
                 end
             else
-                build.destroy_packed_circuit(procinfo)
-                build.connect_all_iopoints(procinfo)
-                procinfo.is_packed = false
+                build.destroy_packed_circuit(current_procinfo)
+                build.connect_all_iopoints(current_procinfo)
+                current_procinfo.is_packed = false
             end
+        end
+    end
+
+    -- Exiting surface
+    if procinfo and procinfo.surface and procinfo.surface.valid and
+        procinfo.surface.index == e.surface_index then
+        debug("on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
+            " surface=" .. tostring(procinfo.surface.name) ..
+            " packed=" .. tostring(procinfo.is_packed))
+        finish_processor_exit(procinfo, is_standard_exit, "on_player_changed_surface")
+
+        -- Fallback for mod interactions where remote exits directly to physical character
+        -- before controller-changed restoration can run (for example sandbox god flows).
+        if not is_standard_exit and
+            procinfo.origin_controller_type == defines.controllers.god and
+            player.surface and player.surface.name ~= procinfo.origin_surface_name then
+            debug("on_player_changed_surface: fallback restore god-origin player=" .. e.player_index ..
+                " current_surface=" .. tostring(player.surface.name) ..
+                " origin_surface=" .. tostring(procinfo.origin_surface_name))
+            restore_player_controller(procinfo, player)
         end
     end
 
     local surface_name = player.surface.name
     procinfo = storage.surface_map[surface_name]
     if procinfo then
+        local intentional_processor_entry =
+            vars.pending_processor_entry_surface == surface_name and
+            vars.pending_processor_entry_tick == game.tick
+        vars.pending_processor_entry_surface = nil
+        vars.pending_processor_entry_tick = nil
+
+        if not intentional_processor_entry and
+            from_proc_surface then
+            debug("on_player_changed_surface: editor nested escape hard-unwind player=" .. e.player_index ..
+                " surface=" .. tostring(surface_name) ..
+                " origin_surface=" .. tostring(procinfo.origin_surface_name))
+            finish_processor_exit(procinfo, false, "on_player_changed_surface/editor_nested_escape")
+            restore_player_controller(procinfo, player)
+            return
+        end
+
+        debug("on_player_changed_surface: entering editor surface player=" .. e.player_index ..
+            " surface=" .. tostring(surface_name) ..
+            " processor=" .. tostring(procinfo.processor and procinfo.processor.name))
+        editor.hide_surface_list(player, "on_player_changed_surface")
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
+        if from_proc_surface and math.abs(player.zoom - editor_remote_zoom) > 0.001 then
+            player.zoom = editor_remote_zoom
+        end
+        player.surface.request_to_generate_chunks(player.position, 8)
+        player.force.chart_all(player.surface)
         editor.create_editor_panel(player, procinfo)
     end
+end
+
+---@param e EventData.on_player_controller_changed
+local function on_player_controller_changed(e)
+    if e.old_type ~= defines.controllers.remote then return end
+
+    local player = game.players[e.player_index]
+    if player.controller_type == defines.controllers.remote then return end
+
+    local vars = get_vars(player)
+    local procinfo = vars.procinfo
+    if not procinfo or not procinfo.surface or not procinfo.surface.valid then return end
+    if player.surface ~= procinfo.surface then return end
+
+    debug("on_player_controller_changed: restoring player=" .. e.player_index ..
+        " old_controller=" .. (controller_names[e.old_type] or tostring(e.old_type)) ..
+        " new_controller=" .. (controller_names[player.controller_type] or tostring(player.controller_type)) ..
+        " surface=" .. tostring(player.surface.name))
+
+    editor.close_all(player)
+    editor.close_editor_panel(player)
+    editor.restore_surface_list(player, "on_player_controller_changed")
+
+    player.opened = nil
+    vars.procinfo = nil
+    vars.processor = nil
+    procinfo.tick = game.tick
+    build.save_packed_circuits(procinfo)
+    restore_player_controller(procinfo, player)
 end
 
 ---------------------------------------------------------------
@@ -1071,6 +1212,8 @@ tools.on_event(defines.events.on_gui_checked_state_changed,
 tools.on_event(defines.events.on_gui_text_changed, on_gui_text_changed)
 tools.on_event(defines.events.on_player_changed_surface,
     on_player_changed_surface)
+tools.on_event(defines.events.on_player_controller_changed,
+    on_player_controller_changed)
 
 --------------------------------------------------------------------------------------
 
@@ -1201,6 +1344,9 @@ local function on_build(entity, e)
             if e.player_index then
                 local player = game.players[e.player_index]
                 if commons.remote_controllers[player.controller_type] then
+                    -- TODO: Implement item-request-proxy handling? vanilla combinators / allowed
+                    --       editor entities do not rely on modules, etc; but other mods may want
+                    --       that functionality to work?
                     entity.revive { raise_revive = true }
                 end
             end
@@ -1316,7 +1462,9 @@ local function on_marked_for_deconstruction(e)
         end
     end
 
-    if entity.valid and (commons.remote_controllers[player.controller_type] or need_mining) then
+    local player_surface = player.surface
+    local is_same_surface = player_surface and player_surface.valid and player_surface == entity.surface
+    if entity.valid and is_same_surface and (commons.remote_controllers[player.controller_type] or need_mining) then
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
@@ -1503,5 +1651,27 @@ remote.add_interface(prefix, {
 ---@param tags Tags
 function editor.save_undo_tags(player_index, pos, tags)
 end
+
+-- eager chunk generation at surface creation isn't always enough; the game
+-- defers some of it, leaving a black map until generation catches up. re-requesting
+-- periodically while a player is inside covers the gap.
+--
+-- approach copied shamelessley from Blueprint Sandboxes:
+-- <https://github.com/cameronleger/blueprint-sandboxes/blob/06b7612d/control.lua#L221-L222>,
+-- <https://github.com/cameronleger/blueprint-sandboxes/blob/06b7612d/scripts/remote-view.lua#L106-L118>
+tools.on_nth_tick(300, function()
+    local charted = {}
+    for _, player in pairs(game.players) do
+        local surface = player.surface
+        if surface and surface.valid and string.find(surface.name, commons.surface_name_pattern) then
+            local key = player.force.name .. surface.name
+            if not charted[key] then
+                surface.request_to_generate_chunks(player.position, 8)
+                player.force.chart_all(surface)
+                charted[key] = true
+            end
+        end
+    end
+end)
 
 return editor

@@ -588,12 +588,25 @@ local function on_gui_open_processor_panel(event)
     if not entity or not entity.valid then return end
 
     if entity.name == device_name then
+        debug("on_gui_open_processor_panel: device opened player=" .. event.player_index ..
+            " entity=" .. tostring(entity.unit_number) ..
+            " surface=" .. tostring(entity.surface and entity.surface.name))
         player.opened = nil
         local processor = find_processor(entity)
-        if not processor then return end
+        if not processor then
+            debug("on_gui_open_processor_panel: no processor found player=" ..
+                event.player_index)
+            return
+        end
+
+        debug("on_gui_open_processor_panel: entering processor player=" ..
+            event.player_index .. " processor=" .. tostring(processor.unit_number) ..
+            " surface=" .. tostring(processor.surface and processor.surface.name))
 
         editor.edit_selected(player, processor)
     elseif entity.name == iopoint_name then
+        debug("on_gui_open_processor_panel: iopoint opened player=" ..
+            event.player_index .. " entity=" .. tostring(entity.unit_number))
         player.opened = nil
     end
 end
@@ -1905,8 +1918,10 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
                 end
 
                 local player = game.players[e.player_index]
+                local player_surface = player.surface
+                local is_same_surface = player_surface and player_surface.valid and player_surface == entity.surface
                 local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
-                if procinfo and commons.remote_controllers[player.controller_type] then
+                if procinfo and is_same_surface and commons.remote_controllers[player.controller_type] then
                     save_undo_tags(e.player_index, entity.position, tags)
                     entity.mine { raise_destroyed = true }
                     return
