@@ -290,6 +290,8 @@ function editor.edit_selected(player, processor)
         " origin_surface=" .. tostring(procinfo.origin_surface_name) ..
         " origin_controller=" .. tostring(procinfo.origin_controller_type) ..
         " target_surface=" .. tostring(surface.name))
+    vars.pending_processor_entry_surface = surface.name
+    vars.pending_processor_entry_tick = game.tick
     player.set_controller {
         type = defines.controllers.remote,
         position = { 0, 0 },
@@ -343,6 +345,9 @@ local function restore_player_controller(procinfo, player)
         end
     elseif ret_controller_type == defines.controllers.god then
         debug("restore_player_controller: teleport return player=" .. player.index)
+        player.set_controller {
+            type = defines.controllers.god
+        }
         player.teleport(ret_surface_position, ret_surface_name)
         local surface = game.surfaces[ret_surface_name]
         local platform = surface.platform
@@ -1114,11 +1119,38 @@ local function on_player_changed_surface(e)
             " surface=" .. tostring(procinfo.surface.name) ..
             " packed=" .. tostring(procinfo.is_packed))
         finish_processor_exit(procinfo, is_standard_exit, "on_player_changed_surface")
+
+        -- Fallback for mod interactions where remote exits directly to physical character
+        -- before controller-changed restoration can run (for example sandbox god flows).
+        if not is_standard_exit and
+            procinfo.origin_controller_type == defines.controllers.god and
+            player.surface and player.surface.name ~= procinfo.origin_surface_name then
+            debug("on_player_changed_surface: fallback restore god-origin player=" .. e.player_index ..
+                " current_surface=" .. tostring(player.surface.name) ..
+                " origin_surface=" .. tostring(procinfo.origin_surface_name))
+            restore_player_controller(procinfo, player)
+        end
     end
 
     local surface_name = player.surface.name
     procinfo = storage.surface_map[surface_name]
     if procinfo then
+        local intentional_processor_entry =
+            vars.pending_processor_entry_surface == surface_name and
+            vars.pending_processor_entry_tick == game.tick
+        vars.pending_processor_entry_surface = nil
+        vars.pending_processor_entry_tick = nil
+
+        if not intentional_processor_entry and
+            from_proc_surface then
+            debug("on_player_changed_surface: editor nested escape hard-unwind player=" .. e.player_index ..
+                " surface=" .. tostring(surface_name) ..
+                " origin_surface=" .. tostring(procinfo.origin_surface_name))
+            finish_processor_exit(procinfo, false, "on_player_changed_surface/editor_nested_escape")
+            restore_player_controller(procinfo, player)
+            return
+        end
+
         debug("on_player_changed_surface: entering editor surface player=" .. e.player_index ..
             " surface=" .. tostring(surface_name) ..
             " processor=" .. tostring(procinfo.processor and procinfo.processor.name))
