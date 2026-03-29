@@ -85,16 +85,8 @@ function editor.create_editor_panel(player, procinfo)
         style = "inside_shallow_frame_with_padding",
     }
 
-    local exit_flow = frame.add { type = "flow", direction = "horizontal" }
-    local b = exit_flow.add {
-        type = "button",
-        caption = { button_prefix .. ".exit_editor" },
-        name = prefix .. "-exit_editor",
-        tooltip = { tooltip_prefix .. ".exit" }
-    }
-    b.style.width = 160
-
-    b = exit_flow.add {
+    local top_flow = frame.add { type = "flow", direction = "horizontal" }
+    local b = top_flow.add {
         type = "button",
         caption = { button_prefix .. ".models" },
         name = prefix .. "-models",
@@ -209,28 +201,6 @@ tools.on_event(defines.events.on_gui_elem_changed,
 
 -----------------------------------------------------------------
 
----@param surface LuaSurface
----@param x number
----@param y number
----@return number
----@return number
-function editor.find_room(surface, x, y)
-    local count = 0
-    while true do
-        local entities = surface.find_entities({ { x - 1, y - 1 }, { x + 1, y + 1 } })
-        if #entities == 0 then break end
-        x = x + 1
-        if x > EDITOR_SIZE / 2 - 1 then
-            x = -EDITOR_SIZE / 2 + 1
-            y = y + 1
-            if y > EDITOR_SIZE / 2 - 1 then y = -EDITOR_SIZE / 2 + 1 end
-        end
-        count = count + 1
-        if count > 1000 then break end
-    end
-    return x, y
-end
-
 local allow_controller_types = {
 
     [defines.controllers.god] = true,
@@ -277,26 +247,18 @@ function editor.edit_selected(player, processor)
     procinfo.origin_surface_name = player.surface.name
     procinfo.origin_surface_position = player.position
     procinfo.origin_controller_type = player.controller_type
-    if not string.find(player.physical_surface.name, commons.surface_name_pattern) and
-        not string.find(procinfo.origin_surface_name, commons.surface_name_pattern) then
-        vars.physical_surface_index = player.physical_surface_index
-        vars.physical_controller_type = player.physical_controller_type
-        vars.physical_position = player.physical_position
-    end
     procinfo.physical_surface_index = player.physical_surface_index
     procinfo.physical_controller_type = player.physical_controller_type
     procinfo.physical_position = player.physical_position
 
-    local x, y = editor.find_room(surface, 0, 0)
     log("[compaktcircuit debug] edit_selected: enter remote player=" .. player.index ..
         " processor=" .. tostring(processor.unit_number) ..
         " origin_surface=" .. tostring(procinfo.origin_surface_name) ..
         " origin_controller=" .. tostring(procinfo.origin_controller_type) ..
-        " target_surface=" .. tostring(surface.name) ..
-        " target_pos=" .. tostring(x) .. "," .. tostring(y))
+        " target_surface=" .. tostring(surface.name))
     player.set_controller {
         type = defines.controllers.remote,
-        position = { x, y },
+        position = { 0, 0 },
         surface = surface
     }
     player.zoom = editor_remote_zoom
@@ -304,8 +266,7 @@ end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
----@param to_origin boolean?
-local function exit_player(procinfo, player, to_origin)
+local function exit_player(procinfo, player)
     ---@type string
     local ret_surface_name
     ---@type MapPosition
@@ -315,18 +276,10 @@ local function exit_player(procinfo, player, to_origin)
     ---@type LuaSurface
     local ret_surface
 
-    local vars = tools.get_vars(player)
-    if not to_origin then
-        ret_surface_name = procinfo.origin_surface_name
-        ret_surface_position = procinfo.origin_surface_position
-        ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
-        ret_surface = game.surfaces[ret_surface_name]
-    elseif vars.physical_surface_index then
-        ret_surface = game.surfaces[vars.physical_surface_index]
-        ret_surface_position = vars.physical_position
-        ret_controller_type = vars.physical_controller_type
-        ret_surface_name = ret_surface.name
-    end
+    ret_surface_name = procinfo.origin_surface_name
+    ret_surface_position = procinfo.origin_surface_position
+    ret_controller_type = procinfo.origin_controller_type or defines.controllers.character
+    ret_surface = game.surfaces[ret_surface_name]
 
     if not ret_surface or not ret_surface.valid then
         ret_surface_name = "nauvis"
@@ -334,14 +287,27 @@ local function exit_player(procinfo, player, to_origin)
     end
 
     log("[compaktcircuit debug] exit_player: player=" .. player.index ..
-        " to_origin=" .. tostring(to_origin) ..
         " return_controller=" .. tostring(ret_controller_type) ..
         " return_surface=" .. tostring(ret_surface_name) ..
         " return_pos=" .. tostring(ret_surface_position.x) .. "," .. tostring(ret_surface_position.y))
 
-    if ret_controller_type == defines.controllers.character
-        or ret_controller_type == defines.controllers.god
-    then
+    if ret_controller_type == defines.controllers.character then
+        local character = player.character
+        if character and character.valid then
+            if player.surface ~= character.surface then
+                player.set_controller {
+                    type = defines.controllers.remote,
+                    position = character.position,
+                    surface = character.surface
+                }
+            end
+            log("[compaktcircuit debug] exit_player: restore character controller player=" .. player.index)
+            player.set_controller {
+                type = defines.controllers.character,
+                character = character
+            }
+        end
+    elseif ret_controller_type == defines.controllers.god then
         log("[compaktcircuit debug] exit_player: teleport return player=" .. player.index)
         player.teleport(ret_surface_position, ret_surface_name)
         local surface = game.surfaces[ret_surface_name]
@@ -394,21 +360,6 @@ function editor.hide_surface_list(player, context)
         player.game_view_settings.show_surface_list = false
         log("[compaktcircuit debug] " .. context .. ": hide surface list player=" .. player.index)
     end
-end
-
----@param e EventData.on_gui_click
-local function on_exit_editor(e)
-    local player = game.players[e.player_index]
-    ccutils.close_all(player)
-    editor.close_editor_panel(player)
-
-    local vars = get_vars(player)
-    local procinfo = vars.procinfo
-    log("[compaktcircuit debug] on_exit_editor: player=" .. e.player_index ..
-        " control=" .. tostring(e.control) ..
-        " procinfo=" .. tostring(procinfo and procinfo.unit_number))
-    vars.is_standard_exit = true
-    exit_player(procinfo, player, e.control)
 end
 
 ---@param player LuaPlayer
@@ -554,7 +505,6 @@ local function on_models_open(e)
     tools.fire_user_event("models.open", player)
 end
 
-tools.on_gui_click(prefix .. "-exit_editor", on_exit_editor)
 tools.on_gui_click(prefix .. "-models", on_models_open)
 tools.on_gui_click(prefix .. "-add_iopole", on_add_pole)
 tools.on_gui_click(prefix .. "-add_internal_connector",
@@ -1283,6 +1233,9 @@ local function on_build(entity, e)
             if e.player_index then
                 local player = game.players[e.player_index]
                 if commons.remote_controllers[player.controller_type] then
+                    -- TODO: Implement item-request-proxy handling? vanilla combinators / allowed
+                    --       editor entities do not rely on modules, etc; but other mods may want
+                    --       that functionality to work?
                     entity.revive { raise_revive = true }
                 end
             end

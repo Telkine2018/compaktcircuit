@@ -280,8 +280,6 @@ local function import_model(player)
     local model_info = models[procinfo.model]
     if not model_info then return end
 
-    local position = player.position
-    player.teleport { -EDITOR_SIZE / 2 + 1, -EDITOR_SIZE / 2 + 1 }
     editor.clean_surface(procinfo)
     procinfo.circuits = model_info.circuits
     procinfo.blueprint = model_info.blueprint
@@ -306,8 +304,6 @@ local function import_model(player)
         end
     end
 
-    local x, y = editor.find_room(player.surface, position.x, position.y)
-    player.teleport({ x, y })
     input.apply_parameters(procinfo)
 end
 
