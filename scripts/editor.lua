@@ -30,6 +30,9 @@ local message_prefix = prefix .. "-message"
 local tooltip_prefix = prefix .. "-tooltip"
 local iopanel_name = prefix .. "-iopole_panel"
 
+-- Chosen slightly at random; I tried to pick a value that looked okay w/ a small-ish game-window ...
+local editor_remote_zoom = 1.0
+
 ---@param player LuaPlayer
 ---@return boolean
 function editor.close_editor_panel(player)
@@ -302,6 +305,7 @@ function editor.edit_selected(player, processor)
         position = { x, y },
         surface = surface
     }
+    player.zoom = editor_remote_zoom
 end
 
 ---@param procinfo ProcInfo
