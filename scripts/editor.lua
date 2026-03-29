@@ -1026,6 +1026,9 @@ local function on_player_changed_surface(e)
     local player = game.players[e.player_index]
     local vars = get_vars(player)
     local procinfo = vars.procinfo
+    local previous_surface = game.surfaces[e.surface_index]
+    local from_proc_surface = previous_surface and previous_surface.valid and
+        storage.surface_map[previous_surface.name] ~= nil
 
     local is_standard_exit = vars.is_standard_exit
     vars.is_standard_exit = false
@@ -1084,6 +1087,9 @@ local function on_player_changed_surface(e)
         editor.hide_surface_list(player, "on_player_changed_surface")
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
+        if from_proc_surface and math.abs(player.zoom - editor_remote_zoom) > 0.001 then
+            player.zoom = editor_remote_zoom
+        end
         player.surface.request_to_generate_chunks(player.position, 8)
         player.force.chart_all(player.surface)
         editor.create_editor_panel(player, procinfo)
