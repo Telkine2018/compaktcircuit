@@ -255,6 +255,13 @@ function editor.edit_selected(player, processor)
     vars.processor = processor
     local surface = editor.get_or_create_surface(procinfo)
 
+    if vars.show_surface_list_before_editor == nil then
+        vars.show_surface_list_before_editor = player.game_view_settings.show_surface_list
+    end
+    if player.game_view_settings.show_surface_list then
+        player.game_view_settings.show_surface_list = false
+    end
+
     if procinfo.is_packed then
         build.restore_packed_circuits(procinfo)
         input.apply_parameters(procinfo)
@@ -335,6 +342,12 @@ local function exit_player(procinfo, player, to_origin)
             position = ret_surface_position,
             surface = ret_surface_name
         }
+    end
+
+    local vars = tools.get_vars(player)
+    if vars.show_surface_list_before_editor ~= nil then
+        player.game_view_settings.show_surface_list = vars.show_surface_list_before_editor
+        vars.show_surface_list_before_editor = nil
     end
 end
 
