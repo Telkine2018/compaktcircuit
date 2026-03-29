@@ -1110,6 +1110,8 @@ local function on_player_changed_surface(e)
             " processor=" .. tostring(procinfo.processor and procinfo.processor.name))
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
+        player.surface.request_to_generate_chunks(player.position, 8)
+        player.force.chart_all(player.surface)
         editor.create_editor_panel(player, procinfo)
     end
 end
@@ -1563,5 +1565,27 @@ remote.add_interface(prefix, {
 ---@param tags Tags
 function editor.save_undo_tags(player_index, pos, tags)
 end
+
+-- eager chunk generation at surface creation isn't always enough; the game
+-- defers some of it, leaving a black map until generation catches up. re-requesting
+-- periodically while a player is inside covers the gap.
+--
+-- approach copied shamelessley from Blueprint Sandboxes:
+-- <https://github.com/cameronleger/blueprint-sandboxes/blob/06b7612d/control.lua#L221-L222>,
+-- <https://github.com/cameronleger/blueprint-sandboxes/blob/06b7612d/scripts/remote-view.lua#L106-L118>
+tools.on_nth_tick(300, function()
+    local charted = {}
+    for _, player in pairs(game.players) do
+        local surface = player.surface
+        if string.find(surface.name, commons.surface_name_pattern) then
+            local key = player.force.name .. surface.name
+            if not charted[key] then
+                surface.request_to_generate_chunks(player.position, 8)
+                player.force.chart_all(surface)
+                charted[key] = true
+            end
+        end
+    end
+end)
 
 return editor
