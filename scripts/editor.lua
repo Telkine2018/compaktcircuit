@@ -266,7 +266,7 @@ end
 
 ---@param procinfo ProcInfo
 ---@param player LuaPlayer
-local function exit_player(procinfo, player)
+local function restore_player_controller(procinfo, player)
     ---@type string
     local ret_surface_name
     ---@type MapPosition
@@ -286,7 +286,7 @@ local function exit_player(procinfo, player)
         ret_surface_position = { x = 0, y = 0 }
     end
 
-    log("[compaktcircuit debug] exit_player: player=" .. player.index ..
+    log("[compaktcircuit debug] restore_player_controller: player=" .. player.index ..
         " return_controller=" .. tostring(ret_controller_type) ..
         " return_surface=" .. tostring(ret_surface_name) ..
         " return_pos=" .. tostring(ret_surface_position.x) .. "," .. tostring(ret_surface_position.y))
@@ -301,14 +301,14 @@ local function exit_player(procinfo, player)
                     surface = character.surface
                 }
             end
-            log("[compaktcircuit debug] exit_player: restore character controller player=" .. player.index)
+            log("[compaktcircuit debug] restore_player_controller: restore character controller player=" .. player.index)
             player.set_controller {
                 type = defines.controllers.character,
                 character = character
             }
         end
     elseif ret_controller_type == defines.controllers.god then
-        log("[compaktcircuit debug] exit_player: teleport return player=" .. player.index)
+        log("[compaktcircuit debug] restore_player_controller: teleport return player=" .. player.index)
         player.teleport(ret_surface_position, ret_surface_name)
         local surface = game.surfaces[ret_surface_name]
         local platform = surface.platform
@@ -317,7 +317,7 @@ local function exit_player(procinfo, player)
         end
     else
         if procinfo.physical_controller_type then
-            log("[compaktcircuit debug] exit_player: restore physical player=" .. player.index ..
+            log("[compaktcircuit debug] restore_player_controller: restore physical player=" .. player.index ..
                 " surface=" .. tostring(procinfo.physical_surface_index))
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
             local surface = game.surfaces[procinfo.physical_surface_index]
@@ -326,7 +326,7 @@ local function exit_player(procinfo, player)
                 player.enter_space_platform(platform)
             end
         end
-        log("[compaktcircuit debug] exit_player: set_controller return player=" .. player.index)
+        log("[compaktcircuit debug] restore_player_controller: set_controller return player=" .. player.index)
         player.set_controller {
             type = ret_controller_type,
             position = ret_surface_position,
@@ -334,7 +334,7 @@ local function exit_player(procinfo, player)
         }
     end
 
-    editor.restore_surface_list(player, "exit_player")
+    editor.restore_surface_list(player, "restore_player_controller")
 end
 
 ---@param player LuaPlayer
@@ -938,7 +938,7 @@ function editor.on_pre_surface_deleted(e)
     storage.surface_map[surface.name] = nil
     procinfo.surface = nil
     for _, player in pairs(game.players) do
-        if player.surface == surface then exit_player(procinfo, player) end
+        if player.surface == surface then restore_player_controller(procinfo, player) end
     end
 end
 
