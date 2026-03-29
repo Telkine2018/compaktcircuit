@@ -437,7 +437,9 @@ local function check_stack(player)
                 return true
             end
 
-            local empty_stack = player.get_main_inventory().find_empty_stack()
+            local main_inventory = player.get_main_inventory()
+            if not main_inventory then return false end
+            local empty_stack = main_inventory.find_empty_stack()
             if empty_stack then
                 empty_stack.transfer_stack(stack)
             else
