@@ -503,10 +503,13 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
             if packed_name then
                 local packed_display_text = nil
+                local sync_display_panel = false
                 if name == "display-panel" then
                     packed_display_text = parse_display_panel_ext_text(bpentity.text)
-                    if not packed_display_text then
-                        packed_name = nil
+                    if packed_display_text then
+                        sync_display_panel = true
+                    else
+                        packed_name = prefix .. "-cc"
                     end
                 end
 
@@ -652,7 +655,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                 end
                             end
                         end
-                    elseif name == "display-panel" then
+                    elseif name == "display-panel" and sync_display_panel then
                         local bp_cb = bpentity.control_behavior --[[@as DisplayPanelBlueprintControlBehavior?]]
                         if bp_cb and bp_cb.parameters then
                             local cb = entity.get_or_create_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
