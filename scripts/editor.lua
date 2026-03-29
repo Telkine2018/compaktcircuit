@@ -242,16 +242,14 @@ end
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
     if storage.last_click and storage.last_click > game.tick - 120 then
-        log("[compaktcircuit debug] edit_selected: ignored bounce click player=" .. player.index)
+        debug("edit_selected: ignored bounce click player=" .. player.index)
         return
     end
     storage.last_click = game.tick
 
     local blocked_reason = get_processor_entry_block_reason(player)
     if blocked_reason then
-        log("[compaktcircuit debug] edit_selected: blocked unsafe entry player=" .. player.index ..
-            " controller=" .. tostring(player.controller_type) ..
-            " physical_controller=" .. tostring(player.physical_controller_type) ..
+        debug("edit_selected: blocked unsafe entry player=" .. player.index ..
             " physical_surface=" .. tostring(player.physical_surface_index) ..
             " reason=" .. blocked_reason)
         player.print("CompaktCircuits: unsafe processor entry blocked from " ..
@@ -261,7 +259,7 @@ function editor.edit_selected(player, processor)
     end
 
     if not processor or not processor.valid then
-        log("[compaktcircuit debug] edit_selected: invalid processor player=" .. player.index)
+        debug("edit_selected: invalid processor player=" .. player.index)
         return
     end
 
@@ -287,7 +285,7 @@ function editor.edit_selected(player, processor)
     procinfo.physical_controller_type = player.physical_controller_type
     procinfo.physical_position = player.physical_position
 
-    log("[compaktcircuit debug] edit_selected: enter remote player=" .. player.index ..
+    debug("edit_selected: enter remote player=" .. player.index ..
         " processor=" .. tostring(processor.unit_number) ..
         " origin_surface=" .. tostring(procinfo.origin_surface_name) ..
         " origin_controller=" .. tostring(procinfo.origin_controller_type) ..
@@ -322,7 +320,7 @@ local function restore_player_controller(procinfo, player)
         ret_surface_position = { x = 0, y = 0 }
     end
 
-    log("[compaktcircuit debug] restore_player_controller: player=" .. player.index ..
+    debug("restore_player_controller: player=" .. player.index ..
         " return_controller=" .. tostring(ret_controller_type) ..
         " return_surface=" .. tostring(ret_surface_name) ..
         " return_pos=" .. tostring(ret_surface_position.x) .. "," .. tostring(ret_surface_position.y))
@@ -337,14 +335,14 @@ local function restore_player_controller(procinfo, player)
                     surface = character.surface
                 }
             end
-            log("[compaktcircuit debug] restore_player_controller: restore character controller player=" .. player.index)
+            debug("restore_player_controller: restore character controller player=" .. player.index)
             player.set_controller {
                 type = defines.controllers.character,
                 character = character
             }
         end
     elseif ret_controller_type == defines.controllers.god then
-        log("[compaktcircuit debug] restore_player_controller: teleport return player=" .. player.index)
+        debug("restore_player_controller: teleport return player=" .. player.index)
         player.teleport(ret_surface_position, ret_surface_name)
         local surface = game.surfaces[ret_surface_name]
         local platform = surface.platform
@@ -353,7 +351,7 @@ local function restore_player_controller(procinfo, player)
         end
     else
         if procinfo.physical_controller_type then
-            log("[compaktcircuit debug] restore_player_controller: restore physical player=" .. player.index ..
+            debug("restore_player_controller: restore physical player=" .. player.index ..
                 " surface=" .. tostring(procinfo.physical_surface_index))
             player.teleport(procinfo.physical_position, procinfo.physical_surface_index, false, false)
             local surface = game.surfaces[procinfo.physical_surface_index]
@@ -362,7 +360,7 @@ local function restore_player_controller(procinfo, player)
                 player.enter_space_platform(platform)
             end
         end
-        log("[compaktcircuit debug] restore_player_controller: set_controller return player=" .. player.index)
+        debug("restore_player_controller: set_controller return player=" .. player.index)
         player.set_controller {
             type = ret_controller_type,
             position = ret_surface_position,
@@ -379,7 +377,7 @@ function editor.restore_surface_list(player, context)
     local vars = tools.get_vars(player)
     if vars.show_surface_list_before_editor ~= nil then
         player.game_view_settings.show_surface_list = vars.show_surface_list_before_editor
-        log("[compaktcircuit debug] " .. context .. ": restore surface list player=" .. player.index ..
+        debug(context .. ": restore surface list player=" .. player.index ..
             " value=" .. tostring(vars.show_surface_list_before_editor))
         vars.show_surface_list_before_editor = nil
     end
@@ -394,7 +392,7 @@ function editor.hide_surface_list(player, context)
     end
     if player.game_view_settings.show_surface_list then
         player.game_view_settings.show_surface_list = false
-        log("[compaktcircuit debug] " .. context .. ": hide surface list player=" .. player.index)
+        debug(context .. ": hide surface list player=" .. player.index)
     end
 end
 
@@ -1069,7 +1067,7 @@ local function on_player_changed_surface(e)
     local is_standard_exit = vars.is_standard_exit
     vars.is_standard_exit = false
 
-    log("[compaktcircuit debug] on_player_changed_surface: player=" .. e.player_index ..
+    debug("on_player_changed_surface: player=" .. e.player_index ..
         " from_surface_index=" .. tostring(e.surface_index) ..
         " current_surface=" .. tostring(player.surface.name) ..
         " has_procinfo=" .. tostring(procinfo ~= nil) ..
@@ -1112,7 +1110,7 @@ local function on_player_changed_surface(e)
     -- Exiting surface
     if procinfo and procinfo.surface and procinfo.surface.valid and
         procinfo.surface.index == e.surface_index then
-        log("[compaktcircuit debug] on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
+        debug("on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
             " surface=" .. tostring(procinfo.surface.name) ..
             " packed=" .. tostring(procinfo.is_packed))
         finish_processor_exit(procinfo, is_standard_exit, "on_player_changed_surface")
@@ -1121,7 +1119,7 @@ local function on_player_changed_surface(e)
     local surface_name = player.surface.name
     procinfo = storage.surface_map[surface_name]
     if procinfo then
-        log("[compaktcircuit debug] on_player_changed_surface: entering editor surface player=" .. e.player_index ..
+        debug("on_player_changed_surface: entering editor surface player=" .. e.player_index ..
             " surface=" .. tostring(surface_name) ..
             " processor=" .. tostring(procinfo.processor and procinfo.processor.name))
         editor.hide_surface_list(player, "on_player_changed_surface")
@@ -1148,7 +1146,7 @@ local function on_player_controller_changed(e)
     if not procinfo or not procinfo.surface or not procinfo.surface.valid then return end
     if player.surface ~= procinfo.surface then return end
 
-    log("[compaktcircuit debug] on_player_controller_changed: restoring player=" .. e.player_index ..
+    debug("on_player_controller_changed: restoring player=" .. e.player_index ..
         " old_controller=" .. (controller_names[e.old_type] or tostring(e.old_type)) ..
         " new_controller=" .. (controller_names[player.controller_type] or tostring(player.controller_type)) ..
         " surface=" .. tostring(player.surface.name))

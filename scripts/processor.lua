@@ -588,24 +588,24 @@ local function on_gui_open_processor_panel(event)
     if not entity or not entity.valid then return end
 
     if entity.name == device_name then
-        log("[compaktcircuit debug] on_gui_open_processor_panel: device opened player=" .. event.player_index ..
+        debug("on_gui_open_processor_panel: device opened player=" .. event.player_index ..
             " entity=" .. tostring(entity.unit_number) ..
             " surface=" .. tostring(entity.surface and entity.surface.name))
         player.opened = nil
         local processor = find_processor(entity)
         if not processor then
-            log("[compaktcircuit debug] on_gui_open_processor_panel: no processor found player=" ..
+            debug("on_gui_open_processor_panel: no processor found player=" ..
                 event.player_index)
             return
         end
 
-        log("[compaktcircuit debug] on_gui_open_processor_panel: entering processor player=" ..
+        debug("on_gui_open_processor_panel: entering processor player=" ..
             event.player_index .. " processor=" .. tostring(processor.unit_number) ..
             " surface=" .. tostring(processor.surface and processor.surface.name))
 
         editor.edit_selected(player, processor)
     elseif entity.name == iopoint_name then
-        log("[compaktcircuit debug] on_gui_open_processor_panel: iopoint opened player=" ..
+        debug("on_gui_open_processor_panel: iopoint opened player=" ..
             event.player_index .. " entity=" .. tostring(entity.unit_number))
         player.opened = nil
     end
