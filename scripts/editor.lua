@@ -266,13 +266,7 @@ function editor.edit_selected(player, processor)
     vars.processor = processor
     local surface = editor.get_or_create_surface(procinfo)
 
-    if vars.show_surface_list_before_editor == nil then
-        vars.show_surface_list_before_editor = player.game_view_settings.show_surface_list
-    end
-    if player.game_view_settings.show_surface_list then
-        player.game_view_settings.show_surface_list = false
-        log("[compaktcircuit debug] edit_selected: hide surface list player=" .. player.index)
-    end
+    editor.hide_surface_list(player, "edit_selected")
 
     if procinfo.is_packed then
         build.restore_packed_circuits(procinfo)
@@ -374,12 +368,31 @@ local function exit_player(procinfo, player, to_origin)
         }
     end
 
+    editor.restore_surface_list(player, "exit_player")
+end
+
+---@param player LuaPlayer
+---@param context string
+function editor.restore_surface_list(player, context)
     local vars = tools.get_vars(player)
     if vars.show_surface_list_before_editor ~= nil then
         player.game_view_settings.show_surface_list = vars.show_surface_list_before_editor
-        log("[compaktcircuit debug] exit_player: restore surface list player=" .. player.index ..
+        log("[compaktcircuit debug] " .. context .. ": restore surface list player=" .. player.index ..
             " value=" .. tostring(vars.show_surface_list_before_editor))
         vars.show_surface_list_before_editor = nil
+    end
+end
+
+---@param player LuaPlayer
+---@param context string
+function editor.hide_surface_list(player, context)
+    local vars = tools.get_vars(player)
+    if vars.show_surface_list_before_editor == nil then
+        vars.show_surface_list_before_editor = player.game_view_settings.show_surface_list
+    end
+    if player.game_view_settings.show_surface_list then
+        player.game_view_settings.show_surface_list = false
+        log("[compaktcircuit debug] " .. context .. ": hide surface list player=" .. player.index)
     end
 end
 
@@ -1070,6 +1083,7 @@ local function on_player_changed_surface(e)
         " is_standard_exit=" .. tostring(is_standard_exit))
 
     if procinfo and not procinfo.processor.valid then
+        editor.restore_surface_list(player, "on_player_changed_surface")
         vars.procinfo = nil
         return
     end
@@ -1082,6 +1096,7 @@ local function on_player_changed_surface(e)
             " packed=" .. tostring(procinfo.is_packed))
         editor.close_iopanel(player)
         editor.close_editor_panel(player)
+        editor.restore_surface_list(player, "on_player_changed_surface")
 
         player.opened = nil
         vars.procinfo = nil
@@ -1112,6 +1127,7 @@ local function on_player_changed_surface(e)
         log("[compaktcircuit debug] on_player_changed_surface: entering editor surface player=" .. e.player_index ..
             " surface=" .. tostring(surface_name) ..
             " processor=" .. tostring(procinfo.processor and procinfo.processor.name))
+        editor.hide_surface_list(player, "on_player_changed_surface")
         vars.procinfo = procinfo
         vars.processor = procinfo.processor
         player.surface.request_to_generate_chunks(player.position, 8)
