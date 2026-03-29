@@ -379,6 +379,7 @@ local function on_gui_checked_state_changed(e)
 
     local vars = get_vars(player)
     local procinfo = vars.procinfo
+    if not procinfo then return end
     local new_packed = e.element.state
     editor.set_packed(procinfo, new_packed, player)
 end
@@ -839,6 +840,7 @@ local function on_gui_selection_state_changed(e)
 
     ---@type ProcInfo
     local procinfo = vars.procinfo
+    if not procinfo then return end
     local iopole_info = get_iopoint_info(procinfo, iopole)
 
     if name == prefix .. ".iopole_index" then
@@ -893,13 +895,15 @@ local function on_gui_text_changed(e)
         local iopole = vars.iopole
         if not iopole or not iopole.valid then return end
         local procinfo = vars.procinfo
+        if not procinfo then return end
 
         local iopoint_info = get_iopoint_info(procinfo, iopole)
         if not iopoint_info then return end
         iopoint_info.label = e.element.text
         build.update_io_text(iopoint_info)
     elseif e.element.name == prefix .. "-title" then
-        local procinfo = vars.procinfo --[[@as ProcInfo]]
+        local procinfo = vars.procinfo
+        if not procinfo then return end
         ---@type string | nil
         local text
         text = e.element.text
@@ -1032,7 +1036,7 @@ local function on_player_changed_surface(e)
         " has_procinfo=" .. tostring(procinfo ~= nil) ..
         " is_standard_exit=" .. tostring(is_standard_exit))
 
-    if procinfo and not procinfo.processor.valid then
+    if procinfo and (not procinfo.processor or not procinfo.processor.valid) then
         editor.restore_surface_list(player, "on_player_changed_surface")
         vars.procinfo = nil
         return
@@ -1044,7 +1048,7 @@ local function on_player_changed_surface(e)
         log("[compaktcircuit debug] on_player_changed_surface: leaving editor surface player=" .. e.player_index ..
             " surface=" .. tostring(procinfo.surface.name) ..
             " packed=" .. tostring(procinfo.is_packed))
-        editor.close_iopanel(player)
+        editor.close_all(player)
         editor.close_editor_panel(player)
         editor.restore_surface_list(player, "on_player_changed_surface")
 
@@ -1351,7 +1355,9 @@ local function on_marked_for_deconstruction(e)
         end
     end
 
-    if entity.valid and (commons.remote_controllers[player.controller_type] or need_mining) then
+    local player_surface = player.surface
+    local is_same_surface = player_surface and player_surface.valid and player_surface == entity.surface
+    if entity.valid and is_same_surface and (commons.remote_controllers[player.controller_type] or need_mining) then
         if entity.name == internal_iopoint_name then
             editor.destroy_internal_iopoint(entity)
         end
@@ -1550,7 +1556,7 @@ tools.on_nth_tick(300, function()
     local charted = {}
     for _, player in pairs(game.players) do
         local surface = player.surface
-        if string.find(surface.name, commons.surface_name_pattern) then
+        if surface and surface.valid and string.find(surface.name, commons.surface_name_pattern) then
             local key = player.force.name .. surface.name
             if not charted[key] then
                 surface.request_to_generate_chunks(player.position, 8)

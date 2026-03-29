@@ -1918,8 +1918,10 @@ tools.on_event(defines.events.on_marked_for_deconstruction,
                 end
 
                 local player = game.players[e.player_index]
+                local player_surface = player.surface
+                local is_same_surface = player_surface and player_surface.valid and player_surface == entity.surface
                 local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
-                if procinfo and commons.remote_controllers[player.controller_type] then
+                if procinfo and is_same_surface and commons.remote_controllers[player.controller_type] then
                     save_undo_tags(e.player_index, entity.position, tags)
                     entity.mine { raise_destroyed = true }
                     return
