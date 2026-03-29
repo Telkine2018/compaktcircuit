@@ -752,8 +752,19 @@ tools.on_event(defines.events.on_player_setup_blueprint,
         local player = game.players[e.player_index]
         ---@type table<integer, LuaEntity>
         local mapping = e.mapping.get()
-        local bp = get_bp_to_setup(player)
-        if bp then register_mapping(bp, mapping, player.surface) end
+
+        -- e.stack: inventory/cursor blueprint; e.record: library blueprint reselect
+        ---@type LuaItemStack | LuaRecord | nil
+        local bp
+        if e.stack then
+            bp = e.stack
+        elseif e.record then
+            bp = e.record
+        else
+            bp = get_bp_to_setup(player)
+        end
+
+        if bp then register_mapping(bp --[[@as LuaItemStack]], mapping, e.surface) end
     end)
 
 script.on_event("on_script_setup_blueprint",
