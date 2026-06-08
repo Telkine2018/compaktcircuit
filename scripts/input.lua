@@ -1297,6 +1297,7 @@ function input.load_property_values(player)
     if not frame then return end
 
     local procinfo = vars.input_procinfo --[[@as ProcInfo]]
+    if not procinfo then return end
 
     local property_table = tools.get_child(frame, "properties")
     if not property_table then return end
