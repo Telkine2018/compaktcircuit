@@ -1,4 +1,4 @@
-local migration = require("__flib__.migration")
+local migration = require("scripts.flib_migration")
 
 local commons = require("scripts.commons")
 local runtime = require("scripts.runtime")
@@ -242,7 +242,7 @@ local function init_procinfo(procinfo)
             draw_iopoint_sprite(point)
 
             point.destructible = false
-            point.minable = false
+            point.minable_flag = false
             table.insert(iopoints, point)
         end
     end
