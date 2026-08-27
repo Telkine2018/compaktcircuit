@@ -1,5 +1,3 @@
-local migration = require("__flib__.migration")
-
 local commons = require("scripts.commons")
 local runtime = require("scripts.runtime")
 
@@ -1687,7 +1685,23 @@ local migrations_table = {
 
 local function on_configuration_changed(data)
     runtime.initialize()
-    migration.on_config_changed(data, migrations_table)
+
+    local change = data.mod_changes[script.mod_name]
+    local old_version = change and change.old_version
+    if not old_version then return end
+
+    local pending = {}
+    for version, migrate in pairs(migrations_table) do
+        if helpers.compare_versions(old_version, version) < 0 then
+            table.insert(pending, { version = version, migrate = migrate })
+        end
+    end
+    table.sort(pending, function(a, b)
+        return helpers.compare_versions(a.version, b.version) < 0
+    end)
+    for _, migration in ipairs(pending) do
+        migration.migrate(data)
+    end
 end
 
 script.on_configuration_changed(on_configuration_changed)
