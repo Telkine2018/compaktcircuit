@@ -27,19 +27,19 @@ local iopoint_text_color = commons.get_color(
 local iopoint_name = commons.iopoint_name
 local display_panel_ext_tag_pattern = "%[[Ee][Xx][Tt]%]"
 
----Only want to apply the full display-panel proxy if the player *wants* that panel reproduced; check the user-entered text for `[ext]`. (Intentionally treating as plain text, who tf is gonna insert a LocalizedString into a display-panel, just sayin)
----@param text LocalisedString
----@param messages table|nil
+---Only apply the full display-panel proxy when the player opts in with `[ext]`.
+---@param text string?
+---@param records DisplayPanelMessageDefinition[]?
 ---@return boolean
-local function has_display_panel_opt_in(text, messages)
+local function has_display_panel_opt_in(text, records)
     if type(text) == "string" and text:find(display_panel_ext_tag_pattern) ~= nil then
         return true
     end
 
-    if type(messages) == "table" then
-        for _, message in pairs(messages) do
-            if type(message) == "table" and type(message.text) == "string" and
-                message.text:find(display_panel_ext_tag_pattern) ~= nil then
+    if type(records) == "table" then
+        for _, record in pairs(records) do
+            if type(record) == "table" and type(record.text) == "string" and
+                record.text:find(display_panel_ext_tag_pattern) ~= nil then
                 return true
             end
         end
@@ -498,11 +498,11 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
 
             if packed_name then
                 local sync_display_panel = false
-                local packed_display_messages = nil
+                local packed_display_records = nil
                 if name == "display-panel" then
                     local bp_cb = bpentity.control_behavior --[[@as DisplayPanelBlueprintControlBehavior?]]
-                    packed_display_messages = bp_cb and bp_cb.parameters
-                    sync_display_panel = has_display_panel_opt_in(bpentity.text, packed_display_messages)
+                    packed_display_records = bp_cb and bp_cb.parameters
+                    sync_display_panel = has_display_panel_opt_in(bpentity.text, packed_display_records)
 
                     if not sync_display_panel then
                         packed_name = prefix .. "-cc"
@@ -671,10 +671,10 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             end
                         end
                     elseif name == "display-panel" and sync_display_panel then
-                        if packed_display_messages then
+                        if packed_display_records then
                             local cb = entity.get_or_create_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
                             if cb then
-                                cb.messages = packed_display_messages
+                                cb.records = packed_display_records
                             end
                         end
                         local bp_display = bpentity --[[@as any]]
@@ -877,7 +877,7 @@ local function display_panel_wants_unpacked_proxy(display_panel)
     if display_panel.to_be_deconstructed() then return false end
 
     local cb = display_panel.get_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]
-    local is_opted_in = has_display_panel_opt_in(display_panel.display_panel_text, cb and cb.messages)
+    local is_opted_in = has_display_panel_opt_in(display_panel.display_panel_text, cb and cb.records)
 
     if not is_opted_in then return false end
 

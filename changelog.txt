@@ -6,6 +6,7 @@ Date: 23. 08. 2026
     - Replace the removed FLIB migration module with Factorio's native version comparison API.
   Bugfixes:
     - Preserve decider combinator else-outputs when circuits are packed.
+    - Use the Factorio 2.1 display-panel records API when packing circuits.
     - Preserve packed entity quality, mirroring, and Factorio 2.1 lamp circuit-network settings.
     - Rebuild existing packed circuits when upgrading to this version.
 ---------------------------------------------------------------------------------------------------
