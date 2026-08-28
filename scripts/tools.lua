@@ -1145,7 +1145,7 @@ end
 
 -------------------------------------
 
----@param signal SignalFilter | ItemWithQualityCounts | SignalID
+---@param signal SignalFilter | ItemWithQualityCount | SignalID
 ---@return string?
 function tools.signal_to_id(signal)
     if not signal then return nil end
