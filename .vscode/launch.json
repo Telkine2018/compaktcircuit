@@ -1,57 +1,14 @@
 {
-    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
-    // Pointez pour afficher la description des attributs existants.
-    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+    
         {
-            "type": "factoriomod",
+            "type": "factorio",
             "request": "launch",
-            "name": "Factorio Mod Debug (Settings & Data)",
-            "hookSettings": false,
-            "hookData": false,
-            "hookMode": "debug",
-            "hookControl": ["compaktcircuit" ],
-            "adjustMods": {
-                "compaktcircuit" : true
-            }
-        },
-        {
-            "type": "factoriomod",
-            "request": "launch",
-            "name": "Factorio Mod Debug + factory_organizer",
-            "hookSettings": false,
-            "hookData": false,
-            "hookMode": "debug",
-            "hookControl": ["compaktcircuit", "factory_organizer" ],
-            "adjustMods": {
-                "compaktcircuit" : true,
-                "factory_organizer" : true
-            }
-        },
-        {
-            "type": "factoriomod",
-            "request": "launch",
-            "name": "Factorio Mod Debug + qoltools",
-            "hookSettings": false,
-            "hookData": false,
-            "hookMode": "debug",
-            "hookControl": ["compaktcircuit", "qoltools" ],
-            "adjustMods": {
-                "compaktcircuit" : true,
-                "qoltools" : true
-            }
-        },
-        
-       {
-            "type": "factoriomod",
-            "request": "launch",
-            "name": "Factorio Mod Debug (Profile)",
-            "hookMode": "profile",
-            "hookControl": ["compaktcircuit" ],
-            "adjustMods": {
-                "compaktcircuit" : true
-            }
+            "name": "Factorio Debug Adapter"
         }
     ]
 }
