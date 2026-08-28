@@ -529,6 +529,8 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                         name = packed_name,
                         position = pos,
                         direction = bpentity.direction,
+                        mirror = bpentity.mirror,
+                        quality = bpentity.quality,
                         force = force
                     }
                     ---@cast entity -nil
@@ -586,11 +588,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     elseif name == "decider-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaDeciderCombinatorControlBehavior]]
                         if bpentity.control_behavior and cb then
-                            local parameters = {
-                                conditions = bpentity.control_behavior.decider_conditions.conditions,
-                                outputs = bpentity.control_behavior.decider_conditions.outputs
-                            }
-                            cb.parameters = parameters
+                            cb.parameters = bpentity.control_behavior.decider_conditions
                         end
                     elseif name == "selector-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaSelectorCombinatorControlBehavior]]
@@ -626,9 +624,24 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                             local cb = entity.get_or_create_control_behavior()
                             ---@cast cb LuaLampControlBehavior
                             local bcontrol = bpentity.control_behavior --[[@as any]]
-                            if bcontrol.use_colors then
-                                cb.color_mode = defines.control_behavior.lamp.color_mode.color_mapping
-                                cb.use_colors = true
+                            cb.use_colors = bcontrol.use_colors or false
+                            if bcontrol.color_mode ~= nil then
+                                cb.color_mode = bcontrol.color_mode
+                            end
+                            if bcontrol.red_signal ~= nil then
+                                cb.red_signal = bcontrol.red_signal
+                            end
+                            if bcontrol.green_signal ~= nil then
+                                cb.green_signal = bcontrol.green_signal
+                            end
+                            if bcontrol.blue_signal ~= nil then
+                                cb.blue_signal = bcontrol.blue_signal
+                            end
+                            if bcontrol.rgb_signal ~= nil then
+                                cb.rgb_signal = bcontrol.rgb_signal
+                            end
+                            if bcontrol.input_networks ~= nil and cb.input_networks ~= nil then
+                                cb.input_networks = bcontrol.input_networks
                             end
                             if bpentity.control_behavior.circuit_condition then
                                 local condition = {}
@@ -636,6 +649,12 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                                     condition[name] = value
                                 end
                                 cb.circuit_condition = condition
+                            end
+                            if bcontrol.circuit_enabled ~= nil then
+                                cb.circuit_enable_disable = bcontrol.circuit_enabled
+                            elseif bcontrol.circuit_condition then
+                                -- Compatibility with blueprints made before the
+                                -- circuit_enabled field was added.
                                 cb.circuit_enable_disable = true
                             end
 

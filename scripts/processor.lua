@@ -1657,6 +1657,18 @@ local function migration_2_0_12()
     end
 end
 
+local function migration_2_1_0()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    if not procinfos then return end
+
+    for _, procinfo in pairs(procinfos) do
+        if procinfo.processor and procinfo.processor.valid and
+            procinfo.is_packed and procinfo.blueprint then
+            build.create_packed_circuit(procinfo)
+        end
+    end
+end
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
@@ -1679,7 +1691,8 @@ local migrations_table = {
     ["1.1.11"] = migration_1_1_11,
     ["2.0.0"] = migration_2_0_0,
     ["2.0.4"] = migration_2_0_4,
-    ["2.0.12"] = migration_2_0_12
+    ["2.0.12"] = migration_2_0_12,
+    ["2.1.0"] = migration_2_1_0
 
 }
 
