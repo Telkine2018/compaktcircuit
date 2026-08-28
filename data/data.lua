@@ -37,7 +37,7 @@ if mods["nullius"] then
         { type = 'item', name = "arithmetic-combinator", amount = 10 },
         { type = 'item', name = "copper-cable",          amount = 10 }
     }
-    recipe1.category = "tiny-crafting"
+    recipe1.categories = { "tiny-crafting" }
     recipe1.always_show_made_in = true
 
     recipe2.name = "nullius-" .. recipe2.name
@@ -45,7 +45,7 @@ if mods["nullius"] then
         { type = 'item', name = "arithmetic-combinator", amount = 20 },
         { type = 'item', name = "copper-cable",          amount = 20 }
     }
-    recipe2.category = "tiny-crafting"
+    recipe2.categories = { "tiny-crafting" }
     recipe2.always_show_made_in = true
 end
 
