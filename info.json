@@ -1,16 +1,16 @@
 {
   "name": "compaktcircuit",
-  "version": "2.0.28",
+  "version": "2.1.0",
   "title": "Compakt circuits",
   "author": "Telkine2018",
   "contact": "",
   "homepage": "",
   "description": "Miniaturize a whole logic network into a single entity to save space (similar to factorissimo but for signals).",
-  "factorio_version": "2.0",
+  "factorio_version": "2.1",
   "dependencies": [
-		"base >= 2.0.0" ,
+    "base >= 2.1.7",
     "? DisplayPlatesForked",
-    "flib >= 0.11.2",
+    "flib >= 0.17.0",
     "? even-pickier-dollies"
-	]
+  ]
 }

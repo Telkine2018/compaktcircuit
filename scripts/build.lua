@@ -602,7 +602,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                         if tags then
                             local iopoint = procinfo.iopoints[tags.index]
                             if iopoint and iopoint.valid then
-                                iopoint.active = false
+                                iopoint.disabled_by_script = true
 
                                 local success1 = iopoint.get_wire_connector(defines.wire_connector_id.circuit_green, true)
                                     .connect_to(entity.get_wire_connector(defines.wire_connector_id.circuit_green, true), false, defines.wire_origin.script)

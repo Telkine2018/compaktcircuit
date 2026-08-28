@@ -240,7 +240,7 @@ local function init_procinfo(procinfo)
             draw_iopoint_sprite(point)
 
             point.destructible = false
-            point.minable = false
+            point.minable_flag = false
             table.insert(iopoints, point)
         end
     end
