@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.0
+Date: 23. 08. 2026
+  Changes:
+    - Add Factorio 2.1 compatibility and require FLIB 0.17 or newer.
+    - Replace the removed FLIB migration module with Factorio's native version comparison API.
+  Bugfixes:
+    - Use the Factorio 2.1 recipe categories API in the Nullius compatibility path.
+    - Preserve decider combinator else-outputs when circuits are packed.
+    - Use the Factorio 2.1 display-panel records API when packing circuits.
+    - Preserve packed entity quality, mirroring, and Factorio 2.1 lamp circuit-network settings.
+    - Rebuild existing packed circuits when upgrading to this version.
+---------------------------------------------------------------------------------------------------
 Version: 2.0.28
 Date: 29.3.206
   Bugfixes:

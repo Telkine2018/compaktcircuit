@@ -1,5 +1,3 @@
-local migration = require("__flib__.migration")
-
 local commons = require("scripts.commons")
 local runtime = require("scripts.runtime")
 
@@ -242,7 +240,7 @@ local function init_procinfo(procinfo)
             draw_iopoint_sprite(point)
 
             point.destructible = false
-            point.minable = false
+            point.minable_flag = false
             table.insert(iopoints, point)
         end
     end
@@ -1659,6 +1657,18 @@ local function migration_2_0_12()
     end
 end
 
+local function migration_2_1_0()
+    procinfos = storage.procinfos --[[@as ProcInfoTable]]
+    if not procinfos then return end
+
+    for _, procinfo in pairs(procinfos) do
+        if procinfo.processor and procinfo.processor.valid and
+            procinfo.is_packed and procinfo.blueprint then
+            build.create_packed_circuit(procinfo)
+        end
+    end
+end
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
@@ -1681,13 +1691,30 @@ local migrations_table = {
     ["1.1.11"] = migration_1_1_11,
     ["2.0.0"] = migration_2_0_0,
     ["2.0.4"] = migration_2_0_4,
-    ["2.0.12"] = migration_2_0_12
+    ["2.0.12"] = migration_2_0_12,
+    ["2.1.0"] = migration_2_1_0
 
 }
 
 local function on_configuration_changed(data)
     runtime.initialize()
-    migration.on_config_changed(data, migrations_table)
+
+    local change = data.mod_changes[script.mod_name]
+    local old_version = change and change.old_version
+    if not old_version then return end
+
+    local pending = {}
+    for version, migrate in pairs(migrations_table) do
+        if helpers.compare_versions(old_version, version) < 0 then
+            table.insert(pending, { version = version, migrate = migrate })
+        end
+    end
+    table.sort(pending, function(a, b)
+        return helpers.compare_versions(a.version, b.version) < 0
+    end)
+    for _, migration in ipairs(pending) do
+        migration.migrate(data)
+    end
 end
 
 script.on_configuration_changed(on_configuration_changed)
