@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.0
 Date: 23. 08. 2026
+  Info:
+    - Thanks to hgschmie and Gohla for 2.1 Port
   Changes:
     - Add Factorio 2.1 compatibility and require FLIB 0.17 or newer.
     - Replace the removed FLIB migration module with Factorio's native version comparison API.
