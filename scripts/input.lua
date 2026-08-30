@@ -401,6 +401,7 @@ function input.open(player, entity)
     else
         outer_frame.force_auto_center()
     end
+    player.opened = outer_frame
 end
 
 tools.on_gui_click(np("close"), function(e)
@@ -444,6 +445,7 @@ tools.on_named_event(np("input_type"),
 ---@param player LuaPlayer
 ---@param nosave boolean?
 function input.close(player, nosave)
+    local closed = false
     local frame = input.get_frame(player)
     if frame then
         if not nosave and player.mod_settings[prefix .. "-autosave"].value then
@@ -453,12 +455,15 @@ function input.close(player, nosave)
         vars.edit_location = frame.location
         vars.input_entity = nil
         frame.destroy()
+        closed = true
     end
 
     local panel = player.gui.left[frame_name]
     if panel then
         panel.destroy()
+        closed = true
     end
+    if closed then ccutils.defer_editor_focus(player) end
 end
 
 ---@param e EventData.on_gui_opened
@@ -705,7 +710,10 @@ end
 
 function input.close_property_table(player)
     local frame = player.gui.screen[property_frame_name]
-    if frame then frame.destroy() end
+    if frame then
+        frame.destroy()
+        ccutils.defer_editor_focus(player)
+    end
 
     local vars = tools.get_vars(player)
     vars.input_procinfo = nil
@@ -1581,8 +1589,14 @@ tools.on_event(defines.events.on_gui_confirmed,
 
 tools.on_event(defines.events.on_gui_closed, ---@param e EventData.on_gui_closed
     function(e)
+        local element = e.element
+        if not element or not element.valid then return end
         local player = game.players[e.player_index]
-        input.close_property_table(player)
+        if element.name == property_frame_name then
+            input.close_property_table(player)
+        elseif element.name == frame_name then
+            input.close(player, true)
+        end
     end)
 
 local function on_load() display_runtime = Runtime.get("Display") end
