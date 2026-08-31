@@ -723,6 +723,14 @@ local field_prefix = prefix .. "_prefix_"
 
 local create_field_table
 
+---@param context CreateInputContext
+---@return ConstantCombinatorFilter[]
+local function get_entity_filters(context)
+    local cb = context.cb
+    local section = cb and cb.get_section(1)
+    return (section and section.filters) or {}
+end
+
 ---@param procinfo ProcInfo
 function input.create_unpacked_input_list(procinfo, input_list)
     local surface = procinfo.surface
@@ -1164,7 +1172,15 @@ create_field_table = {
             }
             signal_table.style.bottom_cell_padding = 5
 
-            local values = (context.value or {}) --[[@as string[] ]]
+            local values = context.value --[[@as string[]? ]]
+            if values == nil then
+                values = {}
+                for _, filter in pairs(get_entity_filters(context)) do
+                    if filter.value then
+                        table.insert(values, tools.signal_to_id(filter.value))
+                    end
+                end
+            end
 
             local index = 1
             while index <= count do
@@ -1199,7 +1215,18 @@ create_field_table = {
             }
             signal_table.style.bottom_cell_padding = 4
 
-            local values = (context.value or {}) --[[ @as {signal:string, count:integer}[] ]]
+            local values = context.value --[[ @as {signal:string, count:integer}[]? ]]
+            if values == nil then
+                values = {}
+                for _, filter in pairs(get_entity_filters(context)) do
+                    if filter.value then
+                        table.insert(values, {
+                            signal = tools.signal_to_id(filter.value),
+                            count = filter.min
+                        })
+                    end
+                end
+            end
             local index = 1
             while index <= count do
                 local fsignal = signal_table.add {

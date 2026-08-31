@@ -12,6 +12,7 @@ Date: 23. 08. 2026
     - Use the Factorio 2.1 display-panel records API when packing circuits.
     - Preserve packed entity quality, mirroring, and Factorio 2.1 lamp circuit-network settings.
     - Rebuild existing packed circuits when upgrading to this version.
+    - Show signals stored in imported model input components in the input dialog.
 ---------------------------------------------------------------------------------------------------
 Version: 2.0.28
 Date: 29.3.206
