@@ -29,6 +29,15 @@ local checkbox_prefix = prefix .. "-checkbox"
 local message_prefix = prefix .. "-message"
 local tooltip_prefix = prefix .. "-tooltip"
 local iopanel_name = prefix .. "-iopole_panel"
+local internal_panel_name = commons.internal_panel_name
+
+---@param opened any
+---@return boolean
+local function is_editor_panel_opened(opened)
+    return opened ~= nil and type(opened) ~= "number" and
+        opened.object_name == "LuaGuiElement" and opened.valid and
+        opened.name == internal_panel_name
+end
 
 ---@param player LuaPlayer
 ---@return boolean
@@ -41,6 +50,53 @@ function editor.close_editor_panel(player)
     end
     return false
 end
+
+---@param player LuaPlayer
+function editor.focus_editor_panel(player)
+    local vars = get_vars(player)
+    if not vars.procinfo or player.opened ~= nil then return end
+
+    local panel = player.gui.left[internal_panel_name]
+    if panel and panel.valid then
+        player.opened = panel
+    end
+end
+
+---@param player LuaPlayer
+---@param main boolean
+local function queue_editor_gui_close(player, main)
+    local vars = get_vars(player)
+    local procinfo = vars.procinfo
+    if not procinfo or not procinfo.surface or
+        player.surface.index ~= procinfo.surface.index then
+        return
+    end
+
+    storage.editor_closed_guis = storage.editor_closed_guis or {}
+    storage.editor_closed_guis[player.index] = {
+        tick = game.tick,
+        main = main
+    }
+end
+
+---@param player LuaPlayer
+function editor.defer_editor_focus(player)
+    queue_editor_gui_close(player, false)
+end
+
+tools.on_event(prefix .. "-open-gui", function(e)
+    local player = game.players[e.player_index]
+    local pending = storage.editor_closed_guis and
+        storage.editor_closed_guis[e.player_index]
+    local editor_is_opened = is_editor_panel_opened(player.opened)
+    if not editor_is_opened and
+        not (pending and pending.main and pending.tick == e.tick) then
+        return
+    end
+
+    get_vars(player).editor_open_gui_tick = e.tick
+    if editor_is_opened then queue_editor_gui_close(player, true) end
+end)
 
 local get_procinfo = build.get_procinfo
 editor.get_proc_info = build.get_procinfo
@@ -60,8 +116,6 @@ local function is_allowed(name)
     if remote_name_map[name] then return name end
     return nil
 end
-
-local internal_panel_name = commons.internal_panel_name
 
 ---@param player LuaPlayer
 ---@param procinfo ProcInfo
@@ -180,6 +234,7 @@ function editor.create_editor_panel(player, procinfo)
         icon_selector = true
     }
     ftitle.style.width = 300
+    player.opened = outer_frame
 end
 
 -----------------------------------------------------------------
@@ -239,8 +294,9 @@ local allow_controller_types = {
 ---@param player LuaPlayer
 ---@param processor LuaEntity
 function editor.edit_selected(player, processor)
-    if storage.last_click and storage.last_click > game.tick - 120 then return end
-    storage.last_click = game.tick
+    local vars = get_vars(player)
+    if vars.last_editor_click == game.tick then return end
+    vars.last_editor_click = game.tick
 
     if not allow_controller_types[player.controller_type] then
         return
@@ -250,7 +306,6 @@ function editor.edit_selected(player, processor)
 
     local procinfo = get_procinfo(processor, true)
     ---@cast procinfo -nil
-    local vars = get_vars(player)
     vars.procinfo = procinfo
     vars.processor = processor
     local surface = editor.get_or_create_surface(procinfo)
@@ -334,16 +389,22 @@ local function exit_player(procinfo, player, to_origin)
     end
 end
 
----@param e EventData.on_gui_click
-local function on_exit_editor(e)
-    local player = game.players[e.player_index]
+---@param player LuaPlayer
+---@param to_origin boolean?
+local function exit_editor(player, to_origin)
     ccutils.close_all(player)
     editor.close_editor_panel(player)
 
     local vars = get_vars(player)
     local procinfo = vars.procinfo
+    if not procinfo then return end
     vars.is_standard_exit = true
-    exit_player(procinfo, player, e.control)
+    exit_player(procinfo, player, to_origin)
+end
+
+---@param e EventData.on_gui_click
+local function on_exit_editor(e)
+    exit_editor(game.players[e.player_index], e.control)
 end
 
 ---@param player LuaPlayer
@@ -355,6 +416,8 @@ function editor.close_all(player)
 end
 
 ccutils.close_all = editor.close_all
+ccutils.focus_editor = editor.focus_editor_panel
+ccutils.defer_editor_focus = editor.defer_editor_focus
 
 ---@param e EventData.on_gui_checked_state_changed
 local function on_gui_checked_state_changed(e)
@@ -646,16 +709,20 @@ end
 
 ---@param player LuaPlayer
 function editor.close_iopanel(player)
+    local closed = false
     local panel = player.gui.screen[iopanel_name]
     if panel then
         tools.get_vars(player).edit_location = panel.location
         panel.destroy()
+        closed = true
     end
 
     panel = player.gui.left[iopanel_name]
     if panel then
         panel.destroy()
+        closed = true
     end
+    if closed then editor.defer_editor_focus(player) end
 end
 
 ---------------------------------------------------------------
@@ -774,6 +841,7 @@ function editor.open_iopole(player, entity)
     else
         outer_frame.force_auto_center()
     end
+    player.opened = outer_frame
 end
 
 ---@param e EventData.on_gui_opened
@@ -1426,15 +1494,69 @@ end
 
 ---@param e EventData.on_gui_closed
 local function on_gui_closed(e)
-    local entity = e.entity
-    if not entity or not entity.valid then return end
-    if entity.name ~= "display-panel" then return end
-
-    local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
-    if procinfo and not procinfo.is_packed then
-        build.create_unpacked_proxies(procinfo)
+    local element = e.element
+    local is_main = element and element.valid and
+        element.name == internal_panel_name or false
+    if element and element.valid and element.name == iopanel_name then
+        editor.close_iopanel(game.players[e.player_index])
     end
+
+    local entity = e.entity
+    if entity and entity.valid and entity.name == "display-panel" then
+        local procinfo = storage.surface_map and storage.surface_map[entity.surface.name]
+        if procinfo and not procinfo.is_packed then
+            build.create_unpacked_proxies(procinfo)
+        end
+    end
+
+    local player = game.players[e.player_index]
+    local vars = get_vars(player)
+    if is_main and vars.ignore_editor_panel_close_tick == e.tick then
+        vars.ignore_editor_panel_close_tick = nil
+        return
+    end
+    queue_editor_gui_close(player, is_main)
 end
+
+tools.on_event(defines.events.on_tick, ---@param e EventData.on_tick
+    function(e)
+        local pending = storage.editor_closed_guis
+        if not pending then return end
+
+        for player_index, closed in pairs(pending) do
+            if closed.tick < e.tick then
+                pending[player_index] = nil
+                local player = game.get_player(player_index)
+                if player and player.connected then
+                    local vars = get_vars(player)
+                    local procinfo = vars.procinfo
+                    local opened = player.opened
+                    local editor_is_opened = is_editor_panel_opened(opened)
+                    local open_gui = closed.main and
+                        vars.editor_open_gui_tick == closed.tick
+                    if vars.editor_open_gui_tick and
+                        vars.editor_open_gui_tick <= closed.tick then
+                        vars.editor_open_gui_tick = nil
+                    end
+                    if procinfo and procinfo.surface and procinfo.surface.valid and
+                        player.surface.index == procinfo.surface.index then
+                        if open_gui and
+                            (opened == nil or editor_is_opened) then
+                            vars.ignore_editor_panel_close_tick = e.tick
+                            player.opened = player
+                        elseif closed.main and
+                            (opened == nil or editor_is_opened) then
+                            exit_editor(player, false)
+                        elseif not closed.main and opened == nil then
+                            editor.focus_editor_panel(player)
+                        end
+                    end
+                end
+            end
+        end
+
+        if next(pending) == nil then storage.editor_closed_guis = nil end
+    end)
 
 ---@param e EventData.on_entity_settings_pasted
 local function on_entity_settings_pasted(e)

@@ -121,8 +121,13 @@ function ccutils.get_top_procinfo(procinfo)
      end 
 end
 
----@param player LuaPlayer
-function ccutils.close_all(player)
-end
+---@type fun(player: LuaPlayer)
+ccutils.close_all = function(player) end
+
+---@type fun(player: LuaPlayer)
+ccutils.focus_editor = function(player) end
+
+---@type fun(player: LuaPlayer)
+ccutils.defer_editor_focus = function(player) end
 
 return ccutils

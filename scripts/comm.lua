@@ -2,6 +2,7 @@ local luautil = require("__core__/lualib/util")
 
 local commons = require("scripts.commons")
 local tools = require("scripts.tools")
+local ccutils = require("scripts.ccutils")
 local Runtime = require("scripts.runtime")
 local commons = require("scripts.commons")
 
@@ -447,6 +448,7 @@ function comm.open(player)
 
     inner.style.height = max_height
     comm.update(player)
+    player.opened = frame
 end
 
 ---@param parent LuaGuiElement
@@ -470,13 +472,26 @@ function comm.update_slot_table(parent)
     end
 end
 
-tools.on_gui_click(np("close"), function(e)
-    local player = game.players[e.player_index]
+---@param player LuaPlayer
+function comm.close(player)
     local frame = get_frame(player)
     if frame then
         frame.destroy()
+        ccutils.defer_editor_focus(player)
     end
+end
+
+tools.on_gui_click(np("close"), function(e)
+    comm.close(game.players[e.player_index])
 end)
+
+tools.on_event(defines.events.on_gui_closed, ---@param e EventData.on_gui_closed
+    function(e)
+        local element = e.element
+        if element and element.valid and element.name == np("panel") then
+            comm.close(game.players[e.player_index])
+        end
+    end)
 
 tools.on_gui_click(np("show_config"), function(e)
     local player = game.players[e.player_index]
