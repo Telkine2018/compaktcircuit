@@ -808,6 +808,7 @@ function input.create_property_table(player, procinfo)
     end
 
     if not input_list or #input_list == 0 then return end
+    input.merge_parameters(procinfo, input_list)
 
     local frame = player.gui.screen.add {
         type = "frame",
@@ -1321,6 +1322,31 @@ local function read_entity_parameter(property)
 
     local filter = filters[1]
     return filter and filter.min
+end
+
+---@param procinfo ProcInfo
+---@param input_list InputProperty[]
+function input.merge_parameters(procinfo, input_list)
+    local values = procinfo.input_values
+    if not values then
+        values = {}
+        procinfo.input_values = values
+    end
+
+    local function merge_list(list)
+        for _, property in pairs(list) do
+            if property.entity and property.entity.valid then
+                if values[property.gid] == nil then
+                    local value = read_entity_parameter(property)
+                    if value ~= nil then values[property.gid] = value end
+                end
+            elseif property.inner_inputs then
+                merge_list(property.inner_inputs)
+            end
+        end
+    end
+
+    merge_list(input_list)
 end
 
 ---@param procinfo ProcInfo

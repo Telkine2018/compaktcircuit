@@ -433,6 +433,7 @@ function build.create_packed_circuit_v2(procinfo)
     procinfo.input_list = input_list
     local result, update_count, errorModel, externals = build.create_packed_circuit_internal(procinfo, false, {}, procinfo, input_list)
     input.normalize(procinfo.input_list)
+    input.merge_parameters(procinfo, procinfo.input_list)
     input.set_values(procinfo)
     return result, update_count, errorModel, externals
 end
