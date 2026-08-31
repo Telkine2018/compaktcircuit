@@ -1280,6 +1280,71 @@ function input.normalize(input_list, prefix)
     end
 end
 
+---@param property InputProperty
+---@return any
+local function read_entity_parameter(property)
+    local input_info = property.input
+    if input_info.__input_value ~= nil then
+        local value = input_info.__input_value
+        input_info.__input_value = nil
+        return value
+    end
+    if input_info.type == input.types.comm then
+        return input_info.channel_name
+    end
+
+    local cb = property.entity.get_control_behavior() --[[@as LuaConstantCombinatorControlBehavior?]]
+    if not cb then return nil end
+    local section = cb.get_section(1)
+    local filters = (section and section.filters) or {}
+
+    if input_info.type == input.types.choose_signals then
+        local signals = {}
+        for _, filter in pairs(filters) do
+            if filter.value then
+                table.insert(signals, tools.signal_to_id(filter.value))
+            end
+        end
+        return signals
+    elseif input_info.type == input.types.choose_signals_with_count then
+        local signals = {}
+        for _, filter in pairs(filters) do
+            if filter.value then
+                table.insert(signals, {
+                    signal = tools.signal_to_id(filter.value),
+                    count = filter.min
+                })
+            end
+        end
+        return signals
+    end
+
+    local filter = filters[1]
+    return filter and filter.min
+end
+
+---@param procinfo ProcInfo
+function input.capture_parameters(procinfo)
+    local input_list = {}
+    input.create_unpacked_input_list(procinfo, input_list)
+    input.normalize(input_list, "")
+
+    local values = {}
+    local function capture_list(list)
+        for _, property in pairs(list) do
+            if property.entity and property.entity.valid then
+                local value = read_entity_parameter(property)
+                if value ~= nil then values[property.gid] = value end
+            elseif property.inner_inputs then
+                capture_list(property.inner_inputs)
+            end
+        end
+    end
+
+    capture_list(input_list)
+    procinfo.input_values = values
+end
+
 ---@class LoadPropertyContext
 ---@field property InputProperty
 ---@field field LuaGuiElement

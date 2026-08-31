@@ -240,8 +240,14 @@ function build.save_packed_circuits2(procinfo)
                     bp.set_blueprint_entity_tags(index, display_info.props)
                 end
             elseif name == input_name then
-                local props = input.get(entity.unit_number)
+                local props = input.get_tags(entity)
                 if props then
+                    props.__input_value = nil
+                    local values = procinfo.input_values
+                    if values and props.value_id then
+                        props.__input_value =
+                            values["_" .. tostring(props.value_id)]
+                    end
                     bp.set_blueprint_entity_tags(index, props)
                 end
             elseif textplate_map[name] == idp then
