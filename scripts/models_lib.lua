@@ -290,6 +290,7 @@ local function import_model(player)
     procinfo.sprite2 = model_info.sprite2
     procinfo.tick = game.tick
     build.restore_packed_circuits(procinfo)
+    input.capture_parameters(procinfo)
     editor.draw_sprite(procinfo)
 
     local frame = player.gui.left[commons.internal_panel_name]
@@ -308,6 +309,9 @@ local function import_model(player)
 
     local x, y = editor.find_room(player.surface, position.x, position.y)
     player.teleport({ x, y })
+    if procinfo.is_packed then
+        build.create_packed_circuit(procinfo)
+    end
     input.apply_parameters(procinfo)
 end
 
@@ -484,6 +488,7 @@ local function apply_model(player)
     for _, procinfo in pairs(outer_list) do
         ---@cast procinfo ProcInfo
         models_lib.copy_from(procinfo, model_procinfo, procinfo.is_packed)
+        input.apply_parameters(procinfo)
         procinfo.sprite1 = model_procinfo.sprite1 or procinfo.sprite1
         procinfo.sprite2 = model_procinfo.sprite2 or procinfo.sprite2
         editor.draw_sprite(procinfo)

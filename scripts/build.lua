@@ -240,8 +240,14 @@ function build.save_packed_circuits2(procinfo)
                     bp.set_blueprint_entity_tags(index, display_info.props)
                 end
             elseif name == input_name then
-                local props = input.get(entity.unit_number)
+                local props = input.get_tags(entity)
                 if props then
+                    props.__input_value = nil
+                    local values = procinfo.input_values
+                    if values and props.value_id then
+                        props.__input_value =
+                            values["_" .. tostring(props.value_id)]
+                    end
                     bp.set_blueprint_entity_tags(index, props)
                 end
             elseif textplate_map[name] == idp then
@@ -427,6 +433,7 @@ function build.create_packed_circuit_v2(procinfo)
     procinfo.input_list = input_list
     local result, update_count, errorModel, externals = build.create_packed_circuit_internal(procinfo, false, {}, procinfo, input_list)
     input.normalize(procinfo.input_list)
+    input.merge_parameters(procinfo, procinfo.input_list)
     input.set_values(procinfo)
     return result, update_count, errorModel, externals
 end
@@ -588,7 +595,12 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     elseif name == "decider-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaDeciderCombinatorControlBehavior]]
                         if bpentity.control_behavior and cb then
-                            cb.parameters = bpentity.control_behavior.decider_conditions
+                            local parameters =
+                                bpentity.control_behavior.decider_conditions
+                            if parameters and not parameters.else_outputs then
+                                parameters.else_outputs = {}
+                            end
+                            cb.parameters = parameters
                         end
                     elseif name == "selector-combinator" then
                         local cb = entity.get_or_create_control_behavior() --[[@as LuaSelectorCombinatorControlBehavior]]
@@ -750,7 +762,16 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                     table.insert(input_list, proc.inner_input)
                 end
             elseif remote_name_map[name] then
-                local tags = bp.get_blueprint_entity_tags(index)
+                local tags = bp.get_blueprint_entity_tags(index) or {}
+                -- Older blueprints can contain only the remote entity's
+                -- position and direction in tags, while Factorio keeps the
+                -- combinator configuration in the standard control behavior.
+                -- Remote arithmetic combinators expect that configuration in
+                -- `parameters` when constructing their packed counterpart.
+                if not tags.parameters and bpentity.control_behavior then
+                    tags.parameters =
+                        bpentity.control_behavior.arithmetic_conditions
+                end
                 local remote_driver = remote_name_map[name]
                 local pos = {
                     x = position.x + bpentity.position.x / 32,
