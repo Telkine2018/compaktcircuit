@@ -140,6 +140,32 @@ local iopoint_ranges_1x1 = {
     [defines.direction.west] = { { index = 2, count = 3 }, { index = 1, count = 1 } }
 }
 
+---@type MapPosition[]
+local iopoint_positions_1x1_8 = {
+    { x = -coord_1x1, y = coord_1x1 },
+    { x = 0,           y = coord_1x1 },
+    { x = coord_1x1,  y = coord_1x1 },
+    { x = coord_1x1,  y = 0 },
+    { x = coord_1x1,  y = -coord_1x1 },
+    { x = 0,           y = -coord_1x1 },
+    { x = -coord_1x1, y = -coord_1x1 },
+    { x = -coord_1x1, y = 0 }
+}
+
+---@type table<defines.direction, IOPointRange[]>
+local iopoint_ranges_1x1_8 = {
+    [defines.direction.north] = { { index = 1, count = 8 } },
+    [defines.direction.east] = {
+        { index = 7, count = 2 }, { index = 1, count = 6 }
+    },
+    [defines.direction.south] = {
+        { index = 5, count = 4 }, { index = 1, count = 4 }
+    },
+    [defines.direction.west] = {
+        { index = 3, count = 6 }, { index = 1, count = 2 }
+    }
+}
+
 local processor_layouts = {
     [processor_name] = {
         positions = iopoint_positions_2x2,
@@ -148,6 +174,10 @@ local processor_layouts = {
     [commons.processor_name_1x1] = {
         positions = iopoint_positions_1x1,
         ranges = iopoint_ranges_1x1
+    },
+    [commons.processor_name_1x1_8] = {
+        positions = iopoint_positions_1x1_8,
+        ranges = iopoint_ranges_1x1_8
     }
 }
 
@@ -1674,6 +1704,34 @@ local function migration_2_1_0()
     end
 end
 
+local function migration_2_1_1()
+    local tech_names = {
+        commons.prefix .. "-tech",
+        "nullius-" .. commons.prefix .. "-tech"
+    }
+    local recipe_names = {
+        commons.processor_name_1x1_8,
+        "nullius-" .. commons.processor_name_1x1_8
+    }
+
+    for _, force in pairs(game.forces) do
+        local researched = false
+        for _, name in ipairs(tech_names) do
+            local technology = force.technologies[name]
+            if technology and technology.researched then
+                researched = true
+                break
+            end
+        end
+        if researched then
+            for _, name in ipairs(recipe_names) do
+                local recipe = force.recipes[name]
+                if recipe then recipe.enabled = true end
+            end
+        end
+    end
+end
+
 local migrations_table = {
 
     ["1.0.7"] = migration_1_0_7,
@@ -1697,7 +1755,8 @@ local migrations_table = {
     ["2.0.0"] = migration_2_0_0,
     ["2.0.4"] = migration_2_0_4,
     ["2.0.12"] = migration_2_0_12,
-    ["2.1.0"] = migration_2_1_0
+    ["2.1.0"] = migration_2_1_0,
+    ["2.1.1"] = migration_2_1_1
 
 }
 

@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.1
+Date: 02. 09. 2026
+  Features:
+    - Add the 1x1 Medium compact processor with eight circuit connection pins.
+  Changes:
+    - Generalize processor integrations to support additional processor variants.
+---------------------------------------------------------------------------------------------------
 Version: 2.1.0
 Date: 23. 08. 2026
   Info:
