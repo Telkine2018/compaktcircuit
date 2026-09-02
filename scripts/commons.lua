@@ -12,6 +12,10 @@ commons.surface_name_pattern = "^proc%_%d+"
 
 commons.processor_with_tags = prefix .. "-processor_with_tags"
 commons.processor_with_tags_1x1 = prefix .. "-processor_with_tags_1x1"
+commons.processor_with_tags_names = {
+	[commons.processor_name] = commons.processor_with_tags,
+	[commons.processor_name_1x1] = commons.processor_with_tags_1x1
+}
 commons.iopoint_name = prefix .. "-iopoint"
 commons.internal_iopoint_name = prefix .. "-internal_iopoint"
 commons.internal_connector_name = prefix .. "-internal_connector"

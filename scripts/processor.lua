@@ -532,7 +532,9 @@ local function on_mined(e)
             if not buffer then return end
 
             buffer.clear()
-            buffer.insert { name = commons.processor_with_tags, count = 1 }
+            local item_name = commons.processor_with_tags_names[entity.name]
+            if not item_name then return end
+            buffer.insert { name = item_name, count = 1 }
             buffer[1].set_tag("blueprint", procinfo.blueprint)
             if procinfo.model then
                 buffer[1].set_tag("model", procinfo.model)
