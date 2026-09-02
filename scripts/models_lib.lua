@@ -348,9 +348,8 @@ local function rename_model(player)
         end
     end
 
-    local model1s = build.get_models(player.force, commons.processor_name)
-    local model2s = build.get_models(player.force, commons.processor_name_1x1)
-    for _, list in pairs({ model1s, model2s }) do
+    for _, processor_name in ipairs(commons.processor_name_list) do
+        local list = build.get_models(player.force, processor_name)
         for _, model in pairs(list) do
             if model.blueprint then
                 model.blueprint = build.rename(model.blueprint, old_model,
@@ -417,7 +416,7 @@ function models_lib.update_model(procinfo, model, current)
     else
         if procinfo.surface ~= nil then
             local processors = procinfo.surface.find_entities_filtered {
-                name = { commons.processor_name, commons.processor_name_1x1 }
+                name = commons.processor_name_list
             }
 
             for _, processor in pairs(processors) do
@@ -635,7 +634,7 @@ tools.on_gui_click(prefix .. "-export_models", ---@param e EventData.on_gui_clic
         ---@cast inventory -nil
 
         local index = 1
-        for _, processor_name in pairs({ commons.processor_name_1x1, commons.processor_name }) do
+        for _, processor_name in ipairs(commons.processor_name_list) do
             local models = build.get_models(player.force, processor_name)
 
             if models then
@@ -684,7 +683,7 @@ tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_clic
                 local model_name = bp.label
                 if entities and #entities == 1 then
                     local proc = entities[1]
-                    if proc.name == commons.processor_name or proc.name == commons.processor_name_1x1 then
+                    if commons.processor_names[proc.name] then
                         local tags = proc.tags
 
                         ---@cast model_name -nil

@@ -371,7 +371,7 @@ end
 function editor.recursive_pack(parent)
     if not parent.surface then return end
     local processors = parent.surface.find_entities_filtered {
-        name = { commons.processor_name, commons.processor_name_1x1 }
+        name = commons.processor_name_list
     }
     for _, processor in pairs(processors) do
         local procinfo = get_procinfo(processor, false)

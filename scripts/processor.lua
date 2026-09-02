@@ -37,7 +37,8 @@ procinfos = {}
 -----------------------------------------------------
 
 local processor_name = commons.processor_name
-local processor_name_1x1 = commons.processor_name_1x1
+local processor_name_list = commons.processor_name_list
+local processor_names = commons.processor_names
 local processor_pattern = commons.processor_pattern
 
 local iopoint_name = commons.iopoint_name
@@ -79,7 +80,7 @@ commons.entities_to_destroy = tools.table_concat {
 ---@return LuaEntity?
 local function find_processor(entry)
     local processors = entry.surface.find_entities_filtered {
-        name = { processor_name, processor_name_1x1 },
+        name = processor_name_list,
         position = entry.position
     }
     if #processors >= 1 then return processors[1] end
@@ -137,6 +138,17 @@ local iopoint_ranges_1x1 = {
     [defines.direction.east] = { { index = 4, count = 1 }, { index = 1, count = 3 } },
     [defines.direction.south] = { { index = 3, count = 2 }, { index = 1, count = 2 } },
     [defines.direction.west] = { { index = 2, count = 3 }, { index = 1, count = 1 } }
+}
+
+local processor_layouts = {
+    [processor_name] = {
+        positions = iopoint_positions_2x2,
+        ranges = iopoint_ranges_2x2
+    },
+    [commons.processor_name_1x1] = {
+        positions = iopoint_positions_1x1,
+        ranges = iopoint_ranges_1x1
+    }
 }
 
 ---Draw circle on IO point
@@ -205,15 +217,10 @@ local function init_procinfo(procinfo)
 
     local find_count = 0
 
-    local ranges
-    local positions
-    if processor.name == processor_name then
-        ranges = iopoint_ranges_2x2[processor.direction]
-        positions = iopoint_positions_2x2
-    else
-        ranges = iopoint_ranges_1x1[processor.direction]
-        positions = iopoint_positions_1x1
-    end
+    local layout = processor_layouts[processor.name]
+    if not layout then return end
+    local ranges = layout.ranges[processor.direction]
+    local positions = layout.positions
 
     for _, range in ipairs(ranges) do
         for index = range.index, range.index + range.count - 1 do
@@ -598,13 +605,9 @@ end
 
 tools.on_event(defines.events.on_gui_opened, on_gui_open_processor_panel)
 
-local build_filter = tools.table_concat {
-    {
-        { filter = 'name', name = processor_name },
-        { filter = 'name', name = processor_name_1x1 },
-        { filter = 'name', name = display_name },
-        { filter = 'name', name = input_name }
-    }
+local build_filter = tools.create_name_filter {
+    processor_name_list,
+    { display_name, input_name }
 }
 
 tools.on_event(defines.events.on_built_entity, on_player_built)
@@ -613,13 +616,12 @@ tools.on_event(defines.events.script_raised_built, on_script_built)
 tools.on_event(defines.events.script_raised_revive, on_script_revive)
 tools.on_event(defines.events.on_space_platform_built_entity, on_space_platform_built_entity)
 
-local mine_filter = {
-    { filter = 'name', name = processor_name },
-    { filter = 'name', name = processor_name_1x1 },
-    { filter = 'name', name = iopoint_name },
-    { filter = 'name', name = commons.device_name },
-    { filter = 'name', name = commons.display_name },
-    { filter = 'name', name = commons.input_name }
+local mine_filter = tools.create_name_filter {
+    processor_name_list,
+    {
+        iopoint_name, commons.device_name, commons.display_name,
+        commons.input_name
+    }
 }
 
 tools.on_event(defines.events.on_player_mined_entity, on_player_mined_entity,
@@ -658,7 +660,7 @@ local function register_mapping(bp, mapping, surface)
                 local entity = bp_entities[index]
                 if string.find(entity.name, processor_pattern) then
                     local entities = surface.find_entities_filtered {
-                        name = { processor_name, processor_name_1x1 },
+                        name = processor_name_list,
                         position = entity.position,
                         radius = 0.1
                     }
@@ -864,10 +866,8 @@ local function on_entity_cloned(ev)
 end
 
 local clone_filter = tools.create_name_filter {
-    {
-        processor_name, processor_name_1x1, commons.packed_display_name,
-        commons.packed_input_name
-    }
+    processor_name_list,
+    { commons.packed_display_name, commons.packed_input_name }
 }
 
 script.on_event(defines.events.on_entity_cloned, on_entity_cloned, clone_filter)
@@ -877,7 +877,7 @@ local function move_processor(context)
     local start_pos = context.start_pos
     local name = entity.name
     local player = game.players[context.player_index]
-    if name ~= processor_name and name ~= processor_name_1x1 then return end
+    if not processor_names[name] then return end
 
     local procinfo = get_procinfo(entity, false)
     if not procinfo then return end
@@ -902,7 +902,7 @@ local function move_processor(context)
     for _, e in pairs(entities) do
         ---@cast e LuaEntity
         name = e.name
-        if name ~= processor_name and name ~= processor_name_1x1 then
+        if not processor_names[name] then
             local p = e.position
             e.teleport({ x = p.x + dx, y = p.y + dy })
             table.insert(move_list, e)
@@ -942,8 +942,9 @@ local function picker_dolly_install()
         script.on_event(remote.call("PickerDollies", "dolly_moved_entity_id"),
             move_processor)
         remote.call("PickerDollies", "add_blacklist_name", iopoint_name)
-        remote.call("PickerDollies", "remove_blacklist_name", processor_name)
-        remote.call("PickerDollies", "remove_blacklist_name", processor_name_1x1)
+        for _, name in ipairs(processor_name_list) do
+            remote.call("PickerDollies", "remove_blacklist_name", name)
+        end
     end
 end
 
@@ -959,7 +960,7 @@ local function factory_organizer_install()
                     processor = find_processor(entity)
                     if not processor then return nil end
                 else
-                    if name ~= processor_name and name ~= processor_name_1x1 then
+                    if not processor_names[name] then
                         return nil
                     end
                     processor = entity
@@ -982,10 +983,10 @@ local function factory_organizer_install()
                 return entities
             end
         })
-        remote.call("factory_organizer", "add_collect_method", processor_name,
-            "compaktcircuit_move", "collect")
-        remote.call("factory_organizer", "add_collect_method",
-            processor_name_1x1, "compaktcircuit_move", "collect")
+        for _, name in ipairs(processor_name_list) do
+            remote.call("factory_organizer", "add_collect_method", name,
+                "compaktcircuit_move", "collect")
+        end
         remote.call("factory_organizer", "add_collect_method",
             iopoint_name, "compaktcircuit_move", "collect")
     end
@@ -1343,7 +1344,7 @@ show_iopoint_label = function(player)
     local pos = found_iopoint.position
     local entities = found_iopoint.surface.find_entities_filtered {
         area = { { pos.x - 1, pos.y - 1 }, { pos.x + 1, pos.y + 1 } },
-        name = { processor_name, processor_name_1x1 }
+        name = processor_name_list
     }
     if #entities == 0 then return end
 
@@ -1539,11 +1540,10 @@ local function migration_1_0_14(data)
 end
 
 local function migration_1_0_15(data)
-    storage.models = {
-
-        [commons.processor_name] = {},
-        [commons.processor_name_1x1] = {}
-    }
+    storage.models = {}
+    for _, name in ipairs(processor_name_list) do
+        storage.models[name] = {}
+    end
 
     procinfos = storage.procinfos --[[@as ProcInfoTable]]
     if not procinfos then return end
@@ -1642,17 +1642,22 @@ local function migration_2_0_12()
         local sc_list = surface.find_entities_filtered { name = names }
         for _, sc in pairs(sc_list) do
             local position = sc.position
-            local area = { { position.x - 1, position.y - 1 }, { position.x + 1, position.y + 1 } }
-            local processors = surface.find_entities_filtered
-                { name = commons.processor_name, area = area }
-            if #processors == 0 then
-                local area = { { position.x - 0.5, position.y - 0.5 }, { position.x + 0.5, position.y + 0.5 } }
-                local processors = surface.find_entities_filtered
-                    { name = commons.processor_name_1x1, area = area }
-                if #processors == 0 then
-                    sc.destroy()
+            local found = false
+            for _, name in ipairs(processor_name_list) do
+                local radius = prototypes.entity[name].tile_width / 2
+                local area = {
+                    { position.x - radius, position.y - radius },
+                    { position.x + radius, position.y + radius }
+                }
+                if #surface.find_entities_filtered {
+                        name = name,
+                        area = area
+                    } > 0 then
+                    found = true
+                    break
                 end
             end
+            if not found then sc.destroy() end
         end
     end
 end
@@ -1853,17 +1858,15 @@ local function on_player_rotated_entity(e) local entity = e.entity end
 
 tools.on_event(defines.events.on_player_rotated_entity, on_player_rotated_entity)
 
-local processor_names = commons.processor_names
-
-
 local undo_classes = {
-    [processor_name] = true,
-    [processor_name_1x1] = true,
     [input_name] = true,
     [display_name] = true,
     [iopoint_name] = true,
     [internal_iopoint_name] = true
 }
+for _, name in ipairs(processor_name_list) do
+    undo_classes[name] = true
+end
 
 local function background_process_entities()
     ---@type table<integer, table<string, Tags>>

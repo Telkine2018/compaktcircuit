@@ -37,10 +37,15 @@ commons.packed_entities = {
 	commons.packed_input_name
 }
 
-commons.processor_names = {
-	[commons.processor_name] = true,
-	[commons.processor_name_1x1] = true
+commons.processor_name_list = {
+	commons.processor_name_1x1,
+	commons.processor_name
 }
+
+commons.processor_names = {}
+for _, name in ipairs(commons.processor_name_list) do
+	commons.processor_names[name] = true
+end
 
 commons.remote_controllers = {
 	[defines.controllers.god] = true,
