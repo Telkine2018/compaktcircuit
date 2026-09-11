@@ -28,6 +28,63 @@ local frame_name = np("frame")
 local get_procinfo = build.get_procinfo
 
 ---@param player LuaPlayer
+local function notify_no_active_processor(player)
+    local message = "CompaktCircuits: action cancelled (no active processor view)."
+    log(message)
+    player.print(message)
+end
+
+---@param player LuaPlayer
+---@return ProcInfo?
+local function get_active_procinfo(player)
+    local procinfo = storage.surface_map[player.surface.name]
+    if not procinfo then return nil end
+    if not procinfo.processor or not procinfo.processor.valid then return nil end
+    return procinfo
+end
+
+---@param player LuaPlayer
+---@return ProcInfo?
+local function get_action_procinfo(player)
+    local active_procinfo = get_active_procinfo(player)
+    if active_procinfo then return active_procinfo end
+
+    local vars = get_vars(player)
+    local model_procinfo = vars.model_procinfo
+    if model_procinfo and model_procinfo.processor and model_procinfo.processor.valid then
+        return model_procinfo
+    end
+
+    vars.model_procinfo = nil
+    return nil
+end
+
+---@param player LuaPlayer
+---@return ProcInfo?
+local function require_action_procinfo(player)
+    local procinfo = get_action_procinfo(player)
+    if procinfo then return procinfo end
+    local vars = get_vars(player)
+    vars.model_action = nil
+    vars.model_procinfo = nil
+    notify_no_active_processor(player)
+    return nil
+end
+
+---@param player LuaPlayer
+---@param action string
+---@return ProcInfo?
+local function prepare_model_action(player, action)
+    local vars = get_vars(player)
+    vars.model_action = action
+    vars.model_procinfo = get_active_procinfo(player)
+    if vars.model_procinfo then return vars.model_procinfo end
+    vars.model_action = nil
+    notify_no_active_processor(player)
+    return nil
+end
+
+---@param player LuaPlayer
 ---@param processor_name string
 ---@return string[] @ Model names
 local function get_model_list(player, processor_name)
@@ -66,6 +123,7 @@ function models_lib.create_panel(player)
 
     local procinfo = storage.surface_map[player.surface.name]
     if not procinfo then return end
+    get_vars(player).model_procinfo = procinfo
 
     ccutils.close_all(player)
 
@@ -180,7 +238,7 @@ function models_lib.create_panel(player)
     end
 end
 
-tools.on_gui_click(np("close"), 
+tools.on_gui_click(np("close"),
 ---@param e EventData.on_gui_click
 function(e)
     models_lib.close(game.players[e.player_index])
@@ -193,6 +251,9 @@ function models_lib.close(player)
         tools.get_vars(player).models_location = frame.location
         frame.destroy()
     end
+    local vars = get_vars(player)
+    vars.model_action = nil
+    vars.model_procinfo = nil
 end
 
 ---@param player LuaPlayer
@@ -214,6 +275,10 @@ end
 local function set_label_mode(player, text_mode, action_mode, ok_text)
     local model_flow = get_model_flow(player)
     local model_button_flow = get_model_button_flow(player)
+
+    if not model_flow[prefix .. "-model_list"] or not model_button_flow[prefix .. "-ok_button"] then
+        return
+    end
 
     model_flow[prefix .. "-model_list"].visible = not text_mode
 
@@ -242,8 +307,9 @@ local function refresh_model_list(player, procinfo)
     cb.selected_index = index
 end
 
-local function add_model(player)
-    local procinfo = storage.surface_map[player.surface.name]
+---@param player LuaPlayer
+---@param procinfo ProcInfo
+local function add_model(player, procinfo)
     local model_flow = get_model_flow(player)
     local model_name = model_flow[prefix .. "-model_name"].text
 
@@ -271,17 +337,14 @@ local function add_model(player)
 end
 
 ---@param player LuaPlayer
-local function import_model(player)
-    --- @type ProcInfo
-    local procinfo = storage.surface_map[player.surface.name]
+---@param procinfo ProcInfo
+local function import_model(player, procinfo)
     if procinfo.model == nil then return end
 
     local models = build.get_models(player.force, procinfo.processor.name)
     local model_info = models[procinfo.model]
     if not model_info then return end
 
-    local position = player.position
-    player.teleport { -EDITOR_SIZE / 2 + 1, -EDITOR_SIZE / 2 + 1 }
     editor.clean_surface(procinfo)
     procinfo.circuits = model_info.circuits
     procinfo.blueprint = model_info.blueprint
@@ -306,15 +369,12 @@ local function import_model(player)
         end
     end
 
-    local x, y = editor.find_room(player.surface, position.x, position.y)
-    player.teleport({ x, y })
     input.apply_parameters(procinfo)
 end
 
 ---@param player LuaPlayer
-local function rename_model(player)
-    ---@type ProcInfo
-    local procinfo = storage.surface_map[player.surface.name]
+---@param procinfo ProcInfo
+local function rename_model(player, procinfo)
     if procinfo.model == nil then return end
 
     --[[
@@ -439,9 +499,8 @@ function models_lib.update_model(procinfo, model, current)
 end
 
 ---@param player LuaPlayer
-local function apply_model(player)
-    ---@type ProcInfo
-    local model_procinfo = storage.surface_map[player.surface.name]
+---@param model_procinfo ProcInfo
+local function apply_model(player, model_procinfo)
     if not model_procinfo.model then return end
 
     local force = player.force
@@ -523,9 +582,8 @@ function models_lib.copy_from(procinfo, src_procinfo, packed)
 end
 
 ---@param player LuaPlayer
-local function remove_model(player)
-    ---@type ProcInfo
-    local procinfo = storage.surface_map[player.surface.name]
+---@param procinfo ProcInfo
+local function remove_model(player, procinfo)
 
     if not procinfo.model then return end
     local models = build.get_models(player.force, procinfo.processor.name)
@@ -536,19 +594,35 @@ end
 
 ---@param player LuaPlayer
 local function execute_model_action(player)
-    local model_action = get_vars(player).model_action
+    local vars = get_vars(player)
+    local model_action = vars.model_action
+
+    if model_action == nil or model_action == "" then
+        return
+    end
+
+    local procinfo = require_action_procinfo(player)
+    if not procinfo then
+        set_label_mode(player, false, false)
+        vars.model_action = nil
+        vars.model_procinfo = nil
+        return
+    end
+
     set_label_mode(player, false, false)
     if model_action == "add" then
-        add_model(player)
+        add_model(player, procinfo)
     elseif model_action == "rename" then
-        rename_model(player)
+        rename_model(player, procinfo)
     elseif model_action == "apply" then
-        apply_model(player)
+        apply_model(player, procinfo)
     elseif model_action == "import" then
-        import_model(player)
+        import_model(player, procinfo)
     elseif model_action == "remove" then
-        remove_model(player)
+        remove_model(player, procinfo)
     end
+    vars.model_action = nil
+    vars.model_procinfo = nil
 end
 
 
@@ -558,7 +632,8 @@ tools.on_event(defines.events.on_gui_selection_state_changed,
         if not e.element.valid or e.element.name ~= prefix .. "-model_list" then return end
 
         local player = game.players[e.player_index]
-        local procinfo = storage.surface_map[player.surface.name]
+        local procinfo = get_action_procinfo(player)
+        if not procinfo then return end
         if e.element.selected_index == 1 then
             procinfo.model = nil
         else
@@ -578,7 +653,7 @@ tools.on_gui_click(prefix .. "-new_model_button",
     ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        get_vars(player).model_action = "add"
+        if not prepare_model_action(player, "add") then return end
         set_label_mode(player, true, true, { button_prefix .. ".new_model" })
     end)
 
@@ -587,20 +662,27 @@ tools.on_gui_click(prefix .. "-rename_button",
     function(e)
         local player = game.players[e.player_index]
 
-        local procinfo = storage.surface_map[player.surface.name]
-        if procinfo.model == nil then return end
+        local vars = get_vars(player)
+        local procinfo = prepare_model_action(player, "rename")
+        if not procinfo then return end
+
+        if procinfo.model == nil then
+            vars.model_action = nil
+            vars.model_procinfo = nil
+            player.print("CompaktCircuits: rename cancelled (no model selected).")
+            return
+        end
 
         local model_flow = get_model_flow(player)
         model_flow[prefix .. "-model_name"].text = procinfo.model
 
-        get_vars(player).model_action = "rename"
         set_label_mode(player, true, true, { button_prefix .. ".rename_model" })
     end)
 
 tools.on_gui_click(prefix .. "-import_model", ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        get_vars(player).model_action = "import"
+        if not prepare_model_action(player, "import") then return end
         set_label_mode(player, false, true,
             { button_prefix .. ".import_model_confirm" })
     end)
@@ -608,7 +690,7 @@ tools.on_gui_click(prefix .. "-import_model", ---@param e EventData.on_gui_click
 tools.on_gui_click(prefix .. "-apply_model", ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        get_vars(player).model_action = "apply"
+        if not prepare_model_action(player, "apply") then return end
         set_label_mode(player, false, true,
             { button_prefix .. ".apply_model_confirm" })
     end)
@@ -616,7 +698,7 @@ tools.on_gui_click(prefix .. "-apply_model", ---@param e EventData.on_gui_click
 tools.on_gui_click(prefix .. "-remove_model", ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
-        get_vars(player).model_action = "remove"
+        if not prepare_model_action(player, "remove") then return end
         set_label_mode(player, false, true,
             { button_prefix .. ".remove_model_confirm" })
     end)
@@ -703,14 +785,19 @@ tools.on_gui_click(prefix .. "-import_models", ---@param e EventData.on_gui_clic
                 end
             end
         end
-        local procinfo = storage.surface_map[player.surface.name]
-        refresh_model_list(player, procinfo)
+        local procinfo = get_active_procinfo(player)
+        if procinfo then
+            refresh_model_list(player, procinfo)
+        end
     end)
 
 tools.on_gui_click(prefix .. "-cancel_button",
     ---@param e EventData.on_gui_click
     function(e)
         local player = game.players[e.player_index]
+        local vars = get_vars(player)
+        vars.model_action = nil
+        vars.model_procinfo = nil
         set_label_mode(player, false, false)
     end)
 
