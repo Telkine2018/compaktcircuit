@@ -1874,7 +1874,7 @@ local function background_process_entities()
             if stack.get_undo_item_count() > 0 then
                 local item = stack.get_undo_item(1)
                 for index, action in pairs(item) do
-                    if action and action.type == "removed-entity" then
+                    if action and action.type == "removed-entity" and action.target then
                         if undo_classes[action.target.name] then
                             local tags = player_map[action.target.position.x .. "," .. action.target.position.y]
                             if tags then
