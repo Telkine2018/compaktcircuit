@@ -66,12 +66,13 @@ local allowed_name_map = {
     [commons.internal_connector_name] = prefix .. "-cc",
     ["substation"] = prefix .. "-cc",
     ["small-lamp"] = prefix .. "-cc",
-    [commons.processor_name] = "@",
-    [commons.processor_name_1x1] = "@",
     [iopoint_name] = prefix .. "-cc",
     [display_name] = commons.packed_display_name,
     [input_name] = commons.packed_input_name
 }
+for _, name in ipairs(commons.processor_name_list) do
+    allowed_name_map[name] = "@"
+end
 build.allowed_name_map = allowed_name_map
 
 ---@type table<string, RemoteInterface>
@@ -206,8 +207,7 @@ function build.save_packed_circuits2(procinfo)
                         area.max.y = position.y
                     end
                 end
-            elseif name == commons.processor_name or name ==
-                commons.processor_name_1x1 then
+            elseif commons.processor_names[name] then
                 build.set_processor_tags(bp, index, entity)
                 local procinfo1 = build.get_procinfo(entity, false)
                 ---@cast procinfo1 -nil
@@ -725,8 +725,7 @@ function build.create_packed_circuit_internal(procinfo, nolamp, recursionSet, to
                         end
                         table.insert(input_list, input_prop)
                     end
-                elseif name == commons.processor_name or name ==
-                    commons.processor_name_1x1 then
+                elseif commons.processor_names[name] then
                     local proc = inner_processors[index]
                     if not proc then
                         proc = { iopoints = {} }

@@ -752,7 +752,7 @@ function input.create_unpacked_input_list(procinfo, input_list)
     end
 
     local inner_processors = surface.find_entities_filtered {
-        name = { commons.processor_name, commons.processor_name_1x1 }
+        name = commons.processor_name_list
     }
 
     if #inner_processors > 0 then

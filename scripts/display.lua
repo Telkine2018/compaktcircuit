@@ -13,7 +13,6 @@ local prefix = commons.prefix
 local display_name = commons.display_name
 
 local processor_name = commons.processor_name
-local processor_name_1x1 = commons.processor_name_1x1
 
 local frame_name = prefix .. "-display"
 local button_prefix = prefix .. "-button"
@@ -847,7 +846,7 @@ local function find_source(rt)
 
         if not string.find(surface_name, '^proc_') then
             local entities = surface.find_entities_filtered {
-                name = { processor_name, processor_name_1x1 },
+                name = commons.processor_name_list,
                 position = rtpos,
                 radius = 1
             }

@@ -31,6 +31,17 @@ local recipe2 = {
     results = { { type = 'item', name = commons.processor_name_1x1, amount = 1 } }
 }
 
+local recipe3 = {
+    type = 'recipe',
+    name = commons.processor_name_1x1_8,
+    enabled = false,
+    ingredients = {
+        { type = 'item', name = 'electronic-circuit', amount = 15 },
+        { type = 'item', name = 'advanced-circuit',   amount = 20 }
+    },
+    results = { { type = 'item', name = commons.processor_name_1x1_8, amount = 1 } }
+}
+
 if mods["nullius"] then
     recipe1.name = "nullius-" .. recipe1.name
     recipe1.ingredients = {
@@ -47,12 +58,23 @@ if mods["nullius"] then
     }
     recipe2.categories = { "tiny-crafting" }
     recipe2.always_show_made_in = true
+
+    recipe3.name = "nullius-" .. recipe3.name
+    recipe3.ingredients = {
+        { type = 'item', name = "arithmetic-combinator", amount = 15 },
+        { type = 'item', name = "copper-cable",          amount = 15 }
+    }
+    recipe3.categories = { "tiny-crafting" }
+    recipe3.always_show_made_in = true
 end
 
 local preq = "advanced-circuit"
 if not no_processor_in_build then
     table.insert(recipe1.ingredients, { type = 'item', name = 'processing-unit', amount = 10 })
     table.insert(recipe2.ingredients, { type = 'item', name = 'processing-unit', amount = 3 })
+    if not mods["nullius"] then
+        table.insert(recipe3.ingredients, { type = 'item', name = 'processing-unit', amount = 6 })
+    end
     preq = "processing-unit"
 end
 
@@ -64,7 +86,8 @@ local tech = {
     icon = png('tech'),
     effects = {
         { type = 'unlock-recipe', recipe = recipe1.name },
-        { type = 'unlock-recipe', recipe = recipe2.name }
+        { type = 'unlock-recipe', recipe = recipe2.name },
+        { type = 'unlock-recipe', recipe = recipe3.name }
     },
     prerequisites = { preq },
     unit = {
@@ -107,7 +130,7 @@ data:extend {
         place_result = commons.processor_name,
         stack_size = 50,
         weight = 200000
-        
+
     }, {
     type = 'item',
     name = commons.processor_name_1x1,
@@ -119,6 +142,16 @@ data:extend {
     stack_size = 50,
     weight = 200000
 }, {
+    type = 'item',
+    name = commons.processor_name_1x1_8,
+    icon_size = 64,
+    icon = png('item/processor_1x1'),
+    subgroup = 'circuit-network',
+    order = 'p[rocessor]-b',
+    place_result = commons.processor_name_1x1_8,
+    stack_size = 50,
+    weight = 200000
+}, {
     type = "item-with-tags",
     name = commons.processor_with_tags,
     hidden_in_factoriopedia = true,
@@ -127,6 +160,17 @@ data:extend {
     subgroup = 'circuit-network',
     order = 'p[rocessor]',
     place_result = commons.processor_name,
+    stack_size = 1,
+    flags = { "not-stackable" }
+}, {
+    type = "item-with-tags",
+    name = commons.processor_with_tags_1x1_8,
+    hidden_in_factoriopedia = true,
+    icon_size = 64,
+    icon = png('item/processor_1x1'),
+    subgroup = 'circuit-network',
+    order = 'p[rocessor]-b',
+    place_result = commons.processor_name_1x1_8,
     stack_size = 1,
     flags = { "not-stackable" }
 }, {
@@ -143,6 +187,7 @@ data:extend {
 }, -- Recipes
     recipe1,
     recipe2,
+    recipe3,
     -- Technology
     tech
 }
@@ -422,6 +467,26 @@ local processor_1x1 = {
 
 ---------------------------
 
+local processor_1x1_8 = {
+
+    type = "simple-entity-with-owner",
+    name = commons.processor_name_1x1_8,
+    picture = base_processor_image_1x1,
+    minable = { mining_time = 1, result = commons.processor_name_1x1_8 },
+    render_layer = 'floor-mechanics',
+    max_health = 250,
+    icons = {
+        { icon_size = 64, icon = png('item/processor_1x1'), icon_mipmaps = 4 }
+    },
+    collision_box = { { -0.45, -0.45 }, { 0.45, 0.45 } },
+    selection_box = { { -0.6, -0.6 }, { 0.6, 0.6 } },
+    selection_priority = 60,
+    collision_mask = { layers = { ["floor"]=true, ["object"]=true, ["water_tile"]=true } },
+    flags = { "placeable-neutral", "player-creation" }
+}
+
+---------------------------
+
 local function add_sprite32(name)
     return {
         type = "sprite",
@@ -440,7 +505,8 @@ local add_sprite = add_sprite32("add")
 
 data:extend {
     iopoint, energy_source, energy_pole, internal_iopoint,
-    internal_iopoint_item, ground_tile, processor, processor_1x1, device,
+    internal_iopoint_item, ground_tile, processor, processor_1x1,
+    processor_1x1_8, device,
     arrow_sprite, arrowr_sprite, arrowd_sprite, circle_sprite, add_sprite
 }
 
