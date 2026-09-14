@@ -26,7 +26,14 @@ local control_select_input = {
     name = prefix .. "-control-click"
 }
 
-data:extend{select_input, control_select_input}
+local open_gui_input = {
+    type = "custom-input",
+    name = prefix .. "-open-gui",
+    key_sequence = "E",
+    linked_game_control = "open-character-gui"
+}
+
+data:extend { select_input, control_select_input, open_gui_input }
 
 local styles = data.raw["gui-style"].default
 

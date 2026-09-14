@@ -546,6 +546,7 @@ function display.open(player, entity)
     else
         outer_frame.force_auto_center()
     end
+    player.opened = outer_frame
 end
 
 tools.on_gui_click(np("close"), function(e)
@@ -569,6 +570,7 @@ tools.on_named_event(np("display_type"),
 ---@param player LuaPlayer
 ---@param nosave boolean?
 function display.close(player, nosave)
+    local closed = false
     local frame = display.get_frame(player)
     if frame then
         if not nosave and player.mod_settings[prefix .. "-autosave"].value then
@@ -578,12 +580,15 @@ function display.close(player, nosave)
         vars.edit_location = frame.location
         vars.display_entity = nil
         frame.destroy()
+        closed = true
     end
 
     local panel = player.gui.left[frame_name]
     if panel then
         panel.destroy()
+        closed = true
     end
+    if closed then ccutils.defer_editor_focus(player) end
 end
 
 ---@param e EventData.on_gui_opened
@@ -803,6 +808,13 @@ local function on_gui_confirmed(e)
 end
 
 tools.on_event(defines.events.on_gui_opened, on_gui_opened)
+tools.on_event(defines.events.on_gui_closed, ---@param e EventData.on_gui_closed
+    function(e)
+        local element = e.element
+        if element and element.valid and element.name == frame_name then
+            display.close(game.players[e.player_index], true)
+        end
+    end)
 tools.on_event(defines.events.on_gui_confirmed, on_gui_confirmed)
 tools.on_gui_click(np("ok"), on_gui_confirmed)
 

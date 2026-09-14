@@ -178,6 +178,7 @@ function models_lib.create_panel(player)
     else
         outer_frame.force_auto_center()
     end
+    player.opened = outer_frame
 end
 
 tools.on_gui_click(np("close"), 
@@ -192,8 +193,17 @@ function models_lib.close(player)
     if frame then
         tools.get_vars(player).models_location = frame.location
         frame.destroy()
+        ccutils.defer_editor_focus(player)
     end
 end
+
+tools.on_event(defines.events.on_gui_closed, ---@param e EventData.on_gui_closed
+    function(e)
+        local element = e.element
+        if element and element.valid and element.name == frame_name then
+            models_lib.close(game.players[e.player_index])
+        end
+    end)
 
 ---@param player LuaPlayer
 ---@return LuaGuiElement

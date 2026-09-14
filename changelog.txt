@@ -7,6 +7,7 @@ Date: 23. 08. 2026
     - Add Factorio 2.1 compatibility and require FLIB 0.17 or newer.
     - Replace the removed FLIB migration module with Factorio's native version comparison API.
   Bugfixes:
+    - Make Escape close editor dialogs / leaving the circuit editor
     - Use the Factorio 2.1 recipe categories API in the Nullius compatibility path.
     - Preserve decider combinator else-outputs when circuits are packed.
     - Use the Factorio 2.1 display-panel records API when packing circuits.
